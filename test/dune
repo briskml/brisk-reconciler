@@ -1,0 +1,9 @@
+(executable
+ (name test)
+ (libraries alcotest easy-format patience_diff brisk-reconciler)
+ (preprocess (pps ppx_deriving.std)))
+
+(alias
+ (name runtest)
+ (deps test.exe)
+ (action (run %{deps})))

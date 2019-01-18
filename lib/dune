@@ -1,0 +1,3 @@
+(library
+ (name brisk_reconciler)
+ (public_name brisk-reconciler))
