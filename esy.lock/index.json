@@ -48,8 +48,7 @@
         "@esy-ocaml/reason@3.4.0@d41d8cd9"
       ],
       "devDependencies": [
-        "refmterr@3.1.10@d41d8cd9", "ocaml@4.7.1003@d41d8cd9",
-        "@opam/ppx_deriving@opam:4.2.1@7927b93a",
+        "refmterr@3.1.10@d41d8cd9", "@opam/ppx_deriving@opam:4.2.1@7927b93a",
         "@opam/patience_diff@opam:v0.11.0@67669090",
         "@opam/merlin@opam:3.2.2@829ee6dd",
         "@opam/easy-format@opam:1.3.1@9abfd4ed",

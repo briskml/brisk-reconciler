@@ -152,7 +152,7 @@ let core = [
            ],
          )
       |> ignore;
-    }
+    },
   ),
   (
     "Test subtree replace elements (not at top-level)",
@@ -477,7 +477,8 @@ let core = [
            )
         |> executeSideEffects
         |> expect(
-             ~label="It adds new element before BoxItemDynamic (it replaces the whole tree)",
+             ~label=
+               "It adds new element before BoxItemDynamic (it replaces the whole tree)",
              Implementation.[
                BeginChanges,
                UnmountChild(root, text("box to move")),
@@ -700,34 +701,48 @@ let core = [
       let effectDisposeCallCount = ref(0);
 
       let onEffect = () => effectCallCount := effectCallCount^ + 1;
-      let onEffectDispose = () => effectDisposeCallCount := effectDisposeCallCount^ + 1;
+      let onEffectDispose = () =>
+        effectDisposeCallCount := effectDisposeCallCount^ + 1;
 
-      let testState = render(<Components.EmptyComponentWithAlwaysEffect onEffect onEffectDispose />)
-      |> executeSideEffects;
+      let testState =
+        render(
+          <Components.EmptyComponentWithAlwaysEffect
+            onEffect
+            onEffectDispose
+          />,
+        )
+        |> executeSideEffects;
+
+      expectInt(~label="The effect should've been run", 1, effectCallCount^);
 
       expectInt(
-           ~label="The effect should've been run",
-           1,
-           effectCallCount^);
-
-      expectInt(~label="The dispose should not have been run yet",
-            0,
-            effectDisposeCallCount^);
+        ~label="The dispose should not have been run yet",
+        0,
+        effectDisposeCallCount^,
+      );
 
       testState
-      |> update(<Components.EmptyComponentWithAlwaysEffect onEffect onEffectDispose />)
+      |> update(
+           <Components.EmptyComponentWithAlwaysEffect
+             onEffect
+             onEffectDispose
+           />,
+         )
       |> executeSideEffects
       |> ignore;
 
       expectInt(
-           ~label="The effect should've been run again",
-           2,
-           effectCallCount^);
+        ~label="The effect should've been run again",
+        2,
+        effectCallCount^,
+      );
 
-      expectInt(~label="The effect dispose callback should have been run",
-            1,
-            effectDisposeCallCount^);
-    }
+      expectInt(
+        ~label="The effect dispose callback should have been run",
+        1,
+        effectDisposeCallCount^,
+      );
+    },
   ),
   (
     "Test 'Always' effect in a nested component",
@@ -736,25 +751,27 @@ let core = [
       let effectCallCount = ref(0);
       let effectDisposeCallCount = ref(0);
       let onEffect = () => effectCallCount := effectCallCount^ + 1;
-      let onEffectDispose = () => effectDisposeCallCount := effectDisposeCallCount^ + 1;
+      let onEffectDispose = () =>
+        effectDisposeCallCount := effectDisposeCallCount^ + 1;
 
       render(
         Components.(
-          <Div> <EmptyComponentWithAlwaysEffect onEffect onEffectDispose /> </Div>
+          <Div>
+            <EmptyComponentWithAlwaysEffect onEffect onEffectDispose />
+          </Div>
         ),
       )
       |> executeSideEffects
       |> ignore;
 
-      expectInt(
-           ~label="The effect should've been run",
-           1,
-           effectCallCount^);
+      expectInt(~label="The effect should've been run", 1, effectCallCount^);
 
-      expectInt(~label="The dispose should not have been run yet",
-            0,
-            effectDisposeCallCount^);
-    }
+      expectInt(
+        ~label="The dispose should not have been run yet",
+        0,
+        effectDisposeCallCount^,
+      );
+    },
   ),
   (
     "Test 'OnMount' effect",
@@ -763,33 +780,47 @@ let core = [
       let effectCallCount = ref(0);
       let effectDisposeCallCount = ref(0);
       let onEffect = () => effectCallCount := effectCallCount^ + 1;
-      let onEffectDispose = () => effectDisposeCallCount := effectDisposeCallCount^ + 1;
-
-      let testState = render(<Components.EmptyComponentWithOnMountEffect onEffect onEffectDispose />)
-      |> executeSideEffects;
-
-      expectInt(
-           ~label="The effect should've been run",
-           1,
-           effectCallCount^);
-
-      expectInt(~label="The dispose should not have been run yet",
-            0,
-            effectDisposeCallCount^);
+      let onEffectDispose = () =>
+        effectDisposeCallCount := effectDisposeCallCount^ + 1;
 
       let testState =
-      testState
-      |> update(<Components.EmptyComponentWithOnMountEffect onEffect onEffectDispose />)
-      |> executeSideEffects;
+        render(
+          <Components.EmptyComponentWithOnMountEffect
+            onEffect
+            onEffectDispose
+          />,
+        )
+        |> executeSideEffects;
+
+      expectInt(~label="The effect should've been run", 1, effectCallCount^);
 
       expectInt(
-           ~label="The effect should not have been run again",
-           1,
-           effectCallCount^);
+        ~label="The dispose should not have been run yet",
+        0,
+        effectDisposeCallCount^,
+      );
 
-      expectInt(~label="The effect dispose callback should not have been run yet",
-            0,
-            effectDisposeCallCount^);
+      let testState =
+        testState
+        |> update(
+             <Components.EmptyComponentWithOnMountEffect
+               onEffect
+               onEffectDispose
+             />,
+           )
+        |> executeSideEffects;
+
+      expectInt(
+        ~label="The effect should not have been run again",
+        1,
+        effectCallCount^,
+      );
+
+      expectInt(
+        ~label="The effect dispose callback should not have been run yet",
+        0,
+        effectDisposeCallCount^,
+      );
 
       testState
       |> update(<Components.EmptyComponent />)
@@ -797,10 +828,10 @@ let core = [
       |> ignore;
 
       expectInt(
-           ~label="The effect should not have been run again",
-           1,
-           effectCallCount^
-         );
+        ~label="The effect should not have been run again",
+        1,
+        effectCallCount^,
+      );
 
       expectInt(
         ~label=
@@ -817,25 +848,27 @@ let core = [
       let effectCallCount = ref(0);
       let effectDisposeCallCount = ref(0);
       let onEffect = () => effectCallCount := effectCallCount^ + 1;
-      let onEffectDispose = () => effectDisposeCallCount := effectDisposeCallCount^ + 1;
+      let onEffectDispose = () =>
+        effectDisposeCallCount := effectDisposeCallCount^ + 1;
 
       render(
         Components.(
-          <Div> <EmptyComponentWithOnMountEffect onEffect onEffectDispose /> </Div>
+          <Div>
+            <EmptyComponentWithOnMountEffect onEffect onEffectDispose />
+          </Div>
         ),
       )
       |> executeSideEffects
       |> ignore;
 
-      expectInt(
-           ~label="The effect should've been run",
-           1,
-           effectCallCount^);
+      expectInt(~label="The effect should've been run", 1, effectCallCount^);
 
-      expectInt(~label="The dispose should not have been run yet",
-            0,
-            effectDisposeCallCount^);
-    }
+      expectInt(
+        ~label="The dispose should not have been run yet",
+        0,
+        effectDisposeCallCount^,
+      );
+    },
   ),
 ];
 

@@ -29,8 +29,7 @@ module State = {
     | State(t('a)): hook(t('a));
 
   let make: 'a => t('a) =
-    initialValue =>
-      {currentValue: initialValue, nextValue: initialValue};
+    initialValue => {currentValue: initialValue, nextValue: initialValue};
 
   let flush: t('a) => bool =
     stateContainer => {
@@ -47,7 +46,7 @@ module State = {
 
   let setState = (nextValue, stateContainer) => {
     stateContainer.nextValue = nextValue;
-  }
+  };
 
   let hook = (initialState, hooks) => {
     let (stateContainer, nextSlots) =
@@ -216,12 +215,13 @@ module Effect = {
     let (state, nextSlots) =
       Slots.use(
         ~default=
-          () => {
-            condition,
-            handler,
-            cleanupHandler: None,
-            previousCondition: condition,
-          },
+          () =>
+            {
+              condition,
+              handler,
+              cleanupHandler: None,
+              previousCondition: condition,
+            },
         ~toWitness=wrapAsHook,
         hooks.slots,
       );
@@ -239,9 +239,9 @@ let effect = Effect.hook;
 
 let executeEffects = (~lifecycle, {slots}) =>
   Slots.fold(
-    (Any(hook), shouldUpdate) =>
-      switch (hook) {
-      | Effect.Effect(state) =>
+    (opaqueValue, shouldUpdate) =>
+      switch (opaqueValue) {
+      | Slots.Any(Effect.Effect(state)) =>
         Effect.executeIfNeeded(~lifecycle, state) || shouldUpdate
       | _ => shouldUpdate
       },
@@ -251,10 +251,11 @@ let executeEffects = (~lifecycle, {slots}) =>
 
 let flushPendingStateUpdates = ({slots}) =>
   Slots.fold(
-    (Any(hook), shouldUpdate) =>
-      switch (hook) {
-      | State.State(state) => State.flush(state) || shouldUpdate
-      | Reducer.Reducer(state) => Reducer.flush(state) || shouldUpdate
+    (opaqueValue, shouldUpdate) =>
+      switch (opaqueValue) {
+      | Slots.Any(State.State(state)) => State.flush(state) || shouldUpdate
+      | Slots.Any(Reducer.Reducer(state)) =>
+        Reducer.flush(state) || shouldUpdate
       | _ => shouldUpdate
       },
     false,

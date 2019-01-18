@@ -11,8 +11,8 @@ module Box = {
         children: listToElement([]),
         make: () => Implementation.{name: "Box", element: Text(title)},
         configureInstance: (~isFirstRender, instance) =>
-          isFirstRender ?
-            instance : Implementation.{name: "Box", element: Text(title)},
+          isFirstRender
+            ? instance : Implementation.{name: "Box", element: Text(title)},
       }
     );
   let createElement = (~key=?, ~title=?, ~children as _children, ()) =>
@@ -76,8 +76,8 @@ module BoxWrapper = {
   let component = component("BoxWrapper");
   let make = (~title="ImABox", ~twoBoxes=false, ~onClick as _=?, _children) =>
     component((_: Hooks.t(unit, unit)) =>
-      twoBoxes ?
-        <Div> <Box title /> <Box title /> </Div> : <Div> <Box title /> </Div>
+      twoBoxes
+        ? <Div> <Box title /> <Box title /> </Div> : <Div> <Box title /> </Div>
     );
   let createElement = (~key=?, ~title=?, ~twoBoxes=?, ~children as _, ()) =>
     element(~key?, make(~title?, ~twoBoxes?, ~onClick=(), ()));
@@ -170,12 +170,12 @@ module UpdateAlternateClicks = {
           ~initialState=ref(0),
           (Click, state) =>
             /* FIXME: make this pure */
-            state^ mod 2 === 0 ?
-              {
+            state^ mod 2 === 0
+              ? {
                 state := state^ + 1;
                 state;
-              } :
-              ref(state^ + 1),
+              }
+              : ref(state^ + 1),
           hooks,
         );
       let _: Hooks.empty =
@@ -223,26 +223,40 @@ module EmptyComponent = {
 
 module EmptyComponentWithAlwaysEffect = {
   let component = component("Box");
-  let make = (~onEffect, ~onEffectDispose, _children) => component((slots) => {
-      let _slots: Hooks.empty = Hooks.effect(Always, () => {
-        onEffect(); 
-        Some(onEffectDispose);
-      }, slots);
-      listToElement([])
-  });
-  let createElement = (~key=?, ~children as _children, ~onEffect, ~onEffectDispose, ()) =>
+  let make = (~onEffect, ~onEffectDispose, _children) =>
+    component(slots => {
+      let _slots: Hooks.empty =
+        Hooks.effect(
+          Always,
+          () => {
+            onEffect();
+            Some(onEffectDispose);
+          },
+          slots,
+        );
+      listToElement([]);
+    });
+  let createElement =
+      (~key=?, ~children as _children, ~onEffect, ~onEffectDispose, ()) =>
     element(~key?, make(~onEffect, ~onEffectDispose, _children));
 };
 
 module EmptyComponentWithOnMountEffect = {
   let component = component("Box");
-  let make = (~onEffect, ~onEffectDispose, _children) => component((slots) => {
-      let _slots: Hooks.empty = Hooks.effect(OnMount, () => {
-        onEffect(); 
-        Some(onEffectDispose);
-      }, slots);
-      listToElement([])
-  });
-  let createElement = (~key=?, ~children as _children, ~onEffect, ~onEffectDispose, ()) =>
+  let make = (~onEffect, ~onEffectDispose, _children) =>
+    component(slots => {
+      let _slots: Hooks.empty =
+        Hooks.effect(
+          OnMount,
+          () => {
+            onEffect();
+            Some(onEffectDispose);
+          },
+          slots,
+        );
+      listToElement([]);
+    });
+  let createElement =
+      (~key=?, ~children as _children, ~onEffect, ~onEffectDispose, ()) =>
     element(~key?, make(~onEffect, ~onEffectDispose, _children));
 };

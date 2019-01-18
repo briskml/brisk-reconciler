@@ -3,17 +3,18 @@
   "version": "0.0.1",
   "license": "MIT",
   "esy": {
-    "build": ["dune build --only-packages brisk-reconciler --root ."]
+    "build": [
+      "dune build -p brisk-reconciler"
+    ]
   },
   "scripts": {
+    "fmt": "dune build @fmt --auto-promote",
     "clean": "dune clean",
     "test": "dune runtest --no-buffer"
   },
   "dependencies": {
     "@esy-ocaml/reason": ">=3.4.0",
-    "@opam/dune": "^1.6.2"
-  },
-  "peerDependencies": {
+    "@opam/dune": "^1.6.2",
     "ocaml": "~4.7.1000"
   },
   "devDependencies": {
@@ -22,7 +23,6 @@
     "@opam/merlin": "^3.2.2",
     "@opam/patience_diff": "*",
     "@opam/ppx_deriving": "^4.2.1",
-    "ocaml": "~4.7.1000",
     "refmterr": "^3.1.10"
   }
 }

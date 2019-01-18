@@ -1,0 +1,8 @@
+{
+  "source": "./package-ci.json",
+  "override": {
+    "dependencies": {
+    "ocaml": "~4.7.1000"
+    }
+  }
+}
