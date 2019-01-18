@@ -1,5 +1,3 @@
-open Brisk_reconciler;
-
 module Implementation = {
   [@deriving (show({with_path: false}), eq)]
   type hostElement =
@@ -53,4 +51,4 @@ module Implementation = {
   };
 };
 
-include Make(Implementation);
+include Brisk_reconciler__Brisk_reconciler_internal.Make(Implementation);
