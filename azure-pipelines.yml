@@ -17,13 +17,3 @@ jobs:
       STAGING_DIRECTORY_UNIX: /Users/vsts/STAGING
       ESY__CACHE_INSTALL_PATH: /Users/vsts/.esy/3____________________________________________________________________/i
       ESY__CACHE_SOURCE_TARBALL_PATH: /Users/vsts/.esy/source/i
-
-  - template: .ci/build-test-platform.yml
-    parameters:
-      platform: Windows
-      vmImage: vs2017-win2016
-      STAGING_DIRECTORY: C:\Users\VssAdministrator\STAGING
-      STAGING_DIRECTORY_UNIX: /C/Users/VssAdministrator/STAGING
-      ESY__CACHE_INSTALL_PATH: /C/Users/VssAdministrator/.esy/3_/i
-      ESY__CACHE_SOURCE_TARBALL_PATH: /C/Users/VssAdministrator/.esy/source/i
-
