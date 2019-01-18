@@ -1,6 +1,6 @@
 {
   "checksum": "f1372752417cf30ed3344aa106f1a8dc",
-  "root": "@brisk/brisk-reconciler@link-dev:./esy.json",
+  "root": "brisk-reconciler@link-dev:./package.json",
   "node": {
     "refmterr@3.1.10@d41d8cd9": {
       "id": "refmterr@3.1.10@d41d8cd9",
@@ -32,6 +32,29 @@
       "overrides": [],
       "dependencies": [],
       "devDependencies": []
+    },
+    "brisk-reconciler@link-dev:./package.json": {
+      "id": "brisk-reconciler@link-dev:./package.json",
+      "name": "brisk-reconciler",
+      "version": "link-dev:./package.json",
+      "source": {
+        "type": "link-dev",
+        "path": ".",
+        "manifest": "package.json"
+      },
+      "overrides": [],
+      "dependencies": [
+        "ocaml@4.7.1003@d41d8cd9", "@opam/dune@opam:1.6.3@a7d7baed",
+        "@esy-ocaml/reason@3.4.0@d41d8cd9"
+      ],
+      "devDependencies": [
+        "refmterr@3.1.10@d41d8cd9", "ocaml@4.7.1003@d41d8cd9",
+        "@opam/ppx_deriving@opam:4.2.1@7927b93a",
+        "@opam/patience_diff@opam:v0.11.0@67669090",
+        "@opam/merlin@opam:3.2.2@829ee6dd",
+        "@opam/easy-format@opam:1.3.1@9abfd4ed",
+        "@opam/alcotest@opam:0.8.5@0b35b339"
+      ]
     },
     "@opam/yojson@opam:1.5.0@890db858": {
       "id": "@opam/yojson@opam:1.5.0@890db858",
@@ -2205,25 +2228,6 @@
         "@opam/dune@opam:1.6.3@a7d7baed"
       ],
       "devDependencies": []
-    },
-    "@brisk/brisk-reconciler@link-dev:./esy.json": {
-      "id": "@brisk/brisk-reconciler@link-dev:./esy.json",
-      "name": "@brisk/brisk-reconciler",
-      "version": "link-dev:./esy.json",
-      "source": { "type": "link-dev", "path": ".", "manifest": "esy.json" },
-      "overrides": [],
-      "dependencies": [
-        "ocaml@4.7.1003@d41d8cd9", "@opam/dune@opam:1.6.3@a7d7baed",
-        "@esy-ocaml/reason@3.4.0@d41d8cd9"
-      ],
-      "devDependencies": [
-        "refmterr@3.1.10@d41d8cd9", "ocaml@4.7.1003@d41d8cd9",
-        "@opam/ppx_deriving@opam:4.2.1@7927b93a",
-        "@opam/patience_diff@opam:v0.11.0@67669090",
-        "@opam/merlin@opam:3.2.2@829ee6dd",
-        "@opam/easy-format@opam:1.3.1@9abfd4ed",
-        "@opam/alcotest@opam:0.8.5@0b35b339"
-      ]
     }
   }
 }

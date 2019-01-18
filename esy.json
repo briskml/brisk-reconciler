@@ -1,6 +1,6 @@
 {
-  "name": "@brisk/brisk-reconciler",
-  "version": "0.1.0",
+  "name": "brisk-reconciler",
+  "version": "0.0.1",
   "license": "MIT",
   "esy": {
     "build": ["dune build --only-packages brisk-reconciler --root ."]
