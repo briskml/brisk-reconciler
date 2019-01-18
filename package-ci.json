@@ -1,0 +1,8 @@
+{
+  "source": "./package.json",
+  "override": {
+    "devDependencies": {
+      "@opam/merlin": null
+    }
+  }
+}

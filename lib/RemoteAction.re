@@ -7,7 +7,7 @@ let create = () => {subscribers: []};
 let subscribe = (~handler: 'action => unit, {subscribers} as emitter: t('a)) => {
   if (!List.exists(f => f === handler, subscribers)) {
     emitter.subscribers = [handler, ...subscribers];
-  }
+  };
   let unsubscribe = () => {
     emitter.subscribers = List.filter(f => f !== f, subscribers);
   };
@@ -16,4 +16,4 @@ let subscribe = (~handler: 'action => unit, {subscribers} as emitter: t('a)) => 
 
 let send = (~action: 'a, emitter: t('a)) => {
   List.iter(c => c(action), emitter.subscribers);
-}
+};

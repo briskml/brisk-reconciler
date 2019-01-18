@@ -124,15 +124,15 @@ let update =
 };
 
 let flushPendingUpdates = ({renderedElement, syntheticElement} as testState) =>
-  Implementation.isDirty^ ?
-    {
+  Implementation.isDirty^
+    ? {
       Implementation.isDirty := false;
       {
         syntheticElement,
         renderedElement: RenderedElement.flushPendingUpdates(renderedElement),
       };
-    } :
-    testState;
+    }
+    : testState;
 
 let executeSideEffects = ({renderedElement} as testState) => {
   RenderedElement.executeHostViewUpdates(renderedElement) |> ignore;
@@ -150,7 +150,7 @@ let expect = (~label=?, expected, testState) => {
 };
 
 let expectInt = (~label, expected, actual) => {
-    Alcotest.(check(int))(label, expected, actual);
+  Alcotest.(check(int))(label, expected, actual);
 };
 
 let act = (~action, rAction, testState) => {

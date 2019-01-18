@@ -12,8 +12,8 @@ let concat = list => {
   useTailRecursion(list) ? aux([], list) : List.concat(list);
 };
 let map = (f, list) =>
-  useTailRecursion(list) ?
-    List.rev_map(f, List.rev(list)) : List.map(f, list);
+  useTailRecursion(list)
+    ? List.rev_map(f, List.rev(list)) : List.map(f, list);
 let map3 = (f, list1, list2, list3) => {
   let rec aux = acc =>
     fun
