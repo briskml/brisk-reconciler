@@ -265,26 +265,30 @@ let ref = Ref.hook;
 let effect = Effect.hook;
 
 let pendingEffects = (~lifecycle, hooks) =>
-  HeterogenousList.fold(
-    (opaqueValue, acc) =>
-      switch (opaqueValue) {
-      | Slots.Any(Effect.Effect(state)) => [
-          Effect.get(~lifecycle, state),
-          ...acc,
-        ]
-      | _ => acc
-      },
-    [],
-    hooks,
-  )
-  |> List.fold_left(
-       (acc, effect) =>
-         switch (effect) {
-         | Some(e) => [e, ...acc]
-         | None => acc
-         },
-       [],
-     );
+  switch (hooks) {
+  | Some(hooks) =>
+    HeterogenousList.fold(
+      (acc, opaqueValue) =>
+        switch (opaqueValue) {
+        | HeterogenousList.Any(Effect.Effect(state)) => [
+            Effect.get(~lifecycle, state),
+            ...acc,
+          ]
+        | _ => acc
+        },
+      [],
+      hooks,
+    )
+    |> List.fold_left(
+         (acc, effect) =>
+           switch (effect) {
+           | Some(e) => [e, ...acc]
+           | None => acc
+           },
+         [],
+       )
+  | None => []
+  };
 
 /*
   * Not implemented yet. Not sure how to type map,
@@ -292,19 +296,21 @@ let pendingEffects = (~lifecycle, hooks) =>
  */
 let flushPendingStateUpdates = hooks =>
   switch (hooks) {
-  | Some(hooks) =>
-    HeterogenousList.map(
-      {
-        f: (type a, hook: hook(a)) => {
-          switch (hook) {
-          | Reducer.Reducer(s) => (Reducer.flush(s): option(a))
-          | State.State(s) => (State.flush(s): option(a))
-          | _ => None
-          };
+  | Some(prevHooks) =>
+    let nextHooks =
+      HeterogenousList.map(
+        {
+          f: (type a, hook: hook(a)) => {
+            switch (hook) {
+            | Reducer.Reducer(s) => (Reducer.flush(s): option(a))
+            | State.State(s) => (State.flush(s): option(a))
+            | _ => None
+            };
+          },
         },
-      },
-      hooks,
-    )
-    |> HeterogenousList.compareElementsIdentity(hooks) == false
-  | None => false
+        prevHooks,
+      );
+    HeterogenousList.compareElementsIdentity(prevHooks, nextHooks)
+      ? hooks : Some(nextHooks);
+  | None => None
   };

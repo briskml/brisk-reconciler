@@ -181,6 +181,8 @@ let core = [
       let cell1 = text("cell1");
       let cell2 = text("cell2");
 
+      print_endline("aki");
+
       testState
       |> flushPendingUpdates
       |> executeSideEffects

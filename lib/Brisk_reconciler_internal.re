@@ -518,12 +518,6 @@ module Make = (OutputTree: OutputTree) => {
       | Some(keyTable) => OpaqueInstanceHash.lookupKey(keyTable, key)
       };
 
-    let executePendingStateUpdates:
-      'state 'action 'elementType 'outputNode.
-      instance('state, 'action, 'elementType, 'outputNode) => bool
-     =
-      instance => Hooks.flushPendingStateUpdates(instance.slots);
-
     type childElementUpdate = {
       updatedRenderedElement: renderedElement,
       /* This represents the way previously rendered elements have been shifted due to moves */
@@ -613,9 +607,9 @@ module Make = (OutputTree: OutputTree) => {
           Element(nextComponent) as nextElement,
         )
         : opaqueInstanceUpdate => {
-      let stateChanged =
-        updateContext.shouldExecutePendingUpdates
-          ? executePendingStateUpdates(instance) : false;
+      let nextState = updateContext.shouldExecutePendingUpdates ?
+        Hooks.flushPendingStateUpdates(instance.slots) : instance.slots;
+      let stateChanged = nextState !== instance.slots;
 
       let bailOut = !stateChanged && instance.element === nextElement;
 
@@ -627,7 +621,7 @@ module Make = (OutputTree: OutputTree) => {
         };
       } else {
         let {component} = instance;
-        component.handedOffInstance := Some(instance);
+        component.handedOffInstance := Some({...instance, slots: nextState});
         switch (nextComponent.handedOffInstance^) {
         /*
          * Case A: The next element *is* of the same component class.

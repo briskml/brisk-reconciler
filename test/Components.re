@@ -150,15 +150,16 @@ module StatelessButton = {
         (),
       ) =>
     component(h => (h, <Div />));
-  let createElement = (~initialClickCount=?, ~test=?, ~children as _, ()) =>
-    element(make(~initialClickCount?, ~test?, ()));
 };
 
 let testWrapper = (~wrappedText="default", _children) =>
-  component("TestWrapper", (_: Hooks.empty) =>
-    <StatelessButton
-      initialClickCount={"wrapped:" ++ wrappedText ++ ":wrapped"}
-    />
+  component("TestWrapper", hooks =>
+    (
+      hooks,
+      <StatelessButton
+        initialClickCount={"wrapped:" ++ wrappedText ++ ":wrapped"}
+      />,
+    )
   );
 
 module ButtonWrapper = {
@@ -219,11 +220,31 @@ module ToggleClicks = {
   let createElement = (~rAction, ~children as _, ()) =>
     component(hooks => {
       let (state, dispatch, hooks) =
-        Hooks.reducer(~initialState=false, (Click, state) => !state, hooks);
+        Hooks.reducer(
+          ~initialState=false,
+          (Click, state) => {
+            print_endline("reducer");
+            !state;
+          },
+          hooks,
+        );
+      print_endline(string_of_bool(state));
       let hooks =
         Hooks.effect(
           OnMount,
-          () => Some(RemoteAction.subscribe(~handler=dispatch, rAction)),
+          () => {
+            print_endline("subscribe");
+            Some(
+              RemoteAction.subscribe(
+                ~handler=
+                  a => {
+                    print_endline("action");
+                    dispatch(a);
+                  },
+                rAction,
+              ),
+            );
+          },
           hooks,
         );
       (

@@ -85,3 +85,4 @@ let effect:
 
 let pendingEffects:
   (~lifecycle: Effect.lifecycle, state('a, unit)) => list(unit => unit);
+let flushPendingStateUpdates: state('a, unit) => state('a, unit);
