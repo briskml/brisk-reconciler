@@ -6,8 +6,10 @@ let createState: unit => state('a, 'b);
 
 type t('a, 'b, 'c, 'd);
 
-let toHooks:
+let ofState:
   (state('a, 'b), ~onStateDidChange: unit => unit) => t('a, 'b, 'c, 'c);
+
+let toState: t('a, 'b, 'c, 'd) => state('c, 'd);
 
 let processNext:
   (
@@ -82,4 +84,4 @@ let effect:
   t('b, unit, 'c, 'd);
 
 let pendingEffects:
-  (~lifecycle: Effect.lifecycle, t('a, 'b)) => list(unit => unit);
+  (~lifecycle: Effect.lifecycle, state('a, unit)) => list(unit => unit);

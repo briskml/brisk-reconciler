@@ -28,6 +28,8 @@ module type S = {
   type mapper = {f: 'a. witness('a) => option('a)};
 
   let map: (mapper, t('a, 'b)) => t('a, 'b);
+
+  let compareElementsIdentity: (t('a, unit), t('a, unit)) => bool;
 };
 
 module Make: (Witness: Witness) => S with type witness('a) = Witness.t('a);

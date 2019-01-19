@@ -1,6 +1,4 @@
-module type Witness = {
-  type t('a);
-};
+module type Witness = {type t('a);};
 
 module type S = {
   type witness('a);
@@ -30,6 +28,8 @@ module type S = {
   type mapper = {f: 'a. witness('a) => option('a)};
 
   let map: (mapper, t('a, 'b)) => t('a, 'b);
+
+  let compareElementsIdentity: (t('a, unit), t('a, unit)) => bool;
 };
 
 module Make = (Witness: Witness) => {
@@ -97,4 +97,12 @@ module Make = (Witness: Witness) => {
           ...map(mapper, t),
         ];
       };
+  let rec compareElementsIdentity: type a. (t(a, unit), t(a, unit)) => bool =
+    (l1, l2) => {
+      switch (l1, l2) {
+      | ([], []) => true
+      | ([{value}, ...t1], [{value: value2}, ...t2]) =>
+        value === value2 && compareElementsIdentity(t1, t2)
+      };
+    };
 };

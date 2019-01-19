@@ -13,15 +13,15 @@ type t('a, 'b, 'c, 'd) = {
   onStateDidChange: unit => unit,
 };
 
-type hooks('a, 'b, 'c, 'd) = t('a, 'b, 'c, 'd);
-
 let createState = () => None;
 
-let toHooks = (remaining, ~onStateDidChange) => {
+let ofState = (remaining, ~onStateDidChange) => {
   remaining,
   processed: HeterogenousList.[],
   onStateDidChange,
 };
+
+let toState = ({processed}) => Some(processed);
 
 let processNext =
     (
@@ -264,7 +264,7 @@ let reducer = Reducer.hook;
 let ref = Ref.hook;
 let effect = Effect.hook;
 
-let pendingEffects = (~lifecycle, {slots}) =>
+let pendingEffects = (~lifecycle, hooks) =>
   HeterogenousList.fold(
     (opaqueValue, acc) =>
       switch (opaqueValue) {
@@ -275,7 +275,7 @@ let pendingEffects = (~lifecycle, {slots}) =>
       | _ => acc
       },
     [],
-    slots,
+    hooks,
   )
   |> List.fold_left(
        (acc, effect) =>
@@ -293,19 +293,18 @@ let pendingEffects = (~lifecycle, {slots}) =>
 let flushPendingStateUpdates = hooks =>
   switch (hooks) {
   | Some(hooks) =>
-    let x =
-      HeterogenousList.map(
-        {
-          f: (type a, hook: hook(a)) => {
-            switch (hook) {
-            | Reducer.Reducer(s) => (Reducer.flush(s): option(a))
-            | State.State(s) => (State.flush(s): option(a))
-            | _ => None
-            };
-          },
+    HeterogenousList.map(
+      {
+        f: (type a, hook: hook(a)) => {
+          switch (hook) {
+          | Reducer.Reducer(s) => (Reducer.flush(s): option(a))
+          | State.State(s) => (State.flush(s): option(a))
+          | _ => None
+          };
         },
-        hooks,
-      );
-    x === hooks;
+      },
+      hooks,
+    )
+    |> HeterogenousList.compareElementsIdentity(hooks) == false
   | None => false
   };
