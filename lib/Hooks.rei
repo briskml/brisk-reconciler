@@ -1,14 +1,22 @@
 type hook('a) = ..;
 
-module Slots: Slots.S with type witness('a) = hook('a);
+type state('a, 'b);
 
-type t('a, 'b) = {
-  slots: Slots.t('a, 'b),
-  onSlotsDidChange: unit => unit,
-};
-type empty = t(unit, unit);
+let createState: unit => state('a, 'b);
 
-let create: (~onSlotsDidChange: unit => unit) => t('a, 'b);
+type t('a, 'b, 'c, 'd);
+
+let toHooks:
+  (state('a, 'b), ~onStateDidChange: unit => unit) => t('a, 'b, 'c, 'c);
+
+let processNext:
+  (
+    ~default: 'value,
+    ~merge: 'value => 'value=?,
+    ~toWitness: 'value => hook('value),
+    t('value => 'b, unit, 'c, 'value => 'd)
+  ) =>
+  ('value, t('b, unit, 'c, 'd));
 
 module State: {
   type t('a);
@@ -50,29 +58,28 @@ module Effect: {
 };
 
 let state:
-  ('state, t(State.t('state), Slots.t('slots, 'nextSlots))) =>
-  ('state, 'state => unit, t('slots, 'nextSlots));
+  ('state, t(State.t('state) => 'b, unit, 'c, State.t('state) => 'd)) =>
+  ('state, 'state => unit, t('b, unit, 'c, 'd));
 
 let reducer:
   (
     ~initialState: 'state,
     ('action, 'state) => 'state,
-    t(Reducer.t('state), Slots.t('slots, 'nextSlots))
+    t(Reducer.t('state) => 'b, unit, 'c, Reducer.t('state) => 'd)
   ) =>
-  ('state, 'action => unit, t('slots, 'nextSlots));
+  ('state, 'action => unit, t('b, unit, 'c, 'd));
 
 let ref:
-  ('state, t(Ref.t('state), Slots.t('slots, 'nextSlots))) =>
-  ('state, 'state => unit, t('slots, 'nextSlots));
+  ('state, t(Ref.t('state) => 'b, unit, 'c, Ref.t('state) => 'd)) =>
+  ('state, 'state => unit, t('b, unit, 'c, 'd));
 
 let effect:
   (
     Effect.condition('condition),
     Effect.handler,
-    t(Effect.t('condition), Slots.t('slots, 'nextSlots))
+    t(Effect.t('condition) => 'b, unit, 'c, Effect.t('condition) => 'd)
   ) =>
-  t('slots, 'nextSlots);
+  t('b, unit, 'c, 'd);
 
 let pendingEffects:
   (~lifecycle: Effect.lifecycle, t('a, 'b)) => list(unit => unit);
-let flushPendingStateUpdates: t('a, 'b) => bool;

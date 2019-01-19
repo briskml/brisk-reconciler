@@ -1,27 +1,68 @@
 type hook('a) = ..;
 
-module Slots =
-  Slots.Make({
+module HeterogenousList =
+  HeterogenousList.Make({
     type t('a) = hook('a);
   });
 
-type t('a, 'b) = {
-  slots: Slots.t('a, 'b),
-  onSlotsDidChange: unit => unit,
+type state('a, 'b) = option(HeterogenousList.t('a, 'b));
+
+type t('a, 'b, 'c, 'd) = {
+  remaining: option(HeterogenousList.t('a, 'b)),
+  processed: HeterogenousList.t('c, 'd),
+  onStateDidChange: unit => unit,
 };
 
-type empty = t(unit, unit);
+type hooks('a, 'b, 'c, 'd) = t('a, 'b, 'c, 'd);
 
-type hooks('slots, 'nextSlots) = t('slots, 'nextSlots);
+let createState = () => None;
 
-let create = (~onSlotsDidChange) => {
-  slots: Slots.create(),
-  onSlotsDidChange,
+let toHooks = (remaining, ~onStateDidChange) => {
+  remaining,
+  processed: HeterogenousList.[],
+  onStateDidChange,
 };
+
+let processNext =
+    (
+      ~default,
+      ~merge=?,
+      ~toWitness,
+      {remaining, processed, onStateDidChange},
+    ) =>
+  switch (remaining) {
+  | Some(l) =>
+    let ({HeterogenousList.value, toWitness}, rest) =
+      HeterogenousList.dropFirst(l);
+    (
+      value,
+      {
+        remaining: Some(rest),
+        processed:
+          HeterogenousList.append(
+            processed,
+            switch (merge) {
+            | Some(f) => f(value)
+            | None => value
+            },
+            toWitness,
+          ),
+        onStateDidChange,
+      },
+    );
+  | None => (
+      default,
+      {
+        remaining: None,
+        processed: HeterogenousList.append(processed, default, toWitness),
+        onStateDidChange,
+      },
+    )
+  };
 
 module State = {
   type t('a) = {
-    mutable currentValue: 'a,
+    currentValue: 'a,
     mutable nextValue: 'a,
   };
 
@@ -31,17 +72,6 @@ module State = {
   let make: 'a => t('a) =
     initialValue => {currentValue: initialValue, nextValue: initialValue};
 
-  let flush: t('a) => bool =
-    stateContainer => {
-      let {currentValue, nextValue} = stateContainer;
-      if (currentValue !== nextValue) {
-        stateContainer.currentValue = nextValue;
-        true;
-      } else {
-        false;
-      };
-    };
-
   let wrapAsHook = s => State(s);
 
   let setState = (nextValue, stateContainer) => {
@@ -49,25 +79,21 @@ module State = {
   };
 
   let hook = (initialState, hooks) => {
-    let (stateContainer, nextSlots) =
-      Slots.use(
-        ~default=() => make(initialState),
-        ~toWitness=wrapAsHook,
-        hooks.slots,
-      );
+    let (stateContainer, nextHooks) =
+      processNext(~default=make(initialState), ~toWitness=wrapAsHook, hooks);
 
     let setter = nextState => {
       setState(nextState, stateContainer);
-      hooks.onSlotsDidChange();
+      hooks.onStateDidChange();
     };
 
-    (stateContainer.currentValue, setter, {...hooks, slots: nextSlots});
+    (stateContainer.currentValue, setter, nextHooks);
   };
 };
 
 module Reducer = {
   type t('a) = {
-    mutable currentValue: 'a,
+    currentValue: 'a,
     mutable updates: list('a => 'a),
   };
 
@@ -77,20 +103,22 @@ module Reducer = {
   let make: 'a => t('a) =
     initialValue => {currentValue: initialValue, updates: []};
 
-  let flush: t('a) => bool =
-    reducerState => {
-      let {currentValue, updates} = reducerState;
-      let nextValue =
-        List.fold_right(
-          (update, latestValue) => update(latestValue),
-          updates,
-          currentValue,
-        );
+  /*
+   let flush: t('a) => bool =
+     reducerState => {
+       let {currentValue, updates} = reducerState;
+       let nextValue =
+         List.fold_right(
+           (update, latestValue) => update(latestValue),
+           updates,
+           currentValue,
+         );
 
-      reducerState.currentValue = nextValue;
-      reducerState.updates = [];
-      currentValue !== nextValue;
-    };
+       reducerState.currentValue = nextValue;
+       reducerState.updates = [];
+       currentValue !== nextValue;
+     };
+   */
 
   let wrapAsHook = s => Reducer(s);
 
@@ -98,20 +126,16 @@ module Reducer = {
     stateContainer.updates = [nextUpdate, ...updates];
   };
 
-  let hook = (~initialState, reducer, hooks: hooks(_)) => {
-    let (stateContainer, nextSlots) =
-      Slots.use(
-        ~default=() => make(initialState),
-        ~toWitness=wrapAsHook,
-        hooks.slots,
-      );
+  let hook = (~initialState, reducer, hooks) => {
+    let (stateContainer, hooks) =
+      processNext(~default=make(initialState), ~toWitness=wrapAsHook, hooks);
 
     let dispatch = action => {
       enqueueUpdate(prevValue => reducer(action, prevValue), stateContainer);
-      hooks.onSlotsDidChange();
+      hooks.onStateDidChange();
     };
 
-    (stateContainer.currentValue, dispatch, {...hooks, slots: nextSlots});
+    (stateContainer.currentValue, dispatch, hooks);
   };
 };
 
@@ -122,16 +146,12 @@ module Ref = {
   let wrapAsHook = s => Ref(s);
 
   let hook = (initialState, hooks) => {
-    let (internalRef, nextSlots) =
-      Slots.use(
-        ~default=() => ref(initialState),
-        ~toWitness=wrapAsHook,
-        hooks.slots,
-      );
+    let (internalRef, hooks) =
+      processNext(~default=ref(initialState), ~toWitness=wrapAsHook, hooks);
 
     let setter = nextValue => internalRef := nextValue;
 
-    (internalRef^, setter, {...hooks, slots: nextSlots});
+    (internalRef^, setter, hooks);
   };
 };
 
@@ -148,8 +168,8 @@ module Effect = {
     | If(('a, 'a) => bool, 'a): condition('a);
   type handler = unit => option(unit => unit);
   type t('a) = {
-    mutable condition: condition('a),
-    mutable handler: unit => option(unit => unit),
+    condition: condition('a),
+    handler: unit => option(unit => unit),
     mutable cleanupHandler: option(unit => unit),
     mutable previousCondition: condition('a),
   };
@@ -216,23 +236,19 @@ module Effect = {
     };
 
   let hook = (condition, handler, hooks) => {
-    let (state, nextSlots) =
-      Slots.use(
-        ~default=
-          () =>
-            {
-              condition,
-              handler,
-              cleanupHandler: None,
-              previousCondition: condition,
-            },
+    let (_, hooks) =
+      processNext(
+        ~default={
+          condition,
+          handler,
+          cleanupHandler: None,
+          previousCondition: condition,
+        },
+        ~merge=prevEffect => {...prevEffect, condition, handler},
         ~toWitness=wrapAsHook,
-        hooks.slots,
+        hooks,
       );
-
-    state.condition = condition;
-    state.handler = handler;
-    {...hooks, slots: nextSlots};
+    hooks;
   };
 };
 
@@ -242,7 +258,7 @@ let ref = Ref.hook;
 let effect = Effect.hook;
 
 let pendingEffects = (~lifecycle, {slots}) =>
-  Slots.fold(
+  HeterogenousList.fold(
     (opaqueValue, acc) =>
       switch (opaqueValue) {
       | Slots.Any(Effect.Effect(state)) => [
@@ -263,15 +279,24 @@ let pendingEffects = (~lifecycle, {slots}) =>
        [],
      );
 
-let flushPendingStateUpdates = ({slots}) =>
-  Slots.fold(
-    (opaqueValue, shouldUpdate) =>
-      switch (opaqueValue) {
-      | Slots.Any(State.State(state)) => State.flush(state) || shouldUpdate
-      | Slots.Any(Reducer.Reducer(state)) =>
-        Reducer.flush(state) || shouldUpdate
-      | _ => shouldUpdate
-      },
-    false,
-    slots,
-  );
+/*
+ * Not implemented yet. Not sure how to type map, 
+ * and if it even makes sense.
+let flushPendingStateUpdates = hooks =>
+  switch (hooks) {
+  | Some(hooks) =>
+    HeterogenousList.map(
+      (opaqueValue, shouldUpdate) =>
+        switch (opaqueValue) {
+        | HeterogenousList.Any(State.State(state)) =>
+          State.flush(state) || shouldUpdate
+        | HeterogenousList.Any(Reducer.Reducer(state)) =>
+          Reducer.flush(state) || shouldUpdate
+        | _ => shouldUpdate
+        },
+      false,
+      hooks,
+    )
+  | None => false
+  };
+*/
