@@ -101,14 +101,14 @@ module State = {
 module Reducer = {
   type t('a) = {
     currentValue: 'a,
-    mutable updates: list('a => 'a),
+    updates: ref(list('a => 'a)),
   };
 
   type hook('a) +=
     | Reducer(t('a)): hook(t('a));
 
   let make: 'a => t('a) =
-    initialValue => {currentValue: initialValue, updates: []};
+    initialValue => {currentValue: initialValue, updates: ref([])};
 
   let flush: t('a) => option(t('a)) =
     reducerState => {
@@ -116,21 +116,21 @@ module Reducer = {
       let nextValue =
         List.fold_right(
           (update, latestValue) => update(latestValue),
-          updates,
+          updates^,
           currentValue,
         );
+      updates := [];
       if (currentValue === nextValue) {
-        reducerState.updates = [];
         None;
       } else {
-        Some({currentValue: nextValue, updates: []});
+        Some({currentValue: nextValue, updates});
       };
     };
 
   let wrapAsHook = s => Reducer(s);
 
-  let enqueueUpdate = (nextUpdate, {updates} as stateContainer) => {
-    stateContainer.updates = [nextUpdate, ...updates];
+  let enqueueUpdate = (nextUpdate, {updates}) => {
+    updates := [nextUpdate, ...updates^];
   };
 
   let hook = (~initialState, reducer, hooks) => {

@@ -607,8 +607,9 @@ module Make = (OutputTree: OutputTree) => {
           Element(nextComponent) as nextElement,
         )
         : opaqueInstanceUpdate => {
-      let nextState = updateContext.shouldExecutePendingUpdates ?
-        Hooks.flushPendingStateUpdates(instance.slots) : instance.slots;
+      let nextState =
+        updateContext.shouldExecutePendingUpdates
+          ? Hooks.flushPendingStateUpdates(instance.slots) : instance.slots;
       let stateChanged = nextState !== instance.slots;
 
       let bailOut = !stateChanged && instance.element === nextElement;
