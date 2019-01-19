@@ -1,4 +1,6 @@
-module type Witness = {type t('a);};
+module type Witness = {
+  type t('a);
+};
 
 module type S = {
   type witness('a);
@@ -24,6 +26,10 @@ module type S = {
   let iter: (opaqueValue => unit, t('a, 'b)) => unit;
 
   let fold: (('acc, opaqueValue) => 'acc, 'acc, t('a, 'b)) => 'acc;
+
+  type mapper = {f: 'a. witness('a) => option('a)};
+
+  let map: (mapper, t('a, 'b)) => t('a, 'b);
 };
 
 module Make = (Witness: Witness) => {
@@ -71,15 +77,24 @@ module Make = (Witness: Witness) => {
       | [{value, toWitness}, ...t] =>
         fold(f, f(acc, Any(toWitness(value))), t)
       };
+  type mapper = {f: 'a. witness('a) => option('a)};
 
-  /*
-  let rec map: type a b. (opaqueValue => unit, t(a, b)) => t(a, b) =
-    (f, l) =>
+  let rec map: type a b. (mapper, t(a, b)) => t(a, b) =
+    (mapper, l) =>
       switch (l) {
       | [] => l
       | [{value, toWitness}, ...t] =>
-        f(Any(toWitness(value)));
-        [f(Any(toWitness(value))), ...map(f, t)];
+        let mapped = mapper.f(toWitness(value));
+        [
+          {
+            value:
+              switch (mapped) {
+              | Some(x) => x
+              | None => value
+              },
+            toWitness,
+          },
+          ...map(mapper, t),
+        ];
       };
-  */
 };

@@ -78,6 +78,13 @@ module State = {
     stateContainer.nextValue = nextValue;
   };
 
+  let flush = ({currentValue, nextValue}) =>
+    if (currentValue === nextValue) {
+      None;
+    } else {
+      Some({currentValue, nextValue: currentValue});
+    };
+
   let hook = (initialState, hooks) => {
     let (stateContainer, nextHooks) =
       processNext(~default=make(initialState), ~toWitness=wrapAsHook, hooks);
@@ -103,22 +110,22 @@ module Reducer = {
   let make: 'a => t('a) =
     initialValue => {currentValue: initialValue, updates: []};
 
-  /*
-   let flush: t('a) => bool =
-     reducerState => {
-       let {currentValue, updates} = reducerState;
-       let nextValue =
-         List.fold_right(
-           (update, latestValue) => update(latestValue),
-           updates,
-           currentValue,
-         );
-
-       reducerState.currentValue = nextValue;
-       reducerState.updates = [];
-       currentValue !== nextValue;
-     };
-   */
+  let flush: t('a) => option(t('a)) =
+    reducerState => {
+      let {currentValue, updates} = reducerState;
+      let nextValue =
+        List.fold_right(
+          (update, latestValue) => update(latestValue),
+          updates,
+          currentValue,
+        );
+      if (currentValue === nextValue) {
+        reducerState.updates = [];
+        None;
+      } else {
+        Some({currentValue: nextValue, updates: []});
+      };
+    };
 
   let wrapAsHook = s => Reducer(s);
 
@@ -280,23 +287,25 @@ let pendingEffects = (~lifecycle, {slots}) =>
      );
 
 /*
- * Not implemented yet. Not sure how to type map, 
- * and if it even makes sense.
+  * Not implemented yet. Not sure how to type map,
+  * and if it even makes sense.
+ */
 let flushPendingStateUpdates = hooks =>
   switch (hooks) {
   | Some(hooks) =>
-    HeterogenousList.map(
-      (opaqueValue, shouldUpdate) =>
-        switch (opaqueValue) {
-        | HeterogenousList.Any(State.State(state)) =>
-          State.flush(state) || shouldUpdate
-        | HeterogenousList.Any(Reducer.Reducer(state)) =>
-          Reducer.flush(state) || shouldUpdate
-        | _ => shouldUpdate
+    let x =
+      HeterogenousList.map(
+        {
+          f: (type a, hook: hook(a)) => {
+            switch (hook) {
+            | Reducer.Reducer(s) => (Reducer.flush(s): option(a))
+            | State.State(s) => (State.flush(s): option(a))
+            | _ => None
+            };
+          },
         },
-      false,
-      hooks,
-    )
+        hooks,
+      );
+    x === hooks;
   | None => false
   };
-*/

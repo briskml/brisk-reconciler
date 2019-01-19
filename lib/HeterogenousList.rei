@@ -24,6 +24,10 @@ module type S = {
   let iter: (opaqueValue => unit, t('a, 'b)) => unit;
 
   let fold: (('acc, opaqueValue) => 'acc, 'acc, t('a, 'b)) => 'acc;
+
+  type mapper = {f: 'a. witness('a) => option('a)};
+
+  let map: (mapper, t('a, 'b)) => t('a, 'b);
 };
 
 module Make: (Witness: Witness) => S with type witness('a) = Witness.t('a);
