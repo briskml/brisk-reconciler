@@ -632,10 +632,7 @@ module Make = (OutputTree: OutputTree) => {
         };
       } else {
         let {component} = instance;
-        /*
-        component.handedOffInstance := Some({...instance, slots: nextState});
-        */
-        switch (nextComponent.eq(instance, component.id, nextComponent.id)) {
+        switch (nextComponent.eq({...instance, slots: nextState}, component.id, nextComponent.id)) {
         /*
          * Case A: The next element *is* of the same component class.
          */
