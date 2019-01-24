@@ -146,6 +146,15 @@ module Make = (OutputTree: OutputTree) => {
            [],
          )
       |> List.rev;
+
+    let pendingEffects = (~lifecycle, acc, instanceForest) => {
+      fold(
+        (acc, Instance({slots})) =>
+          [Hooks.pendingEffects(~lifecycle, slots), ...acc],
+        acc,
+        instanceForest,
+      );
+    };
   };
 
   module SyntheticElement = {
@@ -480,6 +489,15 @@ module Make = (OutputTree: OutputTree) => {
     and ofList =
         (syntheticElement): (instanceForest, list(list(unit => unit))) =>
       SyntheticElement.map(ofElement, syntheticElement);
+
+    let pendingEffects =
+        (~lifecycle, ~nextEffects, ~instance as {instanceSubForest, slots}) => {
+      InstanceForest.pendingEffects(
+        ~lifecycle,
+        [Hooks.pendingEffects(~lifecycle, slots), ...nextEffects],
+        instanceSubForest,
+      );
+    };
   };
 
   module Render = {
@@ -646,20 +664,10 @@ module Make = (OutputTree: OutputTree) => {
           let (opaqueInstance, mountEffects) =
             Instance.ofElement(nextElement);
           let enqueuedEffects =
-            InstanceForest.fold(
-              (acc, Instance({slots})) =>
-                [
-                  Hooks.pendingEffects(~lifecycle=Hooks.Effect.Unmount, slots),
-                  ...acc,
-                ],
-              [
-                Hooks.pendingEffects(
-                  ~lifecycle=Hooks.Effect.Unmount,
-                  instance.slots,
-                ),
-                ...mountEffects,
-              ],
-              instance.instanceSubForest,
+            Instance.pendingEffects(
+              ~lifecycle=Hooks.Effect.Unmount,
+              ~nextEffects=mountEffects,
+              ~instance,
             );
           {
             nearestHostOutputNode:
@@ -991,19 +999,10 @@ module Make = (OutputTree: OutputTree) => {
               ~nearestHostOutputNode=updateContext.nearestHostOutputNode,
             );
           let enqueuedEffects =
-            InstanceForest.fold(
-              (acc, Instance({slots})) =>
-                [
-                  Hooks.pendingEffects(~lifecycle=Hooks.Effect.Unmount, slots),
-                  ...acc,
-                ],
-              [
-                Hooks.pendingEffects(
-                  ~lifecycle=Hooks.Effect.Unmount,
-                  oldInstance.slots,
-                )
-              , ...mountEffects],
-              oldInstance.instanceSubForest,
+            Instance.pendingEffects(
+              ~lifecycle=Unmount,
+              ~nextEffects=mountEffects,
+              ~instance=oldInstance,
             );
           let newInstanceForest = IFlat(newOpaqueInstance);
           {
@@ -1059,12 +1058,8 @@ module Make = (OutputTree: OutputTree) => {
             nextReactElement,
           );
         let enqueuedEffects =
-          InstanceForest.fold(
-            (acc, Instance({slots})) =>
-              [
-                Hooks.pendingEffects(~lifecycle=Hooks.Effect.Unmount, slots),
-                ...acc,
-              ],
+          InstanceForest.pendingEffects(
+            ~lifecycle=Hooks.Effect.Unmount,
             mountEffects,
             oldInstanceForest,
           );
