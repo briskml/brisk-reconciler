@@ -162,19 +162,22 @@ module Effect = {
     fun
     | Some(f) => {
         f();
-        true;
       }
-    | None => false;
+    | None => ();
 
-  let executeIfNeeded:
-    type conditionValue. (~lifecycle: lifecycle, t(conditionValue)) => bool =
+  let get:
+    type conditionValue.
+      (~lifecycle: lifecycle, t(conditionValue)) => option(unit => unit) =
     (~lifecycle, state) => {
       let {condition, previousCondition, handler, cleanupHandler} = state;
       switch (previousCondition) {
       | Always =>
-        ignore(executeOptionalHandler(cleanupHandler));
-        state.cleanupHandler = handler();
-        true;
+        Some(
+          () => {
+            ignore(executeOptionalHandler(cleanupHandler));
+            state.cleanupHandler = handler();
+          },
+        )
       | If(comparator, previousConditionValue) =>
         switch (lifecycle) {
         | Mount
@@ -190,23 +193,24 @@ module Effect = {
             | OnMount => previousConditionValue
             };
           if (comparator(previousConditionValue, currentConditionValue)) {
-            ignore(executeOptionalHandler(cleanupHandler));
             state.previousCondition = condition;
-            state.cleanupHandler = handler();
-            true;
+            Some(
+              () => {
+                ignore(executeOptionalHandler(cleanupHandler));
+                state.cleanupHandler = handler();
+              },
+            );
           } else {
             state.previousCondition = condition;
-            false;
+            None;
           };
-        | Unmount => executeOptionalHandler(cleanupHandler)
+        | Unmount => cleanupHandler
         }
       | OnMount =>
         switch (lifecycle) {
-        | Mount =>
-          state.cleanupHandler = handler();
-          true;
-        | Unmount => executeOptionalHandler(cleanupHandler)
-        | _ => false
+        | Mount => Some(() => state.cleanupHandler = handler())
+        | Unmount => cleanupHandler
+        | _ => None
         }
       };
     };
@@ -237,17 +241,27 @@ let reducer = Reducer.hook;
 let ref = Ref.hook;
 let effect = Effect.hook;
 
-let executeEffects = (~lifecycle, {slots}) =>
+let pendingEffects = (~lifecycle, {slots}) =>
   Slots.fold(
-    (opaqueValue, shouldUpdate) =>
+    (opaqueValue, acc) =>
       switch (opaqueValue) {
-      | Slots.Any(Effect.Effect(state)) =>
-        Effect.executeIfNeeded(~lifecycle, state) || shouldUpdate
-      | _ => shouldUpdate
+      | Slots.Any(Effect.Effect(state)) => [
+          Effect.get(~lifecycle, state),
+          ...acc,
+        ]
+      | _ => acc
       },
-    false,
+    [],
     slots,
-  );
+  )
+  |> List.fold_left(
+       (acc, effect) =>
+         switch (effect) {
+         | Some(e) => [e, ...acc]
+         | None => acc
+         },
+       [],
+     );
 
 let flushPendingStateUpdates = ({slots}) =>
   Slots.fold(

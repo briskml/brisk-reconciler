@@ -73,5 +73,6 @@ let effect:
   ) =>
   t('slots, 'nextSlots);
 
-let executeEffects: (~lifecycle: Effect.lifecycle, t('a, 'b)) => bool;
+let pendingEffects:
+  (~lifecycle: Effect.lifecycle, t('a, 'b)) => list(unit => unit);
 let flushPendingStateUpdates: t('a, 'b) => bool;
