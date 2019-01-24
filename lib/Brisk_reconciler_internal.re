@@ -15,11 +15,9 @@ module Make = (OutputTree: OutputTree) => {
   module GlobalState = {
     let debug = ref(true);
     let componentKeyCounter = ref(0);
-    let instanceIdCounter = ref(0);
     let reset = () => {
       debug := true;
       componentKeyCounter := 0;
-      instanceIdCounter := 0;
     };
 
     /**
