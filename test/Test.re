@@ -851,21 +851,32 @@ let core = [
       let onEffectDispose = () =>
         effectDisposeCallCount := effectDisposeCallCount^ + 1;
 
-      render(
+      let testState = render(
         Components.(
           <Div>
             <EmptyComponentWithOnMountEffect onEffect onEffectDispose />
           </Div>
         ),
       )
-      |> executeSideEffects
-      |> ignore;
+      |> executeSideEffects;
 
       expectInt(~label="The effect should've been run", 1, effectCallCount^);
 
       expectInt(
         ~label="The dispose should not have been run yet",
         0,
+        effectDisposeCallCount^,
+      );
+
+      testState
+      |> update(Components.(<Div />))
+      |> executeSideEffects
+      |> ignore;
+
+      expectInt(
+        ~label=
+          "The effect dispose callback should have been called since the component was un-mounted.",
+        1,
         effectDisposeCallCount^,
       );
     },

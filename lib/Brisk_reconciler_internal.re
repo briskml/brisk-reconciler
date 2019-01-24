@@ -97,13 +97,13 @@ module Make = (OutputTree: OutputTree) => {
   type renderedElement = {
     nearestHostOutputNode: outputNodeContainer,
     instanceForest,
-    enqueuedEffects: list(unit => unit),
+    enqueuedEffects: list(list(unit => unit)),
   };
 
   type opaqueInstanceUpdate = {
     nearestHostOutputNode: outputNodeContainer,
     opaqueInstance,
-    enqueuedEffects: list(unit => unit),
+    enqueuedEffects: list(list(unit => unit)),
   };
 
   module InstanceForest = {
@@ -116,59 +116,18 @@ module Make = (OutputTree: OutputTree) => {
         | Host => 1
         };
 
-    let rec fold =
-            (f, renderedElement, nearestHostOutputNode: outputNodeContainer) =>
-      switch (renderedElement) {
-      | IFlat(e) =>
-        let {nearestHostOutputNode, opaqueInstance, enqueuedEffects} =
-          f(e, nearestHostOutputNode);
-        let unchanged = e === opaqueInstance;
-
-        {
-          nearestHostOutputNode,
-          instanceForest: unchanged ? renderedElement : IFlat(opaqueInstance),
-          enqueuedEffects,
-        };
+    let rec fold = (f, acc, instanceForest) => {
+      switch (instanceForest) {
+      | IFlat(opaqueInstance) => f(acc, opaqueInstance)
       | INested(l, _) =>
-        let (nextL, nearestHostOutputNode, effects) =
-          List.fold_left(
-            (
-              (acc, nearestHostOutputNode: outputNodeContainer, effectsAcc),
-              renderedElement,
-            ) => {
-              let {
-                nearestHostOutputNode,
-                instanceForest: next,
-                enqueuedEffects,
-              } =
-                fold(f, renderedElement, nearestHostOutputNode);
-              (
-                [next, ...acc],
-                nearestHostOutputNode,
-                List.append(effectsAcc, enqueuedEffects),
-              );
-            },
-            ([], nearestHostOutputNode, []),
-            List.rev(l): list(instanceForest),
-          );
-        let unchanged = List.for_all2((===), l, nextL);
-
-        {
-          nearestHostOutputNode,
-          instanceForest:
-            unchanged
-              ? renderedElement
-              : INested(
-                  nextL,
-                  List.fold_left(
-                    (acc, elem) => getSubtreeSize(elem) + acc,
-                    0,
-                    nextL,
-                  ),
-                ),
-          enqueuedEffects: effects,
-        };
+        List.fold_left(
+          (acc, instanceForest) => fold(f, acc, instanceForest),
+          acc,
+          l,
+        )
       };
+    };
+
     let rec flatten =
       fun
       | IFlat(l) => [l]
@@ -187,6 +146,15 @@ module Make = (OutputTree: OutputTree) => {
            [],
          )
       |> List.rev;
+
+    let pendingEffects = (~lifecycle, acc, instanceForest) => {
+      fold(
+        (acc, Instance({slots})) =>
+          [Hooks.pendingEffects(~lifecycle, slots), ...acc],
+        acc,
+        instanceForest,
+      );
+    };
   };
 
   module SyntheticElement = {
@@ -491,7 +459,7 @@ module Make = (OutputTree: OutputTree) => {
   module Instance = {
     let rec ofElement =
             (Element(component) as element)
-            : (opaqueInstance, list(unit => unit)) => {
+            : (opaqueInstance, list(list(unit => unit))) => {
       let slots = Hooks.create(~onSlotsDidChange=OutputTree.markAsStale);
       let subElements = component.render(slots);
       let (instanceSubForest, mountEffects) =
@@ -513,16 +481,23 @@ module Make = (OutputTree: OutputTree) => {
             Node.make(component.elementType, subElements, instanceSubForest),
         }),
         [
-          () =>
-            ignore(
-              Hooks.executeEffects(~lifecycle=Hooks.Effect.Mount, slots),
-            ),
+          Hooks.pendingEffects(~lifecycle=Hooks.Effect.Mount, slots),
           ...mountEffects,
         ],
       );
     }
-    and ofList = (syntheticElement): (instanceForest, list(unit => unit)) =>
+    and ofList =
+        (syntheticElement): (instanceForest, list(list(unit => unit))) =>
       SyntheticElement.map(ofElement, syntheticElement);
+
+    let pendingEffects =
+        (~lifecycle, ~nextEffects, ~instance as {instanceSubForest, slots}) => {
+      InstanceForest.pendingEffects(
+        ~lifecycle,
+        [Hooks.pendingEffects(~lifecycle, slots), ...nextEffects],
+        instanceSubForest,
+      );
+    };
   };
 
   module Render = {
@@ -686,40 +661,14 @@ module Make = (OutputTree: OutputTree) => {
           /**
            * ** Switching component type **
            */
-          let {enqueuedEffects: unmountEffects}: renderedElement =
-            InstanceForest.fold(
-              (Instance({slots}) as opaqueInstance, nearestHostOutputNode) =>
-                {
-                  nearestHostOutputNode,
-                  opaqueInstance,
-                  enqueuedEffects: [
-                    () =>
-                      ignore(
-                        Hooks.executeEffects(
-                          ~lifecycle=Hooks.Effect.Unmount,
-                          slots,
-                        ),
-                      ),
-                  ],
-                },
-              instance.instanceSubForest,
-              updateContext.nearestHostOutputNode,
-            );
-          let unmountEffects = [
-            (
-              () => {
-                ignore(
-                  Hooks.executeEffects(
-                    ~lifecycle=Hooks.Effect.Unmount,
-                    instance.slots,
-                  ),
-                );
-              }
-            ),
-            ...unmountEffects,
-          ];
           let (opaqueInstance, mountEffects) =
             Instance.ofElement(nextElement);
+          let enqueuedEffects =
+            Instance.pendingEffects(
+              ~lifecycle=Hooks.Effect.Unmount,
+              ~nextEffects=mountEffects,
+              ~instance,
+            );
           {
             nearestHostOutputNode:
               SubtreeChange.replaceSubtree(
@@ -732,7 +681,7 @@ module Make = (OutputTree: OutputTree) => {
                   InstanceForest.outputTreeNodes(IFlat(opaqueInstance)),
               ),
             opaqueInstance,
-            enqueuedEffects: List.append(unmountEffects, mountEffects),
+            enqueuedEffects,
           };
         };
       };
@@ -882,13 +831,10 @@ module Make = (OutputTree: OutputTree) => {
             nearestHostOutputNode,
             opaqueInstance: Instance(updatedInstanceWithNewSubtree),
             enqueuedEffects: [
-              () =>
-                ignore(
-                  Hooks.executeEffects(
-                    ~lifecycle=Hooks.Effect.Update,
-                    updatedInstanceWithNewSubtree.slots,
-                  ),
-                ),
+              Hooks.pendingEffects(
+                ~lifecycle=Hooks.Effect.Update,
+                updatedInstanceWithNewSubtree.slots,
+              ),
               ...enqueuedEffects,
             ],
           };
@@ -1037,7 +983,7 @@ module Make = (OutputTree: OutputTree) => {
        * Note: components are matched for key across the entire syntheticElement structure.
        */
       | (
-          IFlat(oldOpaqueInstance),
+          IFlat(Instance(oldInstance) as oldOpaqueInstance),
           Flat(Element({key: oldKey})),
           Flat(Element({key: nextKey}) as nextReactElement),
         ) =>
@@ -1046,11 +992,17 @@ module Make = (OutputTree: OutputTree) => {
           let {
             nearestHostOutputNode,
             opaqueInstance: newOpaqueInstance,
-            enqueuedEffects,
+            enqueuedEffects: mountEffects,
           } =
             renderElement(
               nextReactElement,
               ~nearestHostOutputNode=updateContext.nearestHostOutputNode,
+            );
+          let enqueuedEffects =
+            Instance.pendingEffects(
+              ~lifecycle=Unmount,
+              ~nextEffects=mountEffects,
+              ~instance=oldInstance,
             );
           let newInstanceForest = IFlat(newOpaqueInstance);
           {
@@ -1084,7 +1036,7 @@ module Make = (OutputTree: OutputTree) => {
             enqueuedEffects,
           };
         }
-      | (_, _, _) =>
+      | (oldInstanceForest, _, _) =>
         /* Notice that all elements which are queried successfully
          *  from the hash table must have been here in the previous render
          * No, it's not true. What if the key is the same but element type changes
@@ -1098,12 +1050,18 @@ module Make = (OutputTree: OutputTree) => {
         let {
           nearestHostOutputNode,
           instanceForest: newInstanceForest,
-          enqueuedEffects,
+          enqueuedEffects: mountEffects,
         } =
           renderReactElement(
             ~useKeyTable=keyTable,
             updateContext.nearestHostOutputNode,
             nextReactElement,
+          );
+        let enqueuedEffects =
+          InstanceForest.pendingEffects(
+            ~lifecycle=Hooks.Effect.Unmount,
+            mountEffects,
+            oldInstanceForest,
           );
         {
           nearestHostOutputNode:
@@ -1377,6 +1335,60 @@ module Make = (OutputTree: OutputTree) => {
         (),
       );
 
+    let rec map =
+            (f, renderedElement, nearestHostOutputNode: outputNodeContainer) =>
+      switch (renderedElement) {
+      | IFlat(e) =>
+        let {nearestHostOutputNode, opaqueInstance, enqueuedEffects} =
+          f(e, nearestHostOutputNode);
+        let unchanged = e === opaqueInstance;
+
+        {
+          nearestHostOutputNode,
+          instanceForest: unchanged ? renderedElement : IFlat(opaqueInstance),
+          enqueuedEffects,
+        };
+      | INested(l, _) =>
+        let (nextL, nearestHostOutputNode, effects) =
+          List.fold_left(
+            (
+              (acc, nearestHostOutputNode: outputNodeContainer, effectsAcc),
+              renderedElement,
+            ) => {
+              let {
+                nearestHostOutputNode,
+                instanceForest: next,
+                enqueuedEffects,
+              } =
+                map(f, renderedElement, nearestHostOutputNode);
+              (
+                [next, ...acc],
+                nearestHostOutputNode,
+                List.append(effectsAcc, enqueuedEffects),
+              );
+            },
+            ([], nearestHostOutputNode, []),
+            List.rev(l): list(instanceForest),
+          );
+        let unchanged = List.for_all2((===), l, nextL);
+
+        {
+          nearestHostOutputNode,
+          instanceForest:
+            unchanged
+              ? renderedElement
+              : INested(
+                  nextL,
+                  List.fold_left(
+                    (acc, elem) => InstanceForest.getSubtreeSize(elem) + acc,
+                    0,
+                    nextL,
+                  ),
+                ),
+          enqueuedEffects: effects,
+        };
+      };
+
     /**
      * Flush the pending updates in an instance tree.
      */
@@ -1387,7 +1399,7 @@ module Make = (OutputTree: OutputTree) => {
         instanceForest: newInstanceForest,
         enqueuedEffects: nextEnqueuedEffects,
       } =
-        InstanceForest.fold(
+        map(
           Render.flushPendingUpdates,
           instanceForest,
           nearestHostOutputNode,
@@ -1408,7 +1420,7 @@ module Make = (OutputTree: OutputTree) => {
     };
 
     let executePendingEffects = ({enqueuedEffects} as renderedElement: t) => {
-      List.iter(f => f(), enqueuedEffects);
+      List.iter(List.iter(f => f()), enqueuedEffects);
       {...renderedElement, enqueuedEffects: []};
     };
   };
