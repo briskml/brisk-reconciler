@@ -1037,7 +1037,7 @@ module Make = (OutputTree: OutputTree) => {
        * Note: components are matched for key across the entire syntheticElement structure.
        */
       | (
-          IFlat(oldOpaqueInstance),
+          IFlat(Instance(oldInstance) as oldOpaqueInstance),
           Flat(Element({key: oldKey})),
           Flat(Element({key: nextKey}) as nextReactElement),
         ) =>
@@ -1052,6 +1052,38 @@ module Make = (OutputTree: OutputTree) => {
               nextReactElement,
               ~nearestHostOutputNode=updateContext.nearestHostOutputNode,
             );
+          let {enqueuedEffects: unmountEffects}: renderedElement =
+            InstanceForest.fold(
+              (Instance({slots}) as opaqueInstance, nearestHostOutputNode) =>
+                {
+                  nearestHostOutputNode,
+                  opaqueInstance,
+                  enqueuedEffects: [
+                    () =>
+                      ignore(
+                        Hooks.executeEffects(
+                          ~lifecycle=Hooks.Effect.Unmount,
+                          slots,
+                        ),
+                      ),
+                  ],
+                },
+              oldInstance.instanceSubForest,
+              updateContext.nearestHostOutputNode,
+            );
+          let unmountEffects = [
+            (
+              () => {
+                ignore(
+                  Hooks.executeEffects(
+                    ~lifecycle=Hooks.Effect.Unmount,
+                    oldInstance.slots,
+                  ),
+                );
+              }
+            ),
+            ...unmountEffects,
+          ];
           let newInstanceForest = IFlat(newOpaqueInstance);
           {
             nearestHostOutputNode:
@@ -1063,7 +1095,7 @@ module Make = (OutputTree: OutputTree) => {
                   InstanceForest.outputTreeNodes(newInstanceForest),
               ),
             instanceForest: newInstanceForest,
-            enqueuedEffects,
+            enqueuedEffects: List.append(unmountEffects, enqueuedEffects),
           };
         } else {
           let {
@@ -1084,7 +1116,7 @@ module Make = (OutputTree: OutputTree) => {
             enqueuedEffects,
           };
         }
-      | (_, _, _) =>
+      | (oldInstanceForest, _, _) =>
         /* Notice that all elements which are queried successfully
          *  from the hash table must have been here in the previous render
          * No, it's not true. What if the key is the same but element type changes
@@ -1105,6 +1137,25 @@ module Make = (OutputTree: OutputTree) => {
             updateContext.nearestHostOutputNode,
             nextReactElement,
           );
+          let {enqueuedEffects: unmountEffects}: renderedElement =
+            InstanceForest.fold(
+              (Instance({slots}) as opaqueInstance, nearestHostOutputNode) =>
+                {
+                  nearestHostOutputNode,
+                  opaqueInstance,
+                  enqueuedEffects: [
+                    () =>
+                      ignore(
+                        Hooks.executeEffects(
+                          ~lifecycle=Hooks.Effect.Unmount,
+                          slots,
+                        ),
+                      ),
+                  ],
+                },
+              oldInstanceForest,
+              updateContext.nearestHostOutputNode,
+            );
         {
           nearestHostOutputNode:
             SubtreeChange.replaceSubtree(
@@ -1113,7 +1164,7 @@ module Make = (OutputTree: OutputTree) => {
               ~nextChildren=InstanceForest.outputTreeNodes(newInstanceForest),
             ),
           instanceForest: newInstanceForest,
-          enqueuedEffects,
+          enqueuedEffects: List.append(unmountEffects, enqueuedEffects),
         };
       }
     and updateChildRenderedElement =
