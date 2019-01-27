@@ -195,26 +195,31 @@ module CounterButtons = {
     Custom clock component to show the time. Demonstrates
     use of `useEffect` and `setState` together.
  */
-/* module Clock = (
-     val createComponent((render, ~children, ()) =>
-           render(
-             () =>
-               useStateExperimental(0., ((time, setTime)) =>
-                 useEffectExperimental(
-                   () => {
-                     let evt =
-                       Lwt_engine.on_timer(1.0, true, _ => setTime(Unix.time()));
+module Clock = {
+  let component = LambdaReact.component("Clock");
 
-                     () => Lwt_engine.stop_event(evt);
-                   },
-                   () => <label text={"Time: " ++ string_of_float(time)} />,
-                 )
-               ),
-             ~children,
-           )
-         )
-   ); */
+  let make = () =>
+    component(slots => {
+      let (time, setTime, slots: LambdaReact.Hooks.empty) =
+        LambdaReact.Hooks.state(0., slots);
+      let _slots =
+        LambdaReact.Hooks.effect(
+          LambdaReact.Hooks.Effect.Always,
+          () => {
+            let evt =
+              Lwt_engine.on_timer(1.0, true, _ => setTime(Unix.time()));
+            Some(() => Lwt_engine.stop_event(evt));
+          },
+        );
+      <Label text={"Time: " ++ string_of_float(time)} />;
+    });
 
+  let createElement = (~children as _, ()) => LambdaReact.element(make());
+};
+
+/*
+    Step 5: Make the first render
+ */
 let main = () => {
   let (waiter, wakener) = wait();
 
@@ -224,7 +229,7 @@ let main = () => {
   let render = () =>
     <Vbox>
       <Label text="Hello from Reactify!" />
-      /* <Clock /> */
+      <Clock />
       <CounterButtons />
       <Button onClick=quit text="Quit" />
     </Vbox>;
@@ -232,14 +237,8 @@ let main = () => {
   /* Create a container for our UI */
   let body = new vbox;
   let root = Reconciler.Container(body);
-  let rendered =
-    ref(
-      LambdaReact.RenderedElement.render(
-        root,
-        render(),
-      ),
-    );
-  /* First render! */
+  let rendered = ref(LambdaReact.RenderedElement.render(root, render()));
+
   LambdaReact.RenderedElement.executeHostViewUpdates(rendered^) |> ignore;
 
   Lazy.force(LTerm.stdout)
