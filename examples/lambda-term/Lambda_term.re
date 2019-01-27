@@ -115,6 +115,10 @@ module Label = {
           Label(node);
         },
         configureInstance: (~isFirstRender as _, node) => {
+          switch (node) {
+          | Label(n) => n#set_text(text)
+          | _ => () /* Should never happen */
+          };
           node;
         },
         children,
@@ -139,6 +143,12 @@ module Button = {
           Button(button);
         },
         configureInstance: (~isFirstRender as _, node) => {
+          switch (node) {
+          | Button(n) =>
+            n#set_label(text);
+            n#on_click(onClick);
+          | _ => () /* Should never happen */
+          };
           node;
         },
         children,
@@ -239,6 +249,15 @@ let main = () => {
   let root = Reconciler.Container(body);
   let rendered = ref(LambdaReact.RenderedElement.render(root, render()));
 
+  EventLambda.subscribe(
+    Reconciler.onStale,
+    () => {
+      let nextElement =
+        LambdaReact.RenderedElement.flushPendingUpdates(rendered^);
+      LambdaReact.RenderedElement.executeHostViewUpdates(rendered^) |> ignore;
+      rendered := nextElement;
+    },
+  );
   LambdaReact.RenderedElement.executeHostViewUpdates(rendered^) |> ignore;
 
   Lazy.force(LTerm.stdout)
