@@ -211,8 +211,19 @@ let render = () =>
     Step 5: Make the first render
  */
 let rendered =
-  JsooReact.RenderedElement.render(
-    Dom_html.getElementById_exn("app"),
-    render(),
+  ref(
+    JsooReact.RenderedElement.render(
+      Dom_html.getElementById_exn("app"),
+      render(),
+    ),
   );
-JsooReact.RenderedElement.executeHostViewUpdates(rendered) |> ignore;
+Event.subscribe(
+  Reconciler.onStale,
+  () => {
+    let nextElement =
+      JsooReact.RenderedElement.flushPendingUpdates(rendered^);
+    JsooReact.RenderedElement.executeHostViewUpdates(rendered^) |> ignore;
+    rendered := nextElement;
+  },
+);
+JsooReact.RenderedElement.executeHostViewUpdates(rendered^) |> ignore;
