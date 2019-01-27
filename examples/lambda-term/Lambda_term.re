@@ -238,7 +238,7 @@ let main = () => {
   /* Let's finally put our UI to use! */
   let render = () =>
     <Vbox>
-      <Label text="Hello from Reactify!" />
+      <Label text="Hello World!" />
       <Clock />
       <CounterButtons />
       <Button onClick=quit text="Quit" />
