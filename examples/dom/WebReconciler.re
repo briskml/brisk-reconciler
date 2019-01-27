@@ -14,6 +14,9 @@ module Dom = Js_of_ocaml.Dom;
 module Dom_html = Js_of_ocaml.Dom_html;
 module Js = Js_of_ocaml.Js;
 
+/*
+   Step 1: Define the reconciler template
+ */
 module Reconciler = {
   type hostElement = Js.t(Dom_html.element);
   type node = Js.t(Dom_html.element);
@@ -40,129 +43,16 @@ module Reconciler = {
   let commitChanges = () => ();
 };
 
-/* module Reconciler = {
-     /*
-        Step 1: Define primitives
-      */
-     type primitives =
-       | View
-       | Text(string)
-       | Image(string) /* img src */
-       | Button(unit => unit, string); /* onPress, title */
-
-     /*
-        Step 2: Define node type
-      */
-     type node =
-       | Div(Js.t(Dom_html.divElement))
-       | Span(Js.t(Dom_html.element))
-       | Image(Js.t(Dom_html.imageElement))
-       | Button(Js.t(Dom_html.buttonElement))
-       | Container(Js.t(Dom_html.element));
-     let document = Dom_html.window##.document;
-
-     /*
-        Step 3: Implement a create function
-      */
-     let createInstance: primitives => node =
-       primitive =>
-         switch (primitive) {
-         | View => Div(Dom_html.createDiv(document))
-         | Text(s) =>
-           let e = Dom_html.createSpan(document);
-           e##.innerHTML := Js.string(s);
-           Span(e);
-         | Image(p) =>
-           let img = Dom_html.createImg(document);
-           img##.src := Js.string(p);
-           Image(img);
-         | Button(onPress, title) =>
-           let button =
-             Dom_html.createButton(~_type=Js.string("button"), document);
-           let t = Js.string(title);
-           button##.title := t;
-           button##.innerHTML := t;
-           button##.onclick :=
-             Dom_html.handler(_e => {
-               onPress();
-               Js.bool(false);
-             });
-           Button(button);
-         };
-
-     /*
-         Step 4: Implement remaining primitives
-      */
-
-     let _getInnerNode = node =>
-       switch (node) {
-       | Div(e) => e |> Dom_html.element
-       | Span(e) => e |> Dom_html.element
-       | Image(e) => e |> Dom_html.element
-       | Button(e) => e |> Dom_html.element
-       | Container(e) => e |> Dom_html.element
-       };
-
-     let updateInstance =
-         (node: node, _oldPrimitive: primitives, newPrimitive: primitives) =>
-       switch (newPrimitive, node) {
-       | (View, Div(_e)) => ()
-       | (Text(s), Span(e)) => e##.innerHTML := Js.string(s)
-       | (Image(src), Image(e)) => e##.src := Js.string(src)
-       | (Button(onPress, title), Button(e)) =>
-         let t = Js.string(title);
-         e##.title := t;
-         e##.innerHTML := t;
-         e##.onclick :=
-           Dom_html.handler(_e => {
-             onPress();
-             Js.bool(false);
-           });
-       | _ => raise(InvalidNodePrimitiveMatchInUpdateInstance)
-       };
-
-     let appendChild = (parentNode: node, childNode: node) => {
-       let innerNode = _getInnerNode(childNode);
-       switch (parentNode) {
-       | Div(e) => Dom.appendChild(e, innerNode)
-       | Span(e) => Dom.appendChild(e, innerNode)
-       | Image(e) => Dom.appendChild(e, innerNode)
-       | Button(e) => Dom.appendChild(e, innerNode)
-       | Container(e) => Dom.appendChild(e, innerNode)
-       };
-     };
-
-     let removeChild = (parentNode: node, childNode: node) => {
-       let innerNode = _getInnerNode(childNode);
-       switch (parentNode) {
-       | Div(e) => Dom.removeChild(e, innerNode)
-       | Span(e) => Dom.removeChild(e, innerNode)
-       | Image(e) => Dom.removeChild(e, innerNode)
-       | Button(e) => Dom.removeChild(e, innerNode)
-       | Container(e) => Dom.removeChild(e, innerNode)
-       };
-     };
-
-     let replaceChild = (parentNode: node, oldChild: node, newChild: node) => {
-       let newInnerNode = _getInnerNode(newChild);
-       let oldInnerNode = _getInnerNode(oldChild);
-       switch (parentNode) {
-       | Div(e) => Dom.replaceChild(e, newInnerNode, oldInnerNode)
-       | Span(e) => Dom.replaceChild(e, newInnerNode, oldInnerNode)
-       | Image(e) => Dom.replaceChild(e, newInnerNode, oldInnerNode)
-       | Button(e) => Dom.replaceChild(e, newInnerNode, oldInnerNode)
-       | Container(e) => Dom.replaceChild(e, newInnerNode, oldInnerNode)
-       };
-     };
-   }; */
-
-/* Step 5: Hook it up! */
+/*
+    Step 2: Create the actual reconciler using Brisk_reconciler.Make
+ */
 module JsooReact = Brisk_reconciler.Make(Reconciler);
-open JsooReact;
 
+/*
+   Step 3: Define some native components (aka primitives)
+ */
 let document = Dom_html.window##.document;
 
-/* Define our primitive components */
 module View = {
   let component = JsooReact.nativeComponent("View");
 
@@ -284,6 +174,9 @@ module Button = {
   };
 };
 
+/*
+    Step 4: Use the reconciler + native elements to create something great!
+ */
 type action =
   | Increment
   | Decrement;
@@ -297,7 +190,7 @@ let reducer = (action, state) =>
 module CounterButtons = {
   let component = JsooReact.component("Calculator");
 
-  let make = children =>
+  let make = () =>
     component(slots => {
       let (count, dispatch, _slots: JsooReact.Hooks.empty) =
         JsooReact.Hooks.reducer(~initialState=0, reducer, slots);
@@ -308,18 +201,18 @@ module CounterButtons = {
       </View>;
     });
 
-  let createElement = (~children, ()) => JsooReact.element(make(children));
+  let createElement = (~children as _, ()) => JsooReact.element(make());
 };
 
-/* Create a container for our UI */
-/* let container =
-  JsooReact.createContainer(
-    Reconciler.Container(Dom_html.getElementById_exn("app")),
-  );
-
-/* Let's finally put our UI to use! */
 let render = () =>
-  <view> <text> "Hello World" </text> <CounterButtons /> </view>;
+  <View> <Text text="Hello World" /> <CounterButtons /> </View>;
 
-/* First render! */
-JsooReact.updateContainer(container, render()); */
+/*
+    Step 5: Make the first render
+ */
+let rendered =
+  JsooReact.RenderedElement.render(
+    Dom_html.getElementById_exn("app"),
+    render(),
+  );
+JsooReact.RenderedElement.executeHostViewUpdates(rendered) |> ignore;
