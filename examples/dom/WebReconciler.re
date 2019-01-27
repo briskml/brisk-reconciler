@@ -21,7 +21,7 @@ module Reconciler = {
   type hostElement = Js.t(Dom_html.element);
   type node = Js.t(Dom_html.element);
 
-  let onStale: Event.t(unit) = Event.create();
+  let onStale: EventDom.t(unit) = EventDom.create();
 
   let insertNode = (~parent: node, ~child: node, ~position as _) => {
     Dom.appendChild(parent, child);
@@ -37,7 +37,7 @@ module Reconciler = {
     parent;
   };
 
-  let markAsStale = () => Event.dispatch(onStale, ());
+  let markAsStale = () => EventDom.dispatch(onStale, ());
 
   let beginChanges = () => ();
   let commitChanges = () => ();
@@ -188,7 +188,7 @@ let reducer = (action, state) =>
   };
 
 module CounterButtons = {
-  let component = JsooReact.component("Calculator");
+  let component = JsooReact.component("CounterButtons");
 
   let make = () =>
     component(slots => {
@@ -217,7 +217,7 @@ let rendered =
       render(),
     ),
   );
-Event.subscribe(
+EventDom.subscribe(
   Reconciler.onStale,
   () => {
     let nextElement =
