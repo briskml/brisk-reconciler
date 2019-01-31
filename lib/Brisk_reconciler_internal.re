@@ -84,6 +84,7 @@ module Make = (OutputTree: OutputTree) => {
     | IFlat(opaqueInstance)
     | INested(list(instanceForest), int /*subtree size*/)
   and component('slots, 'nextSlots, 'elementType, 'outputNode) = {
+    debugName: string,
     key: int,
     elementType: elementType('slots, 'nextSlots, 'elementType, 'outputNode),
     handedOffInstance:
@@ -192,12 +193,12 @@ module Make = (OutputTree: OutputTree) => {
         let (nextL, nearestHostOutputNode, enqueuedEffects) =
           List.fold_left(
             ((acc, nearestHostOutputNode, enqueuedEffects), element) => {
-              let {nearestHostOutputNode, instanceForest} =
+              let {nearestHostOutputNode, instanceForest, enqueuedEffects: nextEffects} =
                 fold(f, element, nearestHostOutputNode);
               (
                 [instanceForest, ...acc],
                 nearestHostOutputNode,
-                enqueuedEffects,
+                List.append(enqueuedEffects, nextEffects),
               );
             },
             ([], nearestHostOutputNode, []),
@@ -1057,6 +1058,8 @@ module Make = (OutputTree: OutputTree) => {
             updateContext.nearestHostOutputNode,
             nextReactElement,
           );
+
+          print_endline("here " ++ (List.length(mountEffects) |> string_of_int));
         let enqueuedEffects =
           InstanceForest.pendingEffects(
             ~lifecycle=Hooks.Effect.Unmount,
@@ -1441,9 +1444,10 @@ module Make = (OutputTree: OutputTree) => {
   let listToElement = l => Nested(l);
 
   /* Temporary mechanism for keeping identity without the first class module */
-  let component = (~useDynamicKey=false, _debugName) => {
+  let component = (~useDynamicKey=false, debugName) => {
     let handedOffInstance = ref(None);
     render => {
+      debugName,
       elementType: React,
       key: useDynamicKey ? Key.dynamicKeyMagicNumber : Key.none,
       handedOffInstance,
@@ -1451,9 +1455,10 @@ module Make = (OutputTree: OutputTree) => {
     };
   };
 
-  let nativeComponent = (~useDynamicKey=false, _debugName) => {
+  let nativeComponent = (~useDynamicKey=false, debugName) => {
     let handedOffInstance = ref(None);
     render => {
+      debugName,
       elementType: Host,
       key: useDynamicKey ? Key.dynamicKeyMagicNumber : Key.none,
       handedOffInstance,
