@@ -193,7 +193,11 @@ module Make = (OutputTree: OutputTree) => {
         let (nextL, nearestHostOutputNode, enqueuedEffects) =
           List.fold_left(
             ((acc, nearestHostOutputNode, enqueuedEffects), element) => {
-              let {nearestHostOutputNode, instanceForest, enqueuedEffects: nextEffects} =
+              let {
+                nearestHostOutputNode,
+                instanceForest,
+                enqueuedEffects: nextEffects,
+              } =
                 fold(f, element, nearestHostOutputNode);
               (
                 [instanceForest, ...acc],
@@ -1059,7 +1063,9 @@ module Make = (OutputTree: OutputTree) => {
             nextReactElement,
           );
 
-          print_endline("here " ++ (List.length(mountEffects) |> string_of_int));
+        print_endline(
+          "here " ++ (List.length(mountEffects) |> string_of_int),
+        );
         let enqueuedEffects =
           InstanceForest.pendingEffects(
             ~lifecycle=Hooks.Effect.Unmount,
@@ -1446,24 +1452,32 @@ module Make = (OutputTree: OutputTree) => {
   /* Temporary mechanism for keeping identity without the first class module */
   let component = (~useDynamicKey=false, debugName) => {
     let handedOffInstance = ref(None);
-    render => {
-      debugName,
-      elementType: React,
-      key: useDynamicKey ? Key.dynamicKeyMagicNumber : Key.none,
-      handedOffInstance,
-      render,
-    };
+    (~key=?, render) =>
+      element(
+        ~key?,
+        {
+          debugName,
+          elementType: React,
+          key: useDynamicKey ? Key.dynamicKeyMagicNumber : Key.none,
+          handedOffInstance,
+          render,
+        },
+      );
   };
 
   let nativeComponent = (~useDynamicKey=false, debugName) => {
     let handedOffInstance = ref(None);
-    render => {
-      debugName,
-      elementType: Host,
-      key: useDynamicKey ? Key.dynamicKeyMagicNumber : Key.none,
-      handedOffInstance,
-      render,
-    };
+    (~key=?, render) =>
+      element(
+        ~key?,
+        {
+          debugName,
+          elementType: Host,
+          key: useDynamicKey ? Key.dynamicKeyMagicNumber : Key.none,
+          handedOffInstance,
+          render,
+        },
+      );
   };
 
   module Slots = Slots;

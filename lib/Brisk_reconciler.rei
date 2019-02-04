@@ -85,22 +85,19 @@ module Make:
       (
         ~useDynamicKey: bool=?,
         string,
+        ~key: Key.t=?,
         Hooks.t('slots, 'nextSlots) => syntheticElement
       ) =>
-      component('slots, 'nextSlots, syntheticElement, outputNodeGroup);
+      syntheticElement;
 
     let nativeComponent:
       (
         ~useDynamicKey: bool=?,
         string,
+        ~key: Key.t=?,
         Hooks.t('slots, 'nextSlots) => outputTreeElement('slots, 'nextSlots)
       ) =>
-      component(
-        'slots,
-        'nextSlots,
-        outputTreeElement('slots, 'nextSlots),
-        outputNodeContainer,
-      );
+      syntheticElement;
 
     module Slots = Slots;
     module Hooks = Hooks;
