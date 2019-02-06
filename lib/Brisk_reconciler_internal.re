@@ -1063,9 +1063,6 @@ module Make = (OutputTree: OutputTree) => {
             nextReactElement,
           );
 
-        print_endline(
-          "here " ++ (List.length(mountEffects) |> string_of_int),
-        );
         let enqueuedEffects =
           InstanceForest.pendingEffects(
             ~lifecycle=Hooks.Effect.Unmount,
