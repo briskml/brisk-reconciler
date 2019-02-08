@@ -97,7 +97,7 @@ module Make = (OutputTree: OutputTree) => {
       option(instance('slots, 'nextSlots, 'elementType, 'outputNode)),
 
     render:
-      (Hooks.t('slots, unit, 'nextSlots, 'nextSlots), unit) =>
+      Hooks.t('slots, unit, 'nextSlots, 'nextSlots) =>
       (Hooks.t(unit, unit, 'slots, unit), 'elementType),
   }
   and opaqueInstance =
@@ -478,7 +478,6 @@ module Make = (OutputTree: OutputTree) => {
       let (slots, subElements) =
         component.render(
           Hooks.ofState(slots, ~onStateDidChange=OutputTree.markAsStale),
-          (),
         );
       let slots = Hooks.toState(slots);
       let (instanceSubForest, mountEffects) =
@@ -630,7 +629,13 @@ module Make = (OutputTree: OutputTree) => {
         };
       } else {
         let {component} = instance;
-        switch (nextComponent.eq({...instance, slots: nextState}, component.id, nextComponent.id)) {
+        switch (
+          nextComponent.eq(
+            {...instance, slots: nextState},
+            component.id,
+            nextComponent.id,
+          )
+        ) {
         /*
          * Case A: The next element *is* of the same component class.
          */
@@ -734,7 +739,6 @@ module Make = (OutputTree: OutputTree) => {
                   updatedInstanceWithNewElement.slots,
                   ~onStateDidChange=OutputTree.markAsStale,
                 ),
-                (),
               );
             (Hooks.toState(nextSlots), nextElement);
           } else {
@@ -1469,71 +1473,102 @@ module Make = (OutputTree: OutputTree) => {
   module Hooks = Hooks;
   module RemoteAction = RemoteAction;
 
-  module type Component = {
-    type slots;
-    type nextSlots;
-    type render;
-    let render: Hooks.t(slots, unit, nextSlots, nextSlots) => render;
-    let createComponent:
+  let component:
+    type a b.
       (
-        (Hooks.t(slots, unit, nextSlots, nextSlots), unit) =>
-        (Hooks.t(unit, unit, slots, unit), syntheticElement)
+        ~useDynamicKey: bool=?,
+        string,
+        ~key: Key.t=?,
+        Hooks.t(a, unit, b, b) =>
+        (Hooks.t(unit, unit, a, unit), syntheticElement)
       ) =>
-      component(slots, nextSlots, syntheticElement, outputNodeGroup);
-  };
+      syntheticElement =
+    (~useDynamicKey=false, debugName) => {
+      module Component = {
+        type id('a) +=
+          | Id: id(instance(a, b, syntheticElement, outputNodeGroup));
 
-  let component =
+        let eq:
+          type c.
+            (
+              c,
+              id(c),
+              id(instance(a, b, syntheticElement, outputNodeGroup))
+            ) =>
+            option(instance(a, b, syntheticElement, outputNodeGroup)) =
+          (instance, id1, id2) => {
+            switch (id1, id2) {
+            | (Id, Id) => Some(instance)
+            | (_, _) => None
+            };
+          };
+      };
+      (~key=?, render) =>
+        element(
+          ~key?,
+          {
+            debugName,
+            elementType: React,
+            key: useDynamicKey ? Key.dynamicKeyMagicNumber : Key.none,
+            id: Component.Id,
+            eq: Component.eq,
+            render,
+          },
+        );
+    };
+
+  let nativeComponent:
+    type a b.
       (
-        type render_,
-        type slots_,
-        type nextSlots_,
-        debugName: string,
-        render: Hooks.t(slots_, unit, nextSlots_, nextSlots_) => render_,
-      )
-      : (module Component with
-           type render = render_ and
-           type slots = slots_ and
-           type nextSlots = nextSlots_) =>
-    (module
-     {
-       type slots = slots_;
-       type nextSlots = nextSlots_;
-       type render = render_;
-       type id('a) +=
-         | Id: id(
-                 instance(
-                   slots,
-                   nextSlots,
-                   syntheticElement,
-                   outputNodeGroup,
-                 ),
-               );
-       let eq:
-         type b.
-           (
-             b,
-             id(b),
-             id(
-               instance(slots, nextSlots, syntheticElement, outputNodeGroup),
-             )
-           ) =>
-           option(
-             instance(slots, nextSlots, syntheticElement, outputNodeGroup),
-           ) =
-         (instance, id1, id2) => {
-           switch (id1, id2) {
-           | (Id, Id) => Some(instance)
-           | (_, _) => None
-           };
-         };
-       let render = render;
-       let createComponent = render => {
-         debugName,
-         key: Key.none,
-         elementType: React,
-         id: Id,
-         render,
-         eq,
-       };
-     });
+        ~useDynamicKey: bool=?,
+        string,
+        ~key: Key.t=?,
+        Hooks.t(a, unit, b, b) =>
+        (Hooks.t(unit, unit, a, unit), outputTreeElement(a, b))
+      ) =>
+      syntheticElement =
+    (~useDynamicKey=false, debugName) => {
+      module Component = {
+        type id('a) +=
+          | Id: id(
+                  instance(
+                    a,
+                    b,
+                    outputTreeElement(a, b),
+                    outputNodeContainer,
+                  ),
+                );
+
+        let eq:
+          type c.
+            (
+              c,
+              id(c),
+              id(
+                instance(a, b, outputTreeElement(a, b), outputNodeContainer),
+              )
+            ) =>
+            option(
+              instance(a, b, outputTreeElement(a, b), outputNodeContainer),
+            ) =
+          (instance, id1, id2) => {
+            switch (id1, id2) {
+            | (Id, Id) => Some(instance)
+            | (_, _) => None
+            };
+          };
+      };
+      (~key=?, render) =>
+        element(
+          ~key?,
+          {
+            debugName,
+            elementType: Host,
+            key: useDynamicKey ? Key.dynamicKeyMagicNumber : Key.none,
+            id: Component.Id,
+            eq: Component.eq,
+            render,
+          },
+        );
+    };
 };
