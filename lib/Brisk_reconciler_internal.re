@@ -46,62 +46,62 @@ module Make = (OutputTree: OutputTree) => {
   type outputNodeContainer = Lazy.t(internalOutputNode);
   type outputNodeGroup = list(outputNodeContainer);
   type id('a) = ..;
-  type instance('a, 'b, 'elementType, 'outputNode) = {
-    slots: Hooks.state('a, unit),
-    component: component('a, 'b, 'elementType, 'outputNode),
+  type instance('hooks, 'initialHooks, 'elementType, 'outputNode) = {
+    hooks: Hooks.state('hooks, unit),
+    component: component('hooks, 'initialHooks, 'elementType, 'outputNode),
     element,
     instanceSubForest: instanceForest,
     subElements: 'elementType,
     hostInstance: 'outputNode,
   }
   and element =
-    | Element(component('slots, 'nextSlots, 'elementType, 'outputNode))
+    | Element(component('hooks, 'initialHooks, 'elementType, 'outputNode))
       : element
   and syntheticElement =
     | Flat(element)
     | Nested(list(syntheticElement))
-  and outputTreeElement('slots, 'nextSlots) = {
+  and outputTreeElement('hooks, 'initialHooks) = {
     make: unit => OutputTree.node,
     configureInstance:
       (~isFirstRender: bool, OutputTree.node) => OutputTree.node,
     children: syntheticElement,
   }
-  and elementType('slots, 'nextSlots, 'elementType, 'outputNode) =
+  and elementType('hooks, 'initialHooks, 'elementType, 'outputNode) =
     | Host: elementType(
-              'slots,
-              'nextSlots,
-              outputTreeElement('slots, 'nextSlots),
+              'hooks,
+              'initialHooks,
+              outputTreeElement('hooks, 'initialHooks),
               outputNodeContainer,
             )
     | React: elementType(
-               'slots,
-               'nextSlots,
+               'hooks,
+               'initialHooks,
                syntheticElement,
                outputNodeGroup,
              )
   and instanceForest =
     | IFlat(opaqueInstance)
     | INested(list(instanceForest), int /*subtree size*/)
-  and component('slots, 'nextSlots, 'elementType, 'outputNode) = {
+  and component('hooks, 'initialHooks, 'elementType, 'outputNode) = {
     debugName: string,
     key: int,
-    elementType: elementType('slots, 'nextSlots, 'elementType, 'outputNode),
-    id: id(instance('slots, 'nextSlots, 'elementType, 'outputNode)),
+    elementType: elementType('hooks, 'initialHooks, 'elementType, 'outputNode),
+    id: id(instance('hooks, 'initialHooks, 'elementType, 'outputNode)),
     eq:
       'a.
       (
         'a,
         id('a),
-        id(instance('slots, 'nextSlots, 'elementType, 'outputNode))
+        id(instance('hooks, 'initialHooks, 'elementType, 'outputNode))
       ) =>
-      option(instance('slots, 'nextSlots, 'elementType, 'outputNode)),
+      option(instance('hooks, 'initialHooks, 'elementType, 'outputNode)),
 
     render:
-      Hooks.t('slots, unit, 'nextSlots, 'nextSlots) =>
-      (Hooks.t(unit, unit, 'slots, unit), 'elementType),
+      Hooks.t('hooks, unit, 'initialHooks, 'initialHooks) =>
+      (Hooks.t(unit, unit, 'hooks, unit), 'elementType),
   }
   and opaqueInstance =
-    | Instance(instance('slots, 'nextSlots, 'elementType, 'outputNode))
+    | Instance(instance('hooks, 'initialHooks, 'elementType, 'outputNode))
       : opaqueInstance;
 
   type renderedElement = {
@@ -159,8 +159,8 @@ module Make = (OutputTree: OutputTree) => {
 
     let pendingEffects = (~lifecycle, acc, instanceForest) => {
       fold(
-        (acc, Instance({slots})) =>
-          [Hooks.pendingEffects(~lifecycle, slots), ...acc],
+        (acc, Instance({hooks})) =>
+          [Hooks.pendingEffects(~lifecycle, hooks), ...acc],
         acc,
         instanceForest,
       );
@@ -232,9 +232,9 @@ module Make = (OutputTree: OutputTree) => {
 
   module Node = {
     let make:
-      type slots nextSlots elementType_ outputNode.
+      type hooks initialHooks elementType_ outputNode.
         (
-          elementType(slots, nextSlots, elementType_, outputNode),
+          elementType(hooks, initialHooks, elementType_, outputNode),
           elementType_,
           instanceForest
         ) =>
@@ -474,12 +474,12 @@ module Make = (OutputTree: OutputTree) => {
     let rec ofElement =
             (Element(component) as element)
             : (opaqueInstance, list(list(unit => unit))) => {
-      let slots = Hooks.createState();
-      let (slots, subElements) =
+      let hooks = Hooks.createState();
+      let (hooks, subElements) =
         component.render(
-          Hooks.ofState(slots, ~onStateDidChange=OutputTree.markAsStale),
+          Hooks.ofState(hooks, ~onStateDidChange=OutputTree.markAsStale),
         );
-      let slots = Hooks.toState(slots);
+      let hooks = Hooks.toState(hooks);
       let (instanceSubForest, mountEffects) =
         (
           switch (component.elementType) {
@@ -490,7 +490,7 @@ module Make = (OutputTree: OutputTree) => {
         |> ofList;
       (
         Instance({
-          slots,
+          hooks,
           element,
           component,
           subElements,
@@ -499,7 +499,7 @@ module Make = (OutputTree: OutputTree) => {
             Node.make(component.elementType, subElements, instanceSubForest),
         }),
         [
-          Hooks.pendingEffects(~lifecycle=Hooks.Effect.Mount, slots),
+          Hooks.pendingEffects(~lifecycle=Hooks.Effect.Mount, hooks),
           ...mountEffects,
         ],
       );
@@ -509,10 +509,10 @@ module Make = (OutputTree: OutputTree) => {
       SyntheticElement.map(ofElement, syntheticElement);
 
     let pendingEffects =
-        (~lifecycle, ~nextEffects, ~instance as {instanceSubForest, slots}) => {
+        (~lifecycle, ~nextEffects, ~instance as {instanceSubForest, hooks}) => {
       InstanceForest.pendingEffects(
         ~lifecycle,
-        [Hooks.pendingEffects(~lifecycle, slots), ...nextEffects],
+        [Hooks.pendingEffects(~lifecycle, hooks), ...nextEffects],
         instanceSubForest,
       );
     };
@@ -616,8 +616,8 @@ module Make = (OutputTree: OutputTree) => {
         : opaqueInstanceUpdate => {
       let nextState =
         updateContext.shouldExecutePendingUpdates
-          ? Hooks.flushPendingStateUpdates(instance.slots) : instance.slots;
-      let stateChanged = nextState !== instance.slots;
+          ? Hooks.flushPendingStateUpdates(instance.hooks) : instance.hooks;
+      let stateChanged = nextState !== instance.hooks;
 
       let bailOut = !stateChanged && instance.element === nextElement;
 
@@ -631,7 +631,7 @@ module Make = (OutputTree: OutputTree) => {
         let {component} = instance;
         switch (
           nextComponent.eq(
-            {...instance, slots: nextState},
+            {...instance, hooks: nextState},
             component.id,
             nextComponent.id,
           )
@@ -700,19 +700,19 @@ module Make = (OutputTree: OutputTree) => {
       };
     }
     and updateInstance:
-      type slots nextSlots elementType outputNodeType.
+      type hooks initialHooks elementType outputNodeType.
         (
           ~originalOpaqueInstance: opaqueInstance,
           ~updateContext: UpdateContext.t,
           ~nextComponent: component(
-                            slots,
-                            nextSlots,
+                            hooks,
+                            initialHooks,
                             elementType,
                             outputNodeType,
                           ),
           ~nextElement: element,
           ~stateChanged: bool,
-          instance(slots, nextSlots, elementType, outputNodeType)
+          instance(hooks, initialHooks, elementType, outputNodeType)
         ) =>
         opaqueInstanceUpdate =
       (
@@ -731,23 +731,23 @@ module Make = (OutputTree: OutputTree) => {
 
         let shouldRerender = stateChanged || nextElement !== instance.element;
 
-        let (nextSlots, nextSubElements) =
+        let (initialHooks, nextSubElements) =
           if (shouldRerender) {
-            let (nextSlots, nextElement) =
+            let (initialHooks, nextElement) =
               nextComponent.render(
                 Hooks.ofState(
-                  updatedInstanceWithNewElement.slots,
+                  updatedInstanceWithNewElement.hooks,
                   ~onStateDidChange=OutputTree.markAsStale,
                 ),
               );
-            (Hooks.toState(nextSlots), nextElement);
+            (Hooks.toState(initialHooks), nextElement);
           } else {
-            (instance.slots, instance.subElements);
+            (instance.hooks, instance.subElements);
           };
 
         let updatedInstanceWithNewElement = {
           ...updatedInstanceWithNewElement,
-          slots: nextSlots,
+          hooks: initialHooks,
         };
 
         let {subElements, instanceSubForest} = updatedInstanceWithNewElement;
@@ -836,7 +836,7 @@ module Make = (OutputTree: OutputTree) => {
                   subElements: nextSubElements,
                   hostInstance,
                 }:
-                  instance(slots, nextSlots, elementType, outputNodeType),
+                  instance(hooks, initialHooks, elementType, outputNodeType),
                 enqueuedEffects,
               );
             } else {
@@ -861,7 +861,7 @@ module Make = (OutputTree: OutputTree) => {
             enqueuedEffects: [
               Hooks.pendingEffects(
                 ~lifecycle=Hooks.Effect.Update,
-                updatedInstanceWithNewSubtree.slots,
+                updatedInstanceWithNewSubtree.hooks,
               ),
               ...enqueuedEffects,
             ],
@@ -1469,7 +1469,6 @@ module Make = (OutputTree: OutputTree) => {
 
   let listToElement = l => Nested(l);
 
-  module Slots = Slots;
   module Hooks = Hooks;
   module RemoteAction = RemoteAction;
 
