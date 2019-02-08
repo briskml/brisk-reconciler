@@ -26,14 +26,12 @@ module Unit = {
   let component = nativeComponent("B");
 
   let createElement = (~depth as _, ~children, ()) => {
-    element(
-      component((_: Hooks.empty) =>
-        {
-          make: () => (),
-          configureInstance: (~isFirstRender as _, ()) => (),
-          children: listToElement(children),
-        }
-      ),
+    component((_: Hooks.empty) =>
+      {
+        make: () => (),
+        configureInstance: (~isFirstRender as _, ()) => (),
+        children: listToElement(children),
+      }
     );
   };
 };
@@ -119,9 +117,7 @@ module A = {
       Brisk.listToElement(
         List.mapi(
           (i, c) =>
-            element(
-              make(c, ~depth=depth + 1, ~index=i + childrenIndexOffset, []),
-            ),
+            make(c, ~depth=depth + 1, ~index=i + childrenIndexOffset, []),
           children,
         ),
       );
@@ -143,15 +139,8 @@ module A = {
     | B' => componentB(componentDefinition(~depth, ~index))
     };
 
-  let createElement = (~depth, ~index, ~children as _, ()) => {
-    element(makeA(~depth, ~index, []));
-  };
-
   let render = () => {
-    Brisk.RenderedElement.render(
-      (),
-      createElement(~depth=0, ~index=0, ~children=(), ()),
-    );
+    Brisk.RenderedElement.render((), makeA(~depth=0, ~index=0, []));
   };
 };
 
