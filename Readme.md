@@ -2,23 +2,23 @@
 
 # brisk-reconciler
 
-#### An easy way to model any tree-shaped state with simple stateful functions
+### An easy way to model any `tree-shaped state` with simple `stateful functions`
 
-Definitions:
-- tree-shaped state: Any tree shaped-state like the DOM tree, app navigation state, or even rich text document!
-- stateful functions: A functions that maintain state over time. Imagine that you can take any variable in your function and manage its value over the function's inocation. Now, imagine that any function invocation really creates its own "instance" of the function which will track this state separately from other invocations of this function.
+#### Definitions:
+- `tree-shaped state`: Any tree shaped-state like the DOM tree, app navigation state, or even rich text document!
+- `stateful functions`: A functions that maintain state over time. Imagine that you can take any variable in your function and manage its value over the function's inocation. Now, imagine that any function invocation really creates its own "instance" of the function which will track this state separately from other invocations of this function.
 
 ## Why?
 
-We built this library because we want to have an expressive and powerful abstractions to build and update trees of dynamic data. We built it with UIs in mind but this library is generally applicable.
+We want to provide expressive and powerful abstractions to build and update trees of dynamic data. We built it with UIs in mind but this library is generally applicable.
 
-We encourage to experiment with using this abstraction for different types of outputs. Thanks to `OutputTree` agnostic Hooks (the mechanism which makes function stateful), different types of outputs can use the same internal logic for updates or side effects. 
+We encourage to experiment with this abstraction for different types of outputs. Thanks to `OutputTree`-agnostic Hooks (the mechanism which makes functions stateful), different types of outputs can use the same internal logic for updates or side effects. 
 
 One example of this is Brisk and Revery, where we have two vastly different approaches to building UIs. However, thanks to the shared layer we envision that it'll be very simple to use the two at the same time.
 
-We are building it in Reason. It's a very fast, scalable, extremely expressive, and type safe language with an amazing FFI. It makes a bridge between the world of mainstream programming and great ideas born in academia. Reason is an alternative syntax to OCaml so you can use (or even convert between) the two at the same time. 
+We are building it in Reason. It's a very fast, scalable, and extremely expressive language with an amazing FFI. It has an incredibly powerful type system. Reason is a bridge between the world of mainstream programming and great ideas born in academia. It is an alternative syntax to OCaml so you can use (or even convert between) the two at the same time. 
 
-### Usages
+## Projects which use brisk-reconciler
 
 - [Brisk](https://github.com/briskml/brisk)
 - [Revery](https://github.com/revery-ui/revery)
