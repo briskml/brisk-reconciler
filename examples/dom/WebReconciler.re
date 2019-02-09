@@ -207,13 +207,14 @@ let rendered =
       render(),
     ),
   );
+JsooReact.RenderedElement.executeHostViewUpdates(rendered^) |> ignore;
+
 EventDom.subscribe(
   Reconciler.onStale,
   () => {
     let nextElement =
       JsooReact.RenderedElement.flushPendingUpdates(rendered^);
-    JsooReact.RenderedElement.executeHostViewUpdates(rendered^) |> ignore;
+    JsooReact.RenderedElement.executeHostViewUpdates(nextElement) |> ignore;
     rendered := nextElement;
   },
 );
-JsooReact.RenderedElement.executeHostViewUpdates(rendered^) |> ignore;
