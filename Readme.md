@@ -6,7 +6,7 @@
 
 #### Definitions:
 - `tree-shaped state`: Any tree shaped-state like the DOM tree, app navigation state, or even rich text document!
-- `stateful functions`: A functions that maintain state over time. Imagine that you can take any variable in your function and manage its value over the function's inocation. Now, imagine that any function invocation really creates its own "instance" of the function which will track this state separately from other invocations of this function.
+- `stateful functions`: Functions that maintain state over time. Imagine that you can take any variable in your function and manage its value over the function's inocation. Now, imagine that any function invocation really creates its own "instance" of the function which will track this state separately from other invocations of this function.
 
 ## Why?
 
