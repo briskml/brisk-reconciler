@@ -26,12 +26,15 @@ module Unit = {
   let component = nativeComponent("B");
 
   let createElement = (~depth as _, ~children, ()) => {
-    component((_: Hooks.empty) =>
-      {
-        make: () => (),
-        configureInstance: (~isFirstRender as _, ()) => (),
-        children: listToElement(children),
-      }
+    component(hooks =>
+      (
+        hooks,
+        {
+          make: () => (),
+          configureInstance: (~isFirstRender as _, ()) => (),
+          children: listToElement(children),
+        },
+      )
     );
   };
 };
@@ -103,7 +106,7 @@ module A = {
         },
         hooks,
       );
-    let _: Hooks.empty =
+    let hooks =
       Hooks.effect(
         OnMount,
         () =>
@@ -114,15 +117,18 @@ module A = {
       );
 
     if (depth < 5) {
-      Brisk.listToElement(
-        List.mapi(
-          (i, c) =>
-            make(c, ~depth=depth + 1, ~index=i + childrenIndexOffset, []),
-          children,
+      (
+        hooks,
+        Brisk.listToElement(
+          List.mapi(
+            (i, c) =>
+              make(c, ~depth=depth + 1, ~index=i + childrenIndexOffset, []),
+            children,
+          ),
         ),
       );
     } else {
-      <Unit depth={depth + 1} />;
+      (hooks, <Unit depth={depth + 1} />);
     };
   }
   and componentA = component("A")

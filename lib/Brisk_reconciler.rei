@@ -86,7 +86,8 @@ module Make:
         ~useDynamicKey: bool=?,
         string,
         ~key: Key.t=?,
-        Hooks.t('slots, 'nextSlots) => syntheticElement
+        Hooks.t('a, unit, 'b, 'b) =>
+        (Hooks.t(unit, unit, 'a, unit), syntheticElement)
       ) =>
       syntheticElement;
 
@@ -95,7 +96,8 @@ module Make:
         ~useDynamicKey: bool=?,
         string,
         ~key: Key.t=?,
-        Hooks.t('slots, 'nextSlots) => outputTreeElement('slots, 'nextSlots)
+        Hooks.t('a, unit, 'b, 'b) =>
+        (Hooks.t(unit, unit, 'a, unit), outputTreeElement('a, 'b))
       ) =>
       syntheticElement;
 
