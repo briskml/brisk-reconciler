@@ -247,11 +247,10 @@ let main = () => {
     () => {
       let nextElement =
         LambdaReact.RenderedElement.flushPendingUpdates(rendered^);
-      LambdaReact.RenderedElement.executeHostViewUpdates(rendered^) |> ignore;
+      LambdaReact.RenderedElement.executeHostViewUpdates(nextElement) |> ignore;
       rendered := nextElement;
     },
   );
-  LambdaReact.RenderedElement.executeHostViewUpdates(rendered^) |> ignore;
 
   Lazy.force(LTerm.stdout)
   >>= (
