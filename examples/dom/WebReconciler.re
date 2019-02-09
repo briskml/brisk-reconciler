@@ -53,123 +53,114 @@ module JsooReact = Brisk_reconciler.Make(Reconciler);
  */
 let document = Dom_html.window##.document;
 
-module View = {
+let view = {
   let component = JsooReact.nativeComponent("View");
-
-  let make = children => {
-    component((_: JsooReact.Hooks.empty) =>
-      {
-        make: () => {
-          let node = Dom_html.createDiv(document);
-          node;
+  (~children, ()) => {
+    component(hooks =>
+      (
+        hooks,
+        {
+          make: () => {
+            let node = Dom_html.createDiv(document);
+            node;
+          },
+          configureInstance: (~isFirstRender as _, node) => {
+            node;
+          },
+          children: JsooReact.listToElement(children),
         },
-        configureInstance: (~isFirstRender as _, node) => {
-          node;
-        },
-        children,
-      }
+      )
     );
-  };
-
-  let createElement = (~children, ()) => {
-    JsooReact.element(make(JsooReact.listToElement(children)));
   };
 };
 
-module Image = {
+let image = {
   let component = JsooReact.nativeComponent("Image");
-
-  let make = (~src, children) => {
-    component((_: JsooReact.Hooks.empty) =>
-      {
-        make: () => {
-          let node = Dom_html.createImg(document);
-          node##.src := Js.string(src);
-          node |> Dom_html.element;
+  (~src, ~children, ()) => {
+    component(hooks =>
+      (
+        hooks,
+        {
+          make: () => {
+            let node = Dom_html.createImg(document);
+            node##.src := Js.string(src);
+            node |> Dom_html.element;
+          },
+          configureInstance: (~isFirstRender as _, n) => {
+            /* TODO: Proper way to downcast? */
+            let node: Js.t(Dom_html.imageElement) = Obj.magic(n);
+            node##.src := Js.string(src);
+            node |> Dom_html.element;
+          },
+          children,
         },
-        configureInstance: (~isFirstRender as _, n) => {
-          /* TODO: Proper way to downcast? */
-          let node: Js.t(Dom_html.imageElement) = Obj.magic(n);
-          node##.src := Js.string(src);
-          node |> Dom_html.element;
-        },
-        children,
-      }
+      )
     );
-  };
-
-  let createElement = (~src, ~children, ()) => {
-    JsooReact.element(make(~src, JsooReact.listToElement(children)));
   };
 };
 
-module Text = {
+let text = {
   let component = JsooReact.nativeComponent("Text");
 
-  let make = (~text, children) => {
-    component((_: JsooReact.Hooks.empty) =>
-      {
-        make: () => {
-          let node = Dom_html.createSpan(document);
-          node##.innerHTML := Js.string(text);
-          node |> Dom_html.element;
+  (~text, ~children, ()) => {
+    component(hooks =>
+      (
+        hooks,
+        {
+          make: () => {
+            let node = Dom_html.createSpan(document);
+            node##.innerHTML := Js.string(text);
+            node |> Dom_html.element;
+          },
+          configureInstance: (~isFirstRender as _, n) => {
+            /* TODO: Proper way to downcast? */
+            let node: Js.t(Dom_html.imageElement) = Obj.magic(n);
+            node##.innerHTML := Js.string(text);
+            node |> Dom_html.element;
+          },
+          children: JsooReact.listToElement(children),
         },
-        configureInstance: (~isFirstRender as _, n) => {
-          /* TODO: Proper way to downcast? */
-          let node: Js.t(Dom_html.imageElement) = Obj.magic(n);
-          node##.innerHTML := Js.string(text);
-          node |> Dom_html.element;
-        },
-        children,
-      }
+      )
     );
-  };
-
-  let createElement = (~text, ~children, ()) => {
-    JsooReact.element(make(~text, JsooReact.listToElement(children)));
   };
 };
 
-module Button = {
+let button = {
   let component = JsooReact.nativeComponent("Button");
-
-  let make = (~onPress, ~title, children) => {
-    component((_: JsooReact.Hooks.empty) =>
-      {
-        make: () => {
-          let node =
-            Dom_html.createButton(~_type=Js.string("button"), document);
-          let t = Js.string(title);
-          node##.title := t;
-          node##.innerHTML := t;
-          node##.onclick :=
-            Dom_html.handler(_e => {
-              onPress();
-              Js.bool(false);
-            });
-          node |> Dom_html.element;
+  (~onPress, ~title, ~children, ()) => {
+    component(hooks =>
+      (
+        hooks,
+        {
+          make: () => {
+            let node =
+              Dom_html.createButton(~_type=Js.string("button"), document);
+            let t = Js.string(title);
+            node##.title := t;
+            node##.innerHTML := t;
+            node##.onclick :=
+              Dom_html.handler(_e => {
+                onPress();
+                Js.bool(false);
+              });
+            node |> Dom_html.element;
+          },
+          configureInstance: (~isFirstRender as _, n) => {
+            /* TODO: Proper way to downcast? */
+            let node: Js.t(Dom_html.imageElement) = Obj.magic(n);
+            let t = Js.string(title);
+            node##.title := t;
+            node##.innerHTML := t;
+            node##.onclick :=
+              Dom_html.handler(_e => {
+                onPress();
+                Js.bool(false);
+              });
+            node |> Dom_html.element;
+          },
+          children: JsooReact.listToElement(children),
         },
-        configureInstance: (~isFirstRender as _, n) => {
-          /* TODO: Proper way to downcast? */
-          let node: Js.t(Dom_html.imageElement) = Obj.magic(n);
-          let t = Js.string(title);
-          node##.title := t;
-          node##.innerHTML := t;
-          node##.onclick :=
-            Dom_html.handler(_e => {
-              onPress();
-              Js.bool(false);
-            });
-          node |> Dom_html.element;
-        },
-        children,
-      }
-    );
-  };
-
-  let createElement = (~onPress, ~title, ~children, ()) => {
-    JsooReact.element(
-      make(~onPress, ~title, JsooReact.listToElement(children)),
+      )
     );
   };
 };
@@ -187,25 +178,24 @@ let reducer = (action, state) =>
   | Decrement => state - 1
   };
 
-module CounterButtons = {
+let counterButtons = (~children as _, ()) => {
   let component = JsooReact.component("CounterButtons");
-
-  let make = () =>
-    component(slots => {
-      let (count, dispatch, _slots: JsooReact.Hooks.empty) =
-        JsooReact.Hooks.reducer(~initialState=0, reducer, slots);
-      <View>
-        <Button title="Decrement" onPress={() => dispatch(Decrement)} />
-        <Text text={"Counter: " ++ str(count)} />
-        <Button title="Increment" onPress={() => dispatch(Increment)} />
-      </View>;
-    });
-
-  let createElement = (~children as _, ()) => JsooReact.element(make());
+  component(hooks => {
+    let (count, dispatch, hooks) =
+      JsooReact.Hooks.reducer(~initialState=0, reducer, hooks);
+    (
+      hooks,
+      <view>
+        <button title="Decrement" onPress={() => dispatch(Decrement)} />
+        <text text={"Counter: " ++ str(count)} />
+        <button title="Increment" onPress={() => dispatch(Increment)} />
+      </view>,
+    );
+  });
 };
 
 let render = () =>
-  <View> <Text text="Hello World" /> <CounterButtons /> </View>;
+  <view> <text text="Hello World" /> <counterButtons /> </view>;
 
 /*
     Step 5: Make the first render
