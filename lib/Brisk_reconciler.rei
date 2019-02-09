@@ -101,7 +101,6 @@ module Make:
       ) =>
       syntheticElement;
 
-    module Slots = Slots;
     module Hooks = Hooks;
     module RemoteAction = RemoteAction;
   };
