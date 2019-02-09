@@ -1,5 +1,5 @@
 {
-  "checksum": "f490595e88d44f834b2e78040ff5eefd",
+  "checksum": "838622f5adcbea5170a38db9d66278ef",
   "root": "brisk-reconciler@link-dev:./package.json",
   "node": {
     "ocaml@4.7.1004@d41d8cd9": {
