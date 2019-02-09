@@ -58,107 +58,100 @@ module LambdaReact = Brisk_reconciler.Make(Reconciler);
 /*
    Step 3: Define some native components (aka primitives)
  */
-module Hbox = {
+let hbox = {
   let component = LambdaReact.nativeComponent("Hbox");
 
-  let make = children => {
-    component((_: LambdaReact.Hooks.empty) =>
-      {
-        make: () => {
-          let node = new LTerm_widget.hbox;
-          Container(node);
+  (~children, ()) => {
+    component(hooks =>
+      (
+        hooks,
+        {
+          make: () => {
+            let node = new LTerm_widget.hbox;
+            Container(node);
+          },
+          configureInstance: (~isFirstRender as _, node) => {
+            node;
+          },
+          children: LambdaReact.listToElement(children),
         },
-        configureInstance: (~isFirstRender as _, node) => {
-          node;
-        },
-        children,
-      }
+      )
     );
-  };
-
-  let createElement = (~children, ()) => {
-    LambdaReact.element(make(LambdaReact.listToElement(children)));
   };
 };
 
-module Vbox = {
+let vbox = {
   let component = LambdaReact.nativeComponent("Vbox");
-
-  let make = children => {
-    component((_: LambdaReact.Hooks.empty) =>
-      {
-        make: () => {
-          let node = new LTerm_widget.vbox;
-          Container(node);
+  (~children, ()) => {
+    component(hooks =>
+      (
+        hooks,
+        {
+          make: () => {
+            let node = new LTerm_widget.vbox;
+            Container(node);
+          },
+          configureInstance: (~isFirstRender as _, node) => {
+            node;
+          },
+          children: LambdaReact.listToElement(children),
         },
-        configureInstance: (~isFirstRender as _, node) => {
-          node;
-        },
-        children,
-      }
+      )
     );
-  };
-
-  let createElement = (~children, ()) => {
-    LambdaReact.element(make(LambdaReact.listToElement(children)));
   };
 };
 
-module Label = {
+let label = {
   let component = LambdaReact.nativeComponent("Label");
 
-  let make = (~text, children) => {
-    component((_: LambdaReact.Hooks.empty) =>
-      {
-        make: () => {
-          let node = (new LTerm_widget.label)(text);
-          Label(node);
+  (~text, ~children, ()) => {
+    component(hooks =>
+      (
+        hooks,
+        {
+          make: () => {
+            let node = (new LTerm_widget.label)(text);
+            Label(node);
+          },
+          configureInstance: (~isFirstRender as _, node) => {
+            switch (node) {
+            | Label(n) => n#set_text(text)
+            | _ => () /* Should never happen */
+            };
+            node;
+          },
+          children: LambdaReact.listToElement(children),
         },
-        configureInstance: (~isFirstRender as _, node) => {
-          switch (node) {
-          | Label(n) => n#set_text(text)
-          | _ => () /* Should never happen */
-          };
-          node;
-        },
-        children,
-      }
+      )
     );
-  };
-
-  let createElement = (~text, ~children, ()) => {
-    LambdaReact.element(make(~text, LambdaReact.listToElement(children)));
   };
 };
 
-module Button = {
+let button = {
   let component = LambdaReact.nativeComponent("Button");
 
-  let make = (~text, ~onClick, children) => {
-    component((_: LambdaReact.Hooks.empty) =>
-      {
-        make: () => {
-          let button = (new button)(text);
-          button#on_click(onClick);
-          Button(button);
+  (~text, ~onClick, ~children, ()) => {
+    component(hooks =>
+      (
+        hooks,
+        {
+          make: () => {
+            let button = (new button)(text);
+            button#on_click(onClick);
+            Button(button);
+          },
+          configureInstance: (~isFirstRender as _, node) => {
+            switch (node) {
+            | Button(n) =>
+              n#set_label(text);
+              n#on_click(onClick);
+            | _ => () /* Should never happen */
+            };
+            node;
+          },
+          children: LambdaReact.listToElement(children),
         },
-        configureInstance: (~isFirstRender as _, node) => {
-          switch (node) {
-          | Button(n) =>
-            n#set_label(text);
-            n#on_click(onClick);
-          | _ => () /* Should never happen */
-          };
-          node;
-        },
-        children,
-      }
-    );
-  };
-
-  let createElement = (~text, ~onClick, ~children, ()) => {
-    LambdaReact.element(
-      make(~text, ~onClick, LambdaReact.listToElement(children)),
+      )
     );
   };
 };
@@ -182,21 +175,22 @@ let reducer = (action, state) =>
   | Decrement => state - 1
   };
 
-module CounterButtons = {
+let counterButtons = {
   let component = LambdaReact.component("CounterButtons");
 
-  let make = () =>
-    component(slots => {
-      let (count, dispatch, _slots: LambdaReact.Hooks.empty) =
-        LambdaReact.Hooks.reducer(~initialState=0, reducer, slots);
-      <Hbox>
-        <Button text="Decrement" onClick={() => dispatch(Decrement)} />
-        <Label text={"Counter: " ++ string_of_int(count)} />
-        <Button text="Increment" onClick={() => dispatch(Increment)} />
-      </Hbox>;
+  (~children as _: list(unit), ()) =>
+    component(hooks => {
+      let (count, dispatch, hooks) =
+        LambdaReact.Hooks.reducer(~initialState=0, reducer, hooks);
+      (
+        hooks,
+        <hbox>
+          <button text="Decrement" onClick={() => dispatch(Decrement)} />
+          <label text={"Counter: " ++ string_of_int(count)} />
+          <button text="Increment" onClick={() => dispatch(Increment)} />
+        </hbox>,
+      );
     });
-
-  let createElement = (~children as _, ()) => LambdaReact.element(make());
 };
 
 /*
@@ -205,14 +199,13 @@ module CounterButtons = {
     Custom clock component to show the time. Demonstrates
     use of `useEffect` and `setState` together.
  */
-module Clock = {
-  let component = LambdaReact.component("Clock");
 
-  let make = () =>
-    component(slots => {
-      let (time, setTime, slots: LambdaReact.Hooks.empty) =
-        LambdaReact.Hooks.state(0., slots);
-      let _slots =
+let clock = {
+  let component = LambdaReact.component("Clock");
+  (~children as _: list(unit), ()) =>
+    component(hooks => {
+      let (time, setTime, hooks) = LambdaReact.Hooks.state(0., hooks);
+      let hooks =
         LambdaReact.Hooks.effect(
           LambdaReact.Hooks.Effect.Always,
           () => {
@@ -220,11 +213,10 @@ module Clock = {
               Lwt_engine.on_timer(1.0, true, _ => setTime(Unix.time()));
             Some(() => Lwt_engine.stop_event(evt));
           },
+          hooks,
         );
-      <Label text={"Time: " ++ string_of_float(time)} />;
+      (hooks, <label text={"Time: " ++ string_of_float(time)} />);
     });
-
-  let createElement = (~children as _, ()) => LambdaReact.element(make());
 };
 
 /*
@@ -237,19 +229,20 @@ let main = () => {
 
   /* Let's finally put our UI to use! */
   let render = () =>
-    <Vbox>
-      <Label text="Hello World!" />
-      <Clock />
-      <CounterButtons />
-      <Button onClick=quit text="Quit" />
-    </Vbox>;
+    <vbox>
+      <label text="Hello World!" />
+      <clock />
+      <counterButtons />
+      <button onClick=quit text="Quit" />
+    </vbox>;
 
   /* Create a container for our UI */
   let body = new vbox;
   let root = Reconciler.Container(body);
   let rendered = ref(LambdaReact.RenderedElement.render(root, render()));
+  LambdaReact.RenderedElement.executeHostViewUpdates(rendered^) |> ignore;
 
-  EventLambda.subscribe(
+  let _unsubscribe = EventLambda.subscribe(
     Reconciler.onStale,
     () => {
       let nextElement =
