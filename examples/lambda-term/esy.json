@@ -1,0 +1,27 @@
+{
+  "name": "brisk-reconciler-lambda-example",
+  "version": "0.0.1",
+  "license": "MIT",
+  "esy": {
+    "build": [
+      "dune build -p brisk-reconciler-lambda-example"
+    ]
+  },
+  "scripts": {
+    "fmt": "dune build @fmt --auto-promote",
+    "clean": "dune clean",
+    "test": "dune runtest --no-buffer",
+    "run": "esy x brisk-reconciler-lambda-example.exe"
+  },
+  "dependencies": {
+    "brisk-reconciler": "*",
+    "@opam/lambda-term": "^1.11.0"
+  },
+  "devDependencies": {
+    "@opam/merlin": "^3.2.2",
+    "refmterr": "^3.1.10"
+  },
+  "resolutions": {
+    "brisk-reconciler": "link-dev:../.."
+  }
+}
