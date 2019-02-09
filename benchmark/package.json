@@ -1,0 +1,28 @@
+{
+  "name": "brisk-reconciler-bench",
+  "version": "0.0.1",
+  "license": "MIT",
+  "esy": {
+    "build": [
+      "dune build -p brisk-reconciler-bench"
+    ]
+  },
+  "scripts": {
+    "fmt": "dune build @fmt --auto-promote",
+    "clean": "dune clean",
+    "run": "esy x benchmark.exe"
+  },
+  "dependencies": {
+    "@esy-ocaml/reason": ">=3.4.0",
+    "@opam/dune": "^1.6.2",
+    "ocaml": "~4.7.1000",
+    "brisk-reconciler": "*"
+  },
+  "devDependencies": {
+    "@opam/merlin": "^3.2.2",
+    "@opam/core_bench": "*"
+  },
+  "resolutions": {
+    "brisk-reconciler": "link:../"
+  }
+}
