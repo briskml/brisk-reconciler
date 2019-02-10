@@ -142,9 +142,9 @@ let button = {
           },
           configureInstance: (~isFirstRender as _, node) => {
             switch (node) {
-            | Button(n) =>
-              n#set_label(text);
-              n#on_click(onClick);
+            | Button(n) => n#set_label(text)
+            // Lambda_term doesn't allow to replace event handlers, so we only attach it once on `make`
+            // n#on_click(onClick); 
             | _ => () /* Should never happen */
             };
             node;
@@ -242,15 +242,17 @@ let main = () => {
   let rendered = ref(LambdaReact.RenderedElement.render(root, render()));
   LambdaReact.RenderedElement.executeHostViewUpdates(rendered^) |> ignore;
 
-  let _unsubscribe = EventLambda.subscribe(
-    Reconciler.onStale,
-    () => {
-      let nextElement =
-        LambdaReact.RenderedElement.flushPendingUpdates(rendered^);
-      LambdaReact.RenderedElement.executeHostViewUpdates(nextElement) |> ignore;
-      rendered := nextElement;
-    },
-  );
+  let _unsubscribe =
+    EventLambda.subscribe(
+      Reconciler.onStale,
+      () => {
+        let nextElement =
+          LambdaReact.RenderedElement.flushPendingUpdates(rendered^);
+        LambdaReact.RenderedElement.executeHostViewUpdates(nextElement)
+        |> ignore;
+        rendered := nextElement;
+      },
+    );
 
   Lazy.force(LTerm.stdout)
   >>= (
