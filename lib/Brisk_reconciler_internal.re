@@ -64,14 +64,8 @@ module Make = (OutputTree: OutputTree) => {
     children: syntheticElement,
   }
   and elementType('elementType, 'outputNode) =
-    | Host: elementType(
-              outputTreeElement,
-              outputNodeContainer,
-            )
-    | React: elementType(
-               syntheticElement,
-               outputNodeGroup,
-             )
+    | Host: elementType(outputTreeElement, outputNodeContainer)
+    | React: elementType(syntheticElement, outputNodeGroup)
   and instanceForest =
     | IFlat(opaqueInstance)
     | INested(list(instanceForest), int /*subtree size*/)
@@ -1519,27 +1513,16 @@ module Make = (OutputTree: OutputTree) => {
     (~useDynamicKey=false, debugName) => {
       module Component = {
         type id('a) +=
-          | Id: id(
-                  instance(
-                    a,
-                    b,
-                    outputTreeElement,
-                    outputNodeContainer,
-                  ),
-                );
+          | Id: id(instance(a, b, outputTreeElement, outputNodeContainer));
 
         let eq:
           type c.
             (
               c,
               id(c),
-              id(
-                instance(a, b, outputTreeElement, outputNodeContainer),
-              )
+              id(instance(a, b, outputTreeElement, outputNodeContainer))
             ) =>
-            option(
-              instance(a, b, outputTreeElement, outputNodeContainer),
-            ) =
+            option(instance(a, b, outputTreeElement, outputNodeContainer)) =
           (instance, id1, id2) => {
             switch (id1, id2) {
             | (Id, Id) => Some(instance)
