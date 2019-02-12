@@ -144,7 +144,7 @@ let button = {
             switch (node) {
             | Button(n) => n#set_label(text)
             // Lambda_term doesn't allow to replace event handlers, so we only attach it once on `make`
-            // n#on_click(onClick); 
+            // n#on_click(onClick);
             | _ => () /* Should never happen */
             };
             node;
@@ -239,8 +239,11 @@ let main = () => {
   /* Create a container for our UI */
   let body = new vbox;
   let root = Reconciler.Container(body);
-  let rendered = ref(LambdaReact.RenderedElement.render(root, render()));
-  LambdaReact.RenderedElement.executeHostViewUpdates(rendered^) |> ignore;
+  let rendered = {
+    let rendered = LambdaReact.RenderedElement.render(root, render());
+    LambdaReact.RenderedElement.executeHostViewUpdates(rendered) |> ignore;
+    ref(LambdaReact.RenderedElement.executePendingEffects(rendered));
+  };
 
   let _unsubscribe =
     EventLambda.subscribe(
@@ -250,7 +253,8 @@ let main = () => {
           LambdaReact.RenderedElement.flushPendingUpdates(rendered^);
         LambdaReact.RenderedElement.executeHostViewUpdates(nextElement)
         |> ignore;
-        rendered := nextElement;
+        rendered :=
+          LambdaReact.RenderedElement.executePendingEffects(nextElement);
       },
     );
 

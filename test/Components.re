@@ -219,14 +219,16 @@ module ToggleClicks = {
   let component = component("ToggleClicks");
   let createElement = (~rAction, ~children as _, ()) =>
     component(hooks => {
-      let (state, dispatch, hooks) =
-        Hooks.reducer(~initialState=false, (Click, state) => !state, hooks);
+      let (state, setState, hooks) = Hooks.state(false, hooks);
       let hooks =
         Hooks.effect(
-          OnMount,
+          Always,
           () =>
             Some(
-              RemoteAction.subscribe(~handler=a => dispatch(a), rAction),
+              RemoteAction.subscribe(
+                ~handler=_ => setState(!state),
+                rAction,
+              ),
             ),
           hooks,
         );

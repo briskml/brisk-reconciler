@@ -11,7 +11,7 @@
     "fmt": "dune build @fmt --auto-promote",
     "clean": "dune clean",
     "test": "dune runtest --no-buffer",
-    "run": "esy x brisk-reconciler-lambda-example.exe"
+    "run": "esy x brisk-reconciler-lambda-example"
   },
   "dependencies": {
     "brisk-reconciler": "*",
