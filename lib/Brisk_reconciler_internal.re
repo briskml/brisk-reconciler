@@ -60,22 +60,18 @@ module Make = (OutputTree: OutputTree) => {
   and syntheticElement =
     | Flat(element)
     | Nested(list(syntheticElement))
-  and outputTreeElement('hooks, 'initialHooks) = {
+  and outputTreeElement = {
     make: unit => OutputTree.node,
     configureInstance:
       (~isFirstRender: bool, OutputTree.node) => OutputTree.node,
     children: syntheticElement,
   }
-  and elementType('hooks, 'initialHooks, 'elementType, 'outputNode) =
+  and elementType('elementType, 'outputNode) =
     | Host: elementType(
-              'hooks,
-              'initialHooks,
-              outputTreeElement('hooks, 'initialHooks),
+              outputTreeElement,
               outputNodeContainer,
             )
     | React: elementType(
-               'hooks,
-               'initialHooks,
                syntheticElement,
                outputNodeGroup,
              )
@@ -85,8 +81,7 @@ module Make = (OutputTree: OutputTree) => {
   and component('hooks, 'initialHooks, 'elementType, 'outputNode) = {
     debugName: string,
     key: int,
-    elementType:
-      elementType('hooks, 'initialHooks, 'elementType, 'outputNode),
+    elementType: elementType('elementType, 'outputNode),
     id: id(instance('hooks, 'initialHooks, 'elementType, 'outputNode)),
     eq:
       'a.
@@ -233,9 +228,9 @@ module Make = (OutputTree: OutputTree) => {
 
   module Node = {
     let make:
-      type hooks initialHooks elementType_ outputNode.
+      type elementType_ outputNode.
         (
-          elementType(hooks, initialHooks, elementType_, outputNode),
+          elementType(elementType_, outputNode),
           elementType_,
           instanceForest
         ) =>
@@ -1467,6 +1462,7 @@ module Make = (OutputTree: OutputTree) => {
   };
 
   let listToElement = l => Nested(l);
+  let empty = Nested([]);
 
   module Hooks = Hooks;
   module RemoteAction = RemoteAction;
@@ -1522,7 +1518,7 @@ module Make = (OutputTree: OutputTree) => {
         string,
         ~key: Key.t=?,
         Hooks.t(a, unit, b, b) =>
-        (Hooks.t(unit, unit, a, unit), outputTreeElement(a, b))
+        (Hooks.t(unit, unit, a, unit), outputTreeElement)
       ) =>
       syntheticElement =
     (~useDynamicKey=false, debugName) => {
@@ -1532,7 +1528,7 @@ module Make = (OutputTree: OutputTree) => {
                   instance(
                     a,
                     b,
-                    outputTreeElement(a, b),
+                    outputTreeElement,
                     outputNodeContainer,
                   ),
                 );
@@ -1543,11 +1539,11 @@ module Make = (OutputTree: OutputTree) => {
               c,
               id(c),
               id(
-                instance(a, b, outputTreeElement(a, b), outputNodeContainer),
+                instance(a, b, outputTreeElement, outputNodeContainer),
               )
             ) =>
             option(
-              instance(a, b, outputTreeElement(a, b), outputNodeContainer),
+              instance(a, b, outputTreeElement, outputNodeContainer),
             ) =
           (instance, id1, id2) => {
             switch (id1, id2) {
@@ -1570,3 +1566,6 @@ module Make = (OutputTree: OutputTree) => {
         );
     };
 };
+
+module Hooks = Hooks;
+module RemoteAction = RemoteAction;
