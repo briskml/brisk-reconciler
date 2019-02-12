@@ -15,8 +15,6 @@ let makeField = (key, value) =>
 let formatMountLogItem =
   TestReconciler.Implementation.(
     fun
-    | BeginChanges => Atom("BeginChanges", atom)
-    | CommitChanges => Atom("CommitChanges", atom)
     | MountChild(root, child, position) =>
       List(
         ("MountChild (", ",", ")", list),

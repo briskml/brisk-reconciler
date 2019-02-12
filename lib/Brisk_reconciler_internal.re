@@ -3,9 +3,6 @@ module type OutputTree = {
 
   let markAsStale: unit => unit;
 
-  let beginChanges: unit => unit;
-  let commitChanges: unit => unit;
-
   let insertNode: (~parent: node, ~child: node, ~position: int) => node;
   let deleteNode: (~parent: node, ~child: node) => node;
   let moveNode: (~parent: node, ~child: node, ~from: int, ~to_: int) => node;
@@ -1435,10 +1432,8 @@ module Make = (OutputTree: OutputTree) => {
     };
 
     let executeHostViewUpdates = ({nearestHostOutputNode}: t) => {
-      OutputTree.beginChanges();
       let Node(hostView) | UpdatedNode(_, hostView) =
         Lazy.force(nearestHostOutputNode);
-      OutputTree.commitChanges();
       hostView;
     };
 

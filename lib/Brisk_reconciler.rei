@@ -17,9 +17,6 @@ module type OutputTree = {
     */
   let markAsStale: unit => unit;
 
-  let beginChanges: unit => unit;
-  let commitChanges: unit => unit;
-
   /**
     * Insert child as a child of parent at position. The position is important for 
     * z axis ordering.
