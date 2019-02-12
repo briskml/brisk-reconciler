@@ -1,0 +1,8 @@
+(executable
+    (name Lambda_term)
+    (public_name brisk-reconciler-lambda-example)
+    (libraries lambda-term brisk-reconciler))
+
+(alias
+    (name all)
+    (deps (glob_files *.exe)))

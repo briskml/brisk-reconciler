@@ -85,7 +85,8 @@ module Make = (OutputTree: OutputTree) => {
   and component('hooks, 'initialHooks, 'elementType, 'outputNode) = {
     debugName: string,
     key: int,
-    elementType: elementType('hooks, 'initialHooks, 'elementType, 'outputNode),
+    elementType:
+      elementType('hooks, 'initialHooks, 'elementType, 'outputNode),
     id: id(instance('hooks, 'initialHooks, 'elementType, 'outputNode)),
     eq:
       'a.
@@ -745,12 +746,12 @@ module Make = (OutputTree: OutputTree) => {
             (instance.hooks, instance.subElements);
           };
 
-        let updatedInstanceWithNewElement = {
+        let updatedInstanceWithNewState = {
           ...updatedInstanceWithNewElement,
           hooks: initialHooks,
         };
 
-        let {subElements, instanceSubForest} = updatedInstanceWithNewElement;
+        let {subElements, instanceSubForest} = updatedInstanceWithNewState;
         let (
           nearestHostOutputNode,
           updatedInstanceWithNewSubtree,
@@ -774,7 +775,7 @@ module Make = (OutputTree: OutputTree) => {
               ? (
                 nearestHostOutputNode,
                 {
-                  ...updatedInstanceWithNewElement,
+                  ...updatedInstanceWithNewState,
                   subElements: nextSubElements,
                   instanceSubForest: nextInstanceSubForest,
                 },
@@ -782,20 +783,18 @@ module Make = (OutputTree: OutputTree) => {
               )
               : (
                 nearestHostOutputNode,
-                updatedInstanceWithNewElement,
+                updatedInstanceWithNewState,
                 enqueuedEffects,
               );
           | Host =>
             let instanceWithNewHostView =
               shouldRerender
                 ? {
-                  ...updatedInstanceWithNewElement,
+                  ...updatedInstanceWithNewState,
                   hostInstance:
                     lazy {
                       let instance =
-                        Lazy.force(
-                          updatedInstanceWithNewElement.hostInstance,
-                        );
+                        Lazy.force(updatedInstanceWithNewState.hostInstance);
                       let Node(beforeUpdate) | UpdatedNode(_, beforeUpdate) = instance;
                       let afterUpdate =
                         nextSubElements.configureInstance(
@@ -806,7 +805,7 @@ module Make = (OutputTree: OutputTree) => {
                         ? instance : UpdatedNode(beforeUpdate, afterUpdate);
                     },
                 }
-                : updatedInstanceWithNewElement;
+                : updatedInstanceWithNewState;
 
             let {
               nearestHostOutputNode: hostInstance,

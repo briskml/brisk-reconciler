@@ -82,7 +82,7 @@ module State = {
     if (currentValue === nextValue) {
       None;
     } else {
-      Some({currentValue, nextValue: currentValue});
+      Some({currentValue: nextValue, nextValue});
     };
 
   let hook = (initialState, hooks) => {
