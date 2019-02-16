@@ -18,7 +18,9 @@ module Reconciler = {
     | Container(LTerm_widget.box);
   type node = hostElement;
 
-  let onStale: EventLambda.t(unit) = EventLambda.create();
+  module RemoteAction = Brisk_reconciler.RemoteAction;
+
+  let onStale = RemoteAction.create();
 
   let insertNode = (~parent: node, ~child: node, ~position as _) => {
     switch (parent, child) {
@@ -44,7 +46,7 @@ module Reconciler = {
     parent;
   };
 
-  let markAsStale = () => EventLambda.dispatch(onStale, ());
+  let markAsStale = () => RemoteAction.send(~action=(), onStale);
 
   let beginChanges = () => ();
   let commitChanges = () => ();
@@ -246,9 +248,8 @@ let main = () => {
   };
 
   let _unsubscribe =
-    EventLambda.subscribe(
-      Reconciler.onStale,
-      () => {
+    LambdaReact.RemoteAction.subscribe(
+      ~handler=() => {
         let nextElement =
           LambdaReact.RenderedElement.flushPendingUpdates(rendered^);
         LambdaReact.RenderedElement.executeHostViewUpdates(nextElement)
@@ -256,6 +257,7 @@ let main = () => {
         rendered :=
           LambdaReact.RenderedElement.executePendingEffects(nextElement);
       },
+      Reconciler.onStale,
     );
 
   Lazy.force(LTerm.stdout)
