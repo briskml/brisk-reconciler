@@ -17,12 +17,7 @@ let core = [
       |> executeSideEffects
       |> expect(
            ~label="It correctly inserts nodes",
-           [
-             Implementation.BeginChanges,
-             MountChild(div, box("ImABox"), 0),
-             MountChild(root, div, 0),
-             CommitChanges,
-           ],
+           [MountChild(div, box("ImABox"), 0), MountChild(root, div, 0)],
          )
       |> ignore,
   ),
@@ -39,11 +34,9 @@ let core = [
       |> expect(
            ~label="It inserts two boxes in a div",
            [
-             Implementation.BeginChanges,
              MountChild(div, box("ImABox1"), 0),
              MountChild(div, box("ImABox2"), 1),
              MountChild(root, div, 0),
-             CommitChanges,
            ],
          )
       |> ignore,
@@ -64,11 +57,9 @@ let core = [
       |> expect(
            ~label="It replaces the subtree",
            [
-             Implementation.BeginChanges,
              UnmountChild(div, box("ImABox1")),
              UnmountChild(div, box("ImABox2")),
              MountChild(div, box("ImABox3"), 0),
-             CommitChanges,
            ],
          )
       |> ignore,
@@ -94,12 +85,10 @@ let core = [
       |> expect(
            ~label="It correctly constructs initial tree",
            [
-             Implementation.BeginChanges,
              ChangeText("x", "x"),
              MountChild(root, text("x"), 0),
              ChangeText("y", "y"),
              MountChild(root, text("y"), 1),
-             CommitChanges,
            ],
          )
       |> update(
@@ -113,11 +102,7 @@ let core = [
       |> executeSideEffects
       |> expect(
            ~label="It reorders only one element",
-           [
-             Implementation.BeginChanges,
-             RemountChild(root, text("y"), 1, 0),
-             CommitChanges,
-           ],
+           [RemountChild(root, text("y"), 1, 0)],
          )
       |> ignore;
     },
@@ -132,23 +117,16 @@ let core = [
       |> executeSideEffects
       |> expect(
            ~label="It constructs initial tree",
-           [
-             Implementation.BeginChanges,
-             ChangeText("x", "x"),
-             MountChild(root, text("x"), 0),
-             CommitChanges,
-           ],
+           [ChangeText("x", "x"), MountChild(root, text("x"), 0)],
          )
       |> update(<Components.Text key=key2 title="y" />)
       |> executeSideEffects
       |> expect(
            ~label="It replaces text(x) with text(y)",
            [
-             Implementation.BeginChanges,
              UnmountChild(root, text("x")),
              ChangeText("y", "y"),
              MountChild(root, text("y"), 0),
-             CommitChanges,
            ],
          )
       |> ignore;
@@ -168,12 +146,10 @@ let core = [
         |> expect(
              ~label="It constructs the initial tree",
              [
-               Implementation.BeginChanges,
                ChangeText("well", "well"),
                MountChild(div, well, 0),
                MountChild(div, div, 0),
                MountChild(root, div, 0),
-               CommitChanges,
              ],
            );
 
@@ -187,13 +163,11 @@ let core = [
       |> expect(
            ~label="It replaces text(well) with text(cell1) and text(cell2)",
            [
-             Implementation.BeginChanges,
              UnmountChild(div, well),
              ChangeText("cell1", "cell1"),
              MountChild(div, cell1, 0),
              ChangeText("cell2", "cell2"),
              MountChild(div, cell2, 1),
-             CommitChanges,
            ],
          )
       |> ignore;
@@ -213,11 +187,9 @@ let core = [
         |> expect(
              ~label="It constructs the initial tree",
              [
-               Implementation.BeginChanges,
                ChangeText("well", "well"),
                MountChild(div, well, 0),
                MountChild(root, div, 0),
-               CommitChanges,
              ],
            );
 
@@ -231,13 +203,11 @@ let core = [
       |> expect(
            ~label="It replaces text(well) with text(cell1) and text(cell2)",
            [
-             Implementation.BeginChanges,
              UnmountChild(div, well),
              ChangeText("cell1", "cell1"),
              MountChild(div, cell1, 0),
              ChangeText("cell2", "cell2"),
              MountChild(div, cell2, 1),
-             CommitChanges,
            ],
          )
       |> ignore;
@@ -256,12 +226,7 @@ let core = [
       |> executeSideEffects
       |> expect(
            ~label="It constructs the initial tree",
-           [
-             Implementation.BeginChanges,
-             ChangeText("x", "x"),
-             MountChild(root, text("x"), 0),
-             CommitChanges,
-           ],
+           [ChangeText("x", "x"), MountChild(root, text("x"), 0)],
          )
       |> update(
            listToElement([
@@ -272,12 +237,7 @@ let core = [
       |> executeSideEffects
       |> expect(
            ~label="It correctly mounts prepend topLevelUpdate",
-           [
-             Implementation.BeginChanges,
-             ChangeText("y", "y"),
-             MountChild(root, text("y"), 0),
-             CommitChanges,
-           ],
+           [ChangeText("y", "y"), MountChild(root, text("y"), 0)],
          )
       |> ignore;
     },
@@ -290,23 +250,16 @@ let core = [
       |> executeSideEffects
       |> expect(
            ~label="It renders one Box inside a Div",
-           [
-             Implementation.BeginChanges,
-             MountChild(div, box("ImABox"), 0),
-             MountChild(root, div, 0),
-             CommitChanges,
-           ],
+           [MountChild(div, box("ImABox"), 0), MountChild(root, div, 0)],
          )
       |> update(<Components.BoxWrapper twoBoxes=true />)
       |> executeSideEffects
       |> expect(
            ~label="It replaces one box with two boxes",
            [
-             Implementation.BeginChanges,
              UnmountChild(div, box("ImABox")),
              MountChild(div, box("ImABox"), 0),
              MountChild(div, box("ImABox"), 1),
-             CommitChanges,
            ],
          )
       |> ignore,
@@ -317,10 +270,7 @@ let core = [
     () =>
       render(<Components.EmptyComponent />)
       |> executeSideEffects
-      |> expect(
-           ~label="It renders ChangeCounter component",
-           Implementation.[BeginChanges, CommitChanges],
-         )
+      |> expect(~label="It renders ChangeCounter component", [])
       |> update(
            <Components.ButtonWrapperWrapper wrappedText="initial text" />,
          )
@@ -329,12 +279,10 @@ let core = [
            ~label=
              "It changes components from ChangeCounter to ButtonWrapperWrapper",
            Implementation.[
-             BeginChanges,
              ChangeText("initial text", "initial text"),
              MountChild(div, text("initial text"), 0),
              MountChild(div, div, 1),
              MountChild(root, div, 0),
-             CommitChanges,
            ],
          )
       |> update(
@@ -343,11 +291,7 @@ let core = [
       |> executeSideEffects
       |> expect(
            ~label="It updates text in the ButtonWrapper",
-           Implementation.[
-             BeginChanges,
-             ChangeText("initial text", "updated text"),
-             CommitChanges,
-           ],
+           Implementation.[ChangeText("initial text", "updated text")],
          )
       |> ignore,
   ),
@@ -358,20 +302,15 @@ let core = [
       let rAction = RemoteAction.create();
       render(<Components.BoxList useDynamicKeys=true rAction />)
       |> executeSideEffects
-      |> expect(
-           ~label="It renders initial BoxList",
-           Implementation.[BeginChanges, CommitChanges],
-         )
+      |> expect(~label="It renders initial BoxList", [])
       |> act(~action=Components.BoxList.Create("Hello"), rAction)
       |> flushPendingUpdates
       |> executeSideEffects
       |> expect(
            ~label="It adds a new BoxItem and then flushes",
            Implementation.[
-             BeginChanges,
              ChangeText("Hello", "Hello"),
              MountChild(root, text("Hello"), 0),
-             CommitChanges,
            ],
          )
       |> act(~action=Components.BoxList.Create("World"), rAction)
@@ -380,10 +319,8 @@ let core = [
       |> expect(
            ~label="It prepends one more BoxItem and then flushes",
            Implementation.[
-             BeginChanges,
              ChangeText("World", "World"),
              MountChild(root, text("World"), 0),
-             CommitChanges,
            ],
          )
       |> act(~action=Components.BoxList.Reverse, rAction)
@@ -391,11 +328,7 @@ let core = [
       |> executeSideEffects
       |> expect(
            ~label="It reverses the items list in the BoxList",
-           Implementation.[
-             BeginChanges,
-             RemountChild(root, text("Hello"), 1, 0),
-             CommitChanges,
-           ],
+           Implementation.[RemountChild(root, text("Hello"), 1, 0)],
          )
       |> ignore;
     },
@@ -407,31 +340,20 @@ let core = [
       let rAction = RemoteAction.create();
       render(<Components.BoxList rAction />)
       |> executeSideEffects
-      |> expect(
-           ~label="It renders BoxList",
-           Implementation.[BeginChanges, CommitChanges],
-         )
+      |> expect(~label="It renders BoxList", [])
       |> act(~action=Components.BoxList.Create("Hello"), rAction)
       |> flushPendingUpdates
       |> executeSideEffects
       |> expect(
            ~label="It adds a new Box",
-           Implementation.[
-             BeginChanges,
-             MountChild(root, box("Hello"), 0),
-             CommitChanges,
-           ],
+           Implementation.[MountChild(root, box("Hello"), 0)],
          )
       |> act(~action=Components.BoxList.Create("World"), rAction)
       |> flushPendingUpdates
       |> executeSideEffects
       |> expect(
            ~label="It prepends one more Box",
-           Implementation.[
-             BeginChanges,
-             MountChild(root, box("World"), 0),
-             CommitChanges,
-           ],
+           Implementation.[MountChild(root, box("World"), 0)],
          )
       |> act(~action=Components.BoxList.Reverse, rAction)
       |> flushPendingUpdates
@@ -439,12 +361,10 @@ let core = [
       |> expect(
            ~label="It reverses the boxes list in the BoxList",
            Implementation.[
-             BeginChanges,
              UnmountChild(root, box("World")),
              MountChild(root, box("Hello"), 0),
              UnmountChild(root, box("Hello")),
              MountChild(root, box("World"), 1),
-             CommitChanges,
            ],
          )
       |> ignore;
@@ -461,10 +381,8 @@ let core = [
         |> expect(
              ~label="It renders the initial BoxItemDynamic",
              Implementation.[
-               BeginChanges,
                ChangeText("box to move", "box to move"),
                MountChild(root, text("box to move"), 0),
-               CommitChanges,
              ],
            );
       let {renderedElement: {instanceForest: afterUpdate}} =
@@ -480,12 +398,10 @@ let core = [
              ~label=
                "It adds new element before BoxItemDynamic (it replaces the whole tree)",
              Implementation.[
-               BeginChanges,
                UnmountChild(root, text("box to move")),
                ChangeText("before", "before"),
                MountChild(root, text("before"), 0),
                MountChild(root, text("box to move"), 1),
-               CommitChanges,
              ],
            );
       check(
@@ -515,10 +431,8 @@ let core = [
       |> expect(
            ~label="It renders the initial Boxes list",
            Implementation.[
-             BeginChanges,
              MountChild(root, box("Box1unchanged"), 0),
              MountChild(root, box("Box2unchanged"), 1),
-             CommitChanges,
            ],
          )
       |> update(
@@ -531,13 +445,11 @@ let core = [
       |> expect(
            ~label="It reorders the list",
            Implementation.[
-             BeginChanges,
              UnmountChild(root, box("Box2unchanged")),
              MountChild(root, box("Box2changed"), 1),
              RemountChild(root, box("Box2changed"), 1, 0),
              UnmountChild(root, box("Box1unchanged")),
              MountChild(root, box("Box1changed"), 1),
-             CommitChanges,
            ],
          )
       |> ignore;
@@ -553,47 +465,31 @@ let core = [
       |> expect(
            ~label="It renders UpdateAlternateClicks element",
            Implementation.[
-             BeginChanges,
              ChangeText("0", "0"),
              MountChild(root, text("0"), 0),
-             CommitChanges,
            ],
          )
       |> act(~action=Components.UpdateAlternateClicks.Click, rAction)
       |> flushPendingUpdates
       |> executeSideEffects
-      |> expect(
-           ~label="It only changes state on first click",
-           Implementation.[BeginChanges, CommitChanges],
-         )
+      |> expect(~label="It only changes state on first click", [])
       |> act(~action=Components.UpdateAlternateClicks.Click, rAction)
       |> flushPendingUpdates
       |> executeSideEffects
       |> expect(
            ~label="It changes both state and contents on second click",
-           Implementation.[
-             BeginChanges,
-             ChangeText("0", "2"),
-             CommitChanges,
-           ],
+           Implementation.[ChangeText("0", "2")],
          )
       |> act(~action=Components.UpdateAlternateClicks.Click, rAction)
       |> flushPendingUpdates
       |> executeSideEffects
-      |> expect(
-           ~label="It only changes state on third click",
-           Implementation.[BeginChanges, CommitChanges],
-         )
+      |> expect(~label="It only changes state on third click", [])
       |> act(~action=Components.UpdateAlternateClicks.Click, rAction)
       |> flushPendingUpdates
       |> executeSideEffects
       |> expect(
            ~label="It changes both state and contents on fourth click",
-           Implementation.[
-             BeginChanges,
-             ChangeText("2", "4"),
-             CommitChanges,
-           ],
+           Implementation.[ChangeText("2", "4")],
          )
       |> ignore;
     },
@@ -614,12 +510,10 @@ let core = [
       |> expect(
            ~label="It renders list with Text elements",
            Implementation.[
-             BeginChanges,
              ChangeText("x", "x"),
              MountChild(root, text("x"), 0),
              ChangeText("y", "y"),
              MountChild(root, text("y"), 1),
-             CommitChanges,
            ],
          )
       |> update(
@@ -633,7 +527,7 @@ let core = [
       |> executeSideEffects
       |> expect(
            ~label="It updates the state with a new instance of (same) string",
-           Implementation.[BeginChanges, CommitChanges],
+           [],
          )
       |> update(
            listToElement(
@@ -646,11 +540,7 @@ let core = [
       |> executeSideEffects
       |> expect(
            ~label="it reorders the list",
-           Implementation.[
-             BeginChanges,
-             RemountChild(root, text("y"), 1, 0),
-             CommitChanges,
-           ],
+           Implementation.[RemountChild(root, text("y"), 1, 0)],
          )
       |> ignore;
     },
@@ -668,10 +558,8 @@ let core = [
       |> expect(
            ~label="It renders a new Text element",
            Implementation.[
-             BeginChanges,
              ChangeText("x", "x"),
              MountChild(root, text("x"), 0),
-             CommitChanges,
            ],
          )
       |> update(
@@ -684,10 +572,8 @@ let core = [
       |> expect(
            ~label="It prepends a new Text element to the list",
            Implementation.[
-             BeginChanges,
              ChangeText("y", "y"),
              MountChild(root, text("y"), 0),
-             CommitChanges,
            ],
          )
       |> ignore;
@@ -851,14 +737,15 @@ let core = [
       let onEffectDispose = () =>
         effectDisposeCallCount := effectDisposeCallCount^ + 1;
 
-      let testState = render(
-        Components.(
-          <Div>
-            <EmptyComponentWithOnMountEffect onEffect onEffectDispose />
-          </Div>
-        ),
-      )
-      |> executeSideEffects;
+      let testState =
+        render(
+          Components.(
+            <Div>
+              <EmptyComponentWithOnMountEffect onEffect onEffectDispose />
+            </Div>
+          ),
+        )
+        |> executeSideEffects;
 
       expectInt(~label="The effect should've been run", 1, effectCallCount^);
 

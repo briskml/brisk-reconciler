@@ -3,9 +3,6 @@ module type OutputTree = {
 
   let markAsStale: unit => unit;
 
-  let beginChanges: unit => unit;
-  let commitChanges: unit => unit;
-
   let insertNode: (~parent: node, ~child: node, ~position: int) => node;
   let deleteNode: (~parent: node, ~child: node) => node;
   let moveNode: (~parent: node, ~child: node, ~from: int, ~to_: int) => node;
@@ -60,33 +57,22 @@ module Make = (OutputTree: OutputTree) => {
   and syntheticElement =
     | Flat(element)
     | Nested(list(syntheticElement))
-  and outputTreeElement('hooks, 'initialHooks) = {
+  and outputTreeElement = {
     make: unit => OutputTree.node,
     configureInstance:
       (~isFirstRender: bool, OutputTree.node) => OutputTree.node,
     children: syntheticElement,
   }
-  and elementType('hooks, 'initialHooks, 'elementType, 'outputNode) =
-    | Host: elementType(
-              'hooks,
-              'initialHooks,
-              outputTreeElement('hooks, 'initialHooks),
-              outputNodeContainer,
-            )
-    | React: elementType(
-               'hooks,
-               'initialHooks,
-               syntheticElement,
-               outputNodeGroup,
-             )
+  and elementType('elementType, 'outputNode) =
+    | Host: elementType(outputTreeElement, outputNodeContainer)
+    | React: elementType(syntheticElement, outputNodeGroup)
   and instanceForest =
     | IFlat(opaqueInstance)
     | INested(list(instanceForest), int /*subtree size*/)
   and component('hooks, 'initialHooks, 'elementType, 'outputNode) = {
     debugName: string,
     key: int,
-    elementType:
-      elementType('hooks, 'initialHooks, 'elementType, 'outputNode),
+    elementType: elementType('elementType, 'outputNode),
     id: id(instance('hooks, 'initialHooks, 'elementType, 'outputNode)),
     eq:
       'a.
@@ -233,9 +219,9 @@ module Make = (OutputTree: OutputTree) => {
 
   module Node = {
     let make:
-      type hooks initialHooks elementType_ outputNode.
+      type elementType_ outputNode.
         (
-          elementType(hooks, initialHooks, elementType_, outputNode),
+          elementType(elementType_, outputNode),
           elementType_,
           instanceForest
         ) =>
@@ -1440,10 +1426,8 @@ module Make = (OutputTree: OutputTree) => {
     };
 
     let executeHostViewUpdates = ({nearestHostOutputNode}: t) => {
-      OutputTree.beginChanges();
       let Node(hostView) | UpdatedNode(_, hostView) =
         Lazy.force(nearestHostOutputNode);
-      OutputTree.commitChanges();
       hostView;
     };
 
@@ -1467,6 +1451,7 @@ module Make = (OutputTree: OutputTree) => {
   };
 
   let listToElement = l => Nested(l);
+  let empty = Nested([]);
 
   module Hooks = Hooks;
   module RemoteAction = RemoteAction;
@@ -1522,33 +1507,22 @@ module Make = (OutputTree: OutputTree) => {
         string,
         ~key: Key.t=?,
         Hooks.t(a, unit, b, b) =>
-        (Hooks.t(unit, unit, a, unit), outputTreeElement(a, b))
+        (Hooks.t(unit, unit, a, unit), outputTreeElement)
       ) =>
       syntheticElement =
     (~useDynamicKey=false, debugName) => {
       module Component = {
         type id('a) +=
-          | Id: id(
-                  instance(
-                    a,
-                    b,
-                    outputTreeElement(a, b),
-                    outputNodeContainer,
-                  ),
-                );
+          | Id: id(instance(a, b, outputTreeElement, outputNodeContainer));
 
         let eq:
           type c.
             (
               c,
               id(c),
-              id(
-                instance(a, b, outputTreeElement(a, b), outputNodeContainer),
-              )
+              id(instance(a, b, outputTreeElement, outputNodeContainer))
             ) =>
-            option(
-              instance(a, b, outputTreeElement(a, b), outputNodeContainer),
-            ) =
+            option(instance(a, b, outputTreeElement, outputNodeContainer)) =
           (instance, id1, id2) => {
             switch (id1, id2) {
             | (Id, Id) => Some(instance)
@@ -1570,3 +1544,6 @@ module Make = (OutputTree: OutputTree) => {
         );
     };
 };
+
+module Hooks = Hooks;
+module RemoteAction = RemoteAction;

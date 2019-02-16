@@ -13,6 +13,7 @@ let str = string_of_int;
 module Dom = Js_of_ocaml.Dom;
 module Dom_html = Js_of_ocaml.Dom_html;
 module Js = Js_of_ocaml.Js;
+module RemoteAction = Brisk_reconciler.RemoteAction;
 
 /*
    Step 1: Define the reconciler template
@@ -21,7 +22,7 @@ module Reconciler = {
   type hostElement = Js.t(Dom_html.element);
   type node = Js.t(Dom_html.element);
 
-  let onStale: EventDom.t(unit) = EventDom.create();
+  let onStale: RemoteAction.t(unit) = RemoteAction.create();
 
   let insertNode = (~parent: node, ~child: node, ~position as _) => {
     Dom.appendChild(parent, child);
@@ -37,7 +38,7 @@ module Reconciler = {
     parent;
   };
 
-  let markAsStale = () => EventDom.dispatch(onStale, ());
+  let markAsStale = () => RemoteAction.send(~action=(), onStale);
 
   let beginChanges = () => ();
   let commitChanges = () => ();
@@ -209,12 +210,13 @@ let rendered =
   );
 JsooReact.RenderedElement.executeHostViewUpdates(rendered^) |> ignore;
 
-EventDom.subscribe(
+RemoteAction.subscribe(
+  ~handler=
+    () => {
+      let nextElement =
+        JsooReact.RenderedElement.flushPendingUpdates(rendered^);
+      JsooReact.RenderedElement.executeHostViewUpdates(nextElement) |> ignore;
+      rendered := nextElement;
+    },
   Reconciler.onStale,
-  () => {
-    let nextElement =
-      JsooReact.RenderedElement.flushPendingUpdates(rendered^);
-    JsooReact.RenderedElement.executeHostViewUpdates(nextElement) |> ignore;
-    rendered := nextElement;
-  },
 );
