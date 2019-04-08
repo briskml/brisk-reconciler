@@ -18,14 +18,14 @@ module type OutputTree = {
   let markAsStale: unit => unit;
 
   /**
-    * Insert child as a child of parent at position. The position is important for 
+    * Insert child as a child of parent at position. The position is important for
     * z axis ordering.
     */
   let insertNode: (~parent: node, ~child: node, ~position: int) => node;
   /**
     * Delete child from parent.
     */
-  let deleteNode: (~parent: node, ~child: node) => node;
+  let deleteNode: (~parent: node, ~child: node, ~position: int) => node;
   /**
     * Move child in parent from the from index to to_ index.
     */

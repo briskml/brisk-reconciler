@@ -32,7 +32,7 @@ module Implementation = {
     parent;
   };
 
-  let deleteNode = (~parent: node, ~child: node) => {
+  let deleteNode = (~parent: node, ~child: node, ~position as _) => {
     switch (child.element) {
     | _ => mountLog := [UnmountChild(parent, child), ...mountLog^]
     };

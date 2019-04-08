@@ -4,7 +4,7 @@ module type OutputTree = {
   let markAsStale: unit => unit;
 
   let insertNode: (~parent: node, ~child: node, ~position: int) => node;
-  let deleteNode: (~parent: node, ~child: node) => node;
+  let deleteNode: (~parent: node, ~child: node, ~position: int) => node;
   let moveNode: (~parent: node, ~child: node, ~from: int, ~to_: int) => node;
 };
 
@@ -283,17 +283,23 @@ module Make = (OutputTree: OutputTree) => {
         (
           ~parent as parentWrapper: internalOutputNode,
           ~children: outputNodeGroup,
+          ~position as initialPosition: int,
         ) => {
       let Node(oldParent) | UpdatedNode(_, oldParent) = parentWrapper;
       let newParent =
         List.fold_left(
-          (parent, child) => {
-            let Node(child) | UpdatedNode(_, child) = Lazy.force(child);
-            OutputTree.deleteNode(~parent, ~child);
-          },
-          oldParent,
+          ((position, parent), child) =>
+            (
+              position + 1,
+              {
+                let Node(child) | UpdatedNode(_, child) = Lazy.force(child);
+                OutputTree.deleteNode(~parent, ~child, ~position);
+              },
+            ),
+          (initialPosition, oldParent),
           children,
-        );
+        )
+        |> snd;
       newParent === oldParent
         ? parentWrapper : UpdatedNode(oldParent, newParent);
     };
@@ -311,9 +317,13 @@ module Make = (OutputTree: OutputTree) => {
         )
         : outputNodeContainer =>
       lazy {
-        let parent = Lazy.force(parent);
         insertNodes(
-          ~parent=deleteNodes(~parent, ~children=prevChildren),
+          ~parent=
+            deleteNodes(
+              ~parent=Lazy.force(parent),
+              ~children=prevChildren,
+              ~position=0,
+            ),
           ~children=nextChildren,
           ~position=0,
         );
@@ -334,7 +344,8 @@ module Make = (OutputTree: OutputTree) => {
           ? parent : OutputTree.moveNode(~parent, ~child, ~from, ~to_)
       | UpdatedNode(prevChild, child) when !isVal =>
         OutputTree.insertNode(
-          ~parent=OutputTree.deleteNode(~parent, ~child=prevChild),
+          ~parent=
+            OutputTree.deleteNode(~parent, ~child=prevChild, ~position=from),
           ~child,
           ~position=to_,
         )
@@ -414,7 +425,11 @@ module Make = (OutputTree: OutputTree) => {
                 | UpdatedNode(oldNode, newNode) =>
                   OutputTree.insertNode(
                     ~parent=
-                      OutputTree.deleteNode(~parent=instance, ~child=oldNode),
+                      OutputTree.deleteNode(
+                        ~parent=instance,
+                        ~child=oldNode,
+                        ~position,
+                      ),
                     ~child=newNode,
                     ~position,
                   )

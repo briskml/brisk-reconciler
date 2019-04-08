@@ -5,7 +5,7 @@ include Brisk_reconciler.Make({
     parent;
   };
 
-  let deleteNode = (~parent, ~child as _) => {
+  let deleteNode = (~parent, ~child as _, ~position as _) => {
     parent;
   };
 

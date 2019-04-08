@@ -2,7 +2,10 @@
   "source": "./package-ci.json",
   "override": {
     "dependencies": {
-    "ocaml": "~4.4.0000"
+      "ocaml": "~4.4.0000"
+    },
+    "devDependencies": {
+      "@opam/merlin-lsp": null
     }
   }
 }

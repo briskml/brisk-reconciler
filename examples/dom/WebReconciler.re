@@ -179,17 +179,27 @@ let reducer = (action, state) =>
   | Decrement => state - 1
   };
 
+let action = RemoteAction.create();
+
 let counterButtons = (~children as _, ()) => {
   let component = JsooReact.component("CounterButtons");
   component(hooks => {
-    let (count, dispatch, hooks) =
-      JsooReact.Hooks.reducer(~initialState=0, reducer, hooks);
+    let (count, setCount, hooks) =
+      JsooReact.Hooks.state(0, hooks);
+    let hooks =
+      JsooReact.Hooks.subscribe(~handler=setCount, action, hooks);
     (
       hooks,
       <view>
-        <button title="Decrement" onPress={() => dispatch(Decrement)} />
+        <button title="Decrement" onPress={() => setCount(count - 1)} />
         <text text={"Counter: " ++ str(count)} />
-        <button title="Increment" onPress={() => dispatch(Increment)} />
+        <button
+          title="Reset (Race condition)"
+          onPress={() =>
+            ignore(Js_of_ocaml.Dom_html.setTimeout(() => RemoteAction.send(0, action), 3000.))
+          }
+        />
+        <button title="Increment" onPress={() => setCount(count + 1)} />
       </view>,
     );
   });
