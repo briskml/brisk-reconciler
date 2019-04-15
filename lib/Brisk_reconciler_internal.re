@@ -314,6 +314,7 @@ module Make = (OutputTree: OutputTree) => {
           ~parent: outputNodeContainer,
           ~prevChildren: outputNodeGroup,
           ~nextChildren: outputNodeGroup,
+          ~absoluteSubtreeIndex: int,
         )
         : outputNodeContainer =>
       lazy {
@@ -322,10 +323,10 @@ module Make = (OutputTree: OutputTree) => {
             deleteNodes(
               ~parent=Lazy.force(parent),
               ~children=prevChildren,
-              ~position=0,
+              ~position=absoluteSubtreeIndex,
             ),
           ~children=nextChildren,
-          ~position=0,
+          ~position=absoluteSubtreeIndex,
         );
       };
 
@@ -694,6 +695,7 @@ module Make = (OutputTree: OutputTree) => {
                   ),
                 ~nextChildren=
                   InstanceForest.outputTreeNodes(IFlat(opaqueInstance)),
+                ~absoluteSubtreeIndex=updateContext.absoluteSubtreeIndex,
               ),
             opaqueInstance,
             enqueuedEffects,
@@ -1041,6 +1043,8 @@ module Make = (OutputTree: OutputTree) => {
                   InstanceForest.outputTreeNodes(oldInstanceForest),
                 ~nextChildren=
                   InstanceForest.outputTreeNodes(newInstanceForest),
+                /* hard-coded zero since we will only ever have one child */
+                ~absoluteSubtreeIndex=0,
               ),
             instanceForest: newInstanceForest,
             enqueuedEffects,
@@ -1098,6 +1102,7 @@ module Make = (OutputTree: OutputTree) => {
               ~parent=nearestHostOutputNode,
               ~prevChildren=InstanceForest.outputTreeNodes(oldInstanceForest),
               ~nextChildren=InstanceForest.outputTreeNodes(newInstanceForest),
+              ~absoluteSubtreeIndex=updateContext.absoluteSubtreeIndex,
             ),
           instanceForest: newInstanceForest,
           enqueuedEffects,
@@ -1223,6 +1228,7 @@ module Make = (OutputTree: OutputTree) => {
                     InstanceForest.outputTreeNodes(oldInstanceForest),
                   ~nextChildren=
                     InstanceForest.outputTreeNodes(newInstanceForest),
+                  ~absoluteSubtreeIndex,
                 ),
               instanceForest: newInstanceForest,
               enqueuedEffects,

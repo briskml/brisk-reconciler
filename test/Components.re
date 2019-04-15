@@ -36,6 +36,21 @@ module Div = {
     );
 };
 
+module SingleChildDiv = {
+  let component = nativeComponent("SingleChildDiv");
+  let createElement = (~key=?, ~children as child: syntheticElement, ()) =>
+    component(~key?, h =>
+      (
+        h,
+        {
+          make: () => Implementation.{name: "SingleChildDiv", element: View},
+          configureInstance: (~isFirstRender as _, d) => d,
+          children: child,
+        },
+      )
+    );
+};
+
 module Text = {
   type state = {
     current: string,
