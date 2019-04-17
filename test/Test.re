@@ -3,6 +3,7 @@ open Assert;
 
 let root = Implementation.{name: "root", element: View};
 let div = Implementation.{name: "Div", element: View};
+let singleChildDiv = Implementation.{name: "SingleChildDiv", element: View};
 let text = t => Implementation.{name: "Text", element: Text(t)};
 let box = t => Implementation.{name: "Box", element: Text(t)};
 
@@ -766,6 +767,119 @@ let core = [
         1,
         effectDisposeCallCount^,
       );
+    },
+  ),
+  (
+    "Test transition from empty list to non-empty list",
+    `Quick,
+    () => {
+      GlobalState.useTailHack := false;
+      render(
+        Components.(<Div> {listToElement([])} <Box title="ImABox1" /> </Div>),
+      )
+      |> executeSideEffects
+      |> reset
+      |> update(
+           Components.(
+             <Div>
+               {listToElement([<Box title="ImABox0" />])}
+               <Box title="ImABox1" />
+             </Div>
+           ),
+         )
+      |> executeSideEffects
+      |> expect(
+           ~label="It mounts IAmBox0+1",
+           [
+             MountChild(div, box("ImABox0"), 0),
+             UnmountChild(div, box("ImABox1")),
+             MountChild(div, box("ImABox1"), 1),
+           ],
+         )
+      |> ignore;
+
+      render(
+        Components.(<Div> <Box title="ImABox0" /> {listToElement([])} </Div>),
+      )
+      |> executeSideEffects
+      |> reset
+      |> update(
+           Components.(
+             <Div>
+               <Box title="ImABox0" />
+               {listToElement([<Box title="ImABox1" />])}
+             </Div>
+           ),
+         )
+      |> executeSideEffects
+      |> expect(
+           ~label="It mounts IAmBox0+1",
+           [
+             UnmountChild(div, box("ImABox0")),
+             MountChild(div, box("ImABox0"), 0),
+             MountChild(div, box("ImABox1"), 1),
+           ],
+         )
+      |> ignore;
+    },
+  ),
+  (
+    "Test transition from empty list to non-empty list & <Box key> becomes <Div key>",
+    `Quick,
+    () => {
+      let key = Key.create();
+      render(
+        Components.(
+          <Div> {listToElement([])} <Box key title="ImABoxA" /> </Div>
+        ),
+      )
+      |> executeSideEffects
+      |> reset
+      |> update(
+           Components.(
+             <Div>
+               {listToElement([<Box title="ImABoxB" />])}
+               <Div key />
+             </Div>
+           ),
+         )
+      |> executeSideEffects
+      |> expect(
+           ~label="IAmBox",
+           [
+             MountChild(div, box("ImABoxB"), 0),
+             UnmountChild(div, box("ImABoxA")),
+             MountChild(div, div, 1),
+           ],
+         )
+      |> ignore;
+    },
+  ),
+  (
+    "Test a <SingleChildDiv> with single Flat child, with a changing key",
+    `Quick,
+    () => {
+      render(
+        Components.(
+          <SingleChildDiv> ...<Div key={Key.create()} /> </SingleChildDiv>
+        ),
+      )
+      |> executeSideEffects
+      |> reset
+      |> update(
+           Components.(
+             <SingleChildDiv> ...<Div key={Key.create()} /> </SingleChildDiv>
+           ),
+         )
+      |> executeSideEffects
+      |> expect(
+           ~label="it re-mounts the node with the new key",
+           [
+             UnmountChild(singleChildDiv, div),
+             MountChild(singleChildDiv, div, 0),
+           ],
+         )
+      |> ignore;
     },
   ),
 ];
