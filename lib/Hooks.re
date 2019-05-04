@@ -89,9 +89,11 @@ module State = {
     let (stateContainer, nextHooks) =
       processNext(~default=make(initialState), ~toWitness=wrapAsHook, hooks);
 
+    let onStateDidChange = hooks.onStateDidChange;
+
     let setter = nextState => {
       setState(nextState, stateContainer);
-      hooks.onStateDidChange();
+      onStateDidChange();
     };
 
     (stateContainer.currentValue, setter, nextHooks);
@@ -137,9 +139,11 @@ module Reducer = {
     let (stateContainer, hooks) =
       processNext(~default=make(initialState), ~toWitness=wrapAsHook, hooks);
 
+    let onStateDidChange = hooks.onStateDidChange;
+
     let dispatch = action => {
       enqueueUpdate(prevValue => reducer(action, prevValue), stateContainer);
-      hooks.onStateDidChange();
+      onStateDidChange();
     };
 
     (stateContainer.currentValue, dispatch, hooks);
