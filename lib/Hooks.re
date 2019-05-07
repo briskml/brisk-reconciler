@@ -270,23 +270,16 @@ let pendingEffects = (~lifecycle, hooks) =>
     HeterogenousList.fold(
       (acc, opaqueValue) =>
         switch (opaqueValue) {
-        | HeterogenousList.Any(Effect.Effect(state)) => [
-            Effect.get(~lifecycle, state),
-            ...acc,
-          ]
+        | HeterogenousList.Any(Effect.Effect(state)) =>
+          switch (Effect.get(~lifecycle, state)) {
+          | None => acc
+          | Some(effect) => EffectSequence.chain(acc, effect)
+          }
         | _ => acc
         },
       [],
       hooks,
     )
-    |> List.fold_left(
-         (acc, effect) =>
-           switch (effect) {
-           | Some(e) => [e, ...acc]
-           | None => acc
-           },
-         [],
-       )
   | None => []
   };
 
