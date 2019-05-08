@@ -94,13 +94,13 @@ module Make = (OutputTree: OutputTree) => {
   type renderedElement = {
     nearestHostOutputNode: outputNodeContainer,
     instanceForest,
-    enqueuedEffects: list(list(unit => unit)),
+    enqueuedEffects: EffectSequence.t,
   };
 
   type opaqueInstanceUpdate = {
     nearestHostOutputNode: outputNodeContainer,
     opaqueInstance,
-    enqueuedEffects: list(list(unit => unit)),
+    enqueuedEffects: EffectSequence.t,
   };
 
   module InstanceForest = {
@@ -147,7 +147,7 @@ module Make = (OutputTree: OutputTree) => {
     let pendingEffects = (~lifecycle, acc, instanceForest) => {
       fold(
         (acc, Instance({hooks})) =>
-          [Hooks.pendingEffects(~lifecycle, hooks), ...acc],
+          EffectSequence.chain(Hooks.pendingEffects(~lifecycle, hooks), acc),
         acc,
         instanceForest,
       );
@@ -155,7 +155,7 @@ module Make = (OutputTree: OutputTree) => {
   };
 
   module SyntheticElement = {
-    let rec map = (f, syntheticElement) =>
+    let rec map = (f, syntheticElement): (instanceForest, EffectSequence.t) =>
       switch (syntheticElement) {
       | Flat(l) =>
         let (opaqueInstance, enqueuedMountEffects) = f(l);
@@ -171,7 +171,7 @@ module Make = (OutputTree: OutputTree) => {
             |> List.map(InstanceForest.getSubtreeSize)
             |> List.fold_left((+), 0),
           ),
-          List.concat(effects),
+          List.fold_left(EffectSequence.chain, EffectSequence.noop, effects),
         );
       };
     let rec fold =
@@ -198,10 +198,10 @@ module Make = (OutputTree: OutputTree) => {
               (
                 [instanceForest, ...acc],
                 nearestHostOutputNode,
-                List.append(enqueuedEffects, nextEffects),
+                EffectSequence.chain(enqueuedEffects, nextEffects),
               );
             },
-            ([], nearestHostOutputNode, []),
+            ([], nearestHostOutputNode, EffectSequence.noop),
             List.rev(l),
           );
         {
@@ -476,7 +476,7 @@ module Make = (OutputTree: OutputTree) => {
   module Instance = {
     let rec ofElement =
             (Element(component) as element)
-            : (opaqueInstance, list(list(unit => unit))) => {
+            : (opaqueInstance, EffectSequence.t) => {
       let hooks = Hooks.createState();
       let (hooks, subElements) =
         component.render(
@@ -501,21 +501,23 @@ module Make = (OutputTree: OutputTree) => {
           hostInstance:
             Node.make(component.elementType, subElements, instanceSubForest),
         }),
-        [
+        EffectSequence.chain(
           Hooks.pendingEffects(~lifecycle=Hooks.Effect.Mount, hooks),
-          ...mountEffects,
-        ],
+          mountEffects,
+        ),
       );
     }
-    and ofList =
-        (syntheticElement): (instanceForest, list(list(unit => unit))) =>
+    and ofList = (syntheticElement): (instanceForest, EffectSequence.t) =>
       SyntheticElement.map(ofElement, syntheticElement);
 
     let pendingEffects =
         (~lifecycle, ~nextEffects, ~instance as {instanceSubForest, hooks}) => {
       InstanceForest.pendingEffects(
         ~lifecycle,
-        [Hooks.pendingEffects(~lifecycle, hooks), ...nextEffects],
+        EffectSequence.chain(
+          Hooks.pendingEffects(~lifecycle, hooks),
+          nextEffects,
+        ),
         instanceSubForest,
       );
     };
@@ -628,7 +630,7 @@ module Make = (OutputTree: OutputTree) => {
         {
           nearestHostOutputNode: updateContext.nearestHostOutputNode,
           opaqueInstance: originalOpaqueInstance,
-          enqueuedEffects: [],
+          enqueuedEffects: EffectSequence.noop,
         };
       } else {
         let {component} = instance;
@@ -860,13 +862,14 @@ module Make = (OutputTree: OutputTree) => {
           {
             nearestHostOutputNode,
             opaqueInstance: Instance(updatedInstanceWithNewSubtree),
-            enqueuedEffects: [
-              Hooks.pendingEffects(
-                ~lifecycle=Hooks.Effect.Update,
-                updatedInstanceWithNewSubtree.hooks,
+            enqueuedEffects:
+              EffectSequence.chain(
+                Hooks.pendingEffects(
+                  ~lifecycle=Hooks.Effect.Update,
+                  updatedInstanceWithNewSubtree.hooks,
+                ),
+                enqueuedEffects,
               ),
-              ...enqueuedEffects,
-            ],
           };
         };
       }
@@ -984,7 +987,7 @@ module Make = (OutputTree: OutputTree) => {
                 prevSubtreeSize
                 + InstanceForest.getSubtreeSize(instanceForest),
                 indexShift,
-                List.append(enqueuedEffects, enqueuedEffectsAcc),
+                EffectSequence.chain(enqueuedEffects, enqueuedEffectsAcc),
               );
             },
             oldInstanceForests,
@@ -995,7 +998,7 @@ module Make = (OutputTree: OutputTree) => {
               [],
               updateContext.absoluteSubtreeIndex,
               0,
-              [],
+              EffectSequence.noop,
             ),
           );
         let newInstanceForests = List.rev(newInstanceForests);
@@ -1399,10 +1402,10 @@ module Make = (OutputTree: OutputTree) => {
               (
                 [next, ...acc],
                 nearestHostOutputNode,
-                List.append(effectsAcc, enqueuedEffects),
+                EffectSequence.chain(effectsAcc, enqueuedEffects),
               );
             },
-            ([], nearestHostOutputNode, []),
+            ([], nearestHostOutputNode, EffectSequence.noop),
             List.rev(l): list(instanceForest),
           );
         let unchanged = List.for_all2((===), l, nextL);
@@ -1442,7 +1445,8 @@ module Make = (OutputTree: OutputTree) => {
       {
         instanceForest: newInstanceForest,
         nearestHostOutputNode,
-        enqueuedEffects: List.append(nextEnqueuedEffects, enqueuedEffects),
+        enqueuedEffects:
+          EffectSequence.chain(nextEnqueuedEffects, enqueuedEffects),
       };
     };
 
@@ -1453,8 +1457,8 @@ module Make = (OutputTree: OutputTree) => {
     };
 
     let executePendingEffects = ({enqueuedEffects} as renderedElement: t) => {
-      List.iter(List.iter(f => f()), enqueuedEffects);
-      {...renderedElement, enqueuedEffects: []};
+      enqueuedEffects();
+      {...renderedElement, enqueuedEffects: EffectSequence.noop};
     };
   };
 
