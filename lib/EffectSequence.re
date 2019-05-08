@@ -2,9 +2,14 @@ type t = unit => unit;
 
 let noop = () => ();
 
-let flatten = (l, ()) => List.iter(f => f(), l);
-
-let chain = (f', f, ()) => {
-  f'();
-  f();
-};
+let chain = (f, f') =>
+  if (f' === noop) {
+    f;
+  } else if (f === noop) {
+    f';
+  } else {
+    () => {
+      f();
+      f'();
+    };
+  };
