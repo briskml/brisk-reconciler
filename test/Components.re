@@ -4,10 +4,16 @@ open TestReconciler;
  * The simplest component. Composes nothing!
  */
 module Box = {
-  let component = nativeComponent("Box");
   let createElement =
-      (~key=?, ~title="ImABox", ~onClick as _=?, ~children as _children, ()) =>
-    component(~key?, h =>
+    nativeComponent(
+      "Box",
+      (
+        ~hooks as h,
+        ~title="ImABox",
+        ~onClick as _=?,
+        ~children as _children,
+        (),
+      ) =>
       (
         h,
         {
@@ -22,9 +28,8 @@ module Box = {
 };
 
 module Div = {
-  let component = nativeComponent("Div");
-  let createElement = (~key=?, ~children, ()) =>
-    component(~key?, h =>
+  let createElement =
+    nativeComponent("Div", (~hooks as h, ~children, ()) =>
       (
         h,
         {
@@ -37,9 +42,10 @@ module Div = {
 };
 
 module SingleChildDiv = {
-  let component = nativeComponent("SingleChildDiv");
-  let createElement = (~key=?, ~children as child: syntheticElement, ()) =>
-    component(~key?, h =>
+  let createElement =
+    nativeComponent(
+      "SingleChildDiv",
+      (~hooks as h, ~children as child: syntheticElement, ()) =>
       (
         h,
         {
@@ -56,56 +62,53 @@ module Text = {
     current: string,
     prev: string,
   };
-  let component = nativeComponent("Text");
-  let createElement = (~key=?, ~title="ImABox", ~children as _children, ()) =>
-    component(
-      ~key?,
-      hooks => {
-        let (prevTitle, setTitle, hooks) = Hooks.ref(title, hooks);
-        let hooks =
-          Hooks.effect(
-            Always,
-            () => {
-              setTitle(title);
-              None;
-            },
-            hooks,
-          );
-        (
-          hooks,
-          {
-            make: () => Implementation.{name: "Text", element: Text(title)},
-            configureInstance: (~isFirstRender, t) => {
-              if (prevTitle != title || isFirstRender) {
-                Implementation.mountLog :=
-                  [
-                    Implementation.ChangeText(prevTitle, title),
-                    ...Implementation.mountLog^,
-                  ];
-              };
-              t;
-            },
-            children: listToElement([]),
+  let createElement =
+    nativeComponent(
+      "Text", (~hooks, ~title="ImABox", ~children as _children, ()) => {
+      let (prevTitle, setTitle, hooks) = Hooks.ref(title, hooks);
+      let hooks =
+        Hooks.effect(
+          Always,
+          () => {
+            setTitle(title);
+            None;
           },
+          hooks,
         );
-      },
-    );
+      (
+        hooks,
+        {
+          make: () => Implementation.{name: "Text", element: Text(title)},
+          configureInstance: (~isFirstRender, t) => {
+            if (prevTitle != title || isFirstRender) {
+              Implementation.mountLog :=
+                [
+                  Implementation.ChangeText(prevTitle, title),
+                  ...Implementation.mountLog^,
+                ];
+            };
+            t;
+          },
+          children: listToElement([]),
+        },
+      );
+    });
 };
 
 let stringToElement = string => <Text title=string />;
 
 module BoxWrapper = {
-  let component = component("BoxWrapper");
   let createElement =
+    component(
+      "BoxWrapper",
       (
-        ~key=?,
+        ~hooks as h,
         ~title="ImABox",
         ~twoBoxes=false,
         ~onClick as _=?,
         ~children as _,
         (),
       ) =>
-    component(~key?, h =>
       (
         h,
         twoBoxes
@@ -119,18 +122,22 @@ module BoxWrapper = {
  * Box with dynamic keys.
  */
 module BoxItemDynamic = {
-  let component = component(~useDynamicKey=true, "BoxItemDynamic");
-  let createElement = (~title="ImABox", ~children as _, ()) =>
-    component(h => (h, stringToElement(title)));
+  let createElement =
+    component(
+      ~useDynamicKey=true,
+      "BoxItemDynamic",
+      (~hooks as h, ~title="ImABox", ~children as _, ()) =>
+      (h, stringToElement(title))
+    );
 };
 
 module BoxList = {
   type action =
     | Create(string)
     | Reverse;
-  let component = component("BoxList");
-  let createElement = (~rAction, ~useDynamicKeys=false, ~children as _, ()) =>
-    component(hooks => {
+  let createElement =
+    component(
+      "BoxList", (~hooks, ~rAction, ~useDynamicKeys=false, ~children as _, ()) => {
       let (state, dispatch, hooks) =
         Hooks.reducer(
           ~initialState=[],
@@ -156,19 +163,22 @@ module BoxList = {
 };
 
 module StatelessButton = {
-  let component = component("StatelessButton");
   let createElement =
+    component(
+      "StatelessButton",
       (
+        ~hooks as h,
         ~initialClickCount as _="noclicks",
         ~test as _="default",
         ~children as _,
         (),
       ) =>
-    component(h => (h, <Div />));
+      (h, <Div />)
+    );
 };
 
-let testWrapper = (~wrappedText="default", _children) =>
-  component("TestWrapper", hooks =>
+let testWrapper =
+  component("TestWrapper", (~hooks, ~wrappedText="default", _children) =>
     (
       hooks,
       <StatelessButton
@@ -178,9 +188,9 @@ let testWrapper = (~wrappedText="default", _children) =>
   );
 
 module ButtonWrapper = {
-  let component = component("ButtonWrapper");
-  let createElement = (~wrappedText="default", ~children as _, ()) =>
-    component(hooks =>
+  let createElement =
+    component(
+      "ButtonWrapper", (~hooks, ~wrappedText="default", ~children as _, ()) =>
       (
         hooks,
         <StatelessButton
@@ -192,9 +202,10 @@ module ButtonWrapper = {
 
 module ButtonWrapperWrapper = {
   let buttonWrapperJsx = <ButtonWrapper wrappedText="TestButtonUpdated!!!" />;
-  let component = component("ButtonWrapperWrapper");
-  let createElement = (~wrappedText="default", ~children as _, ()) =>
-    component(hooks =>
+  let createElement =
+    component(
+      "ButtonWrapperWrapper",
+      (~hooks, ~wrappedText="default", ~children as _, ()) =>
       (hooks, <Div> {stringToElement(wrappedText)} buttonWrapperJsx </Div>)
     );
 };
@@ -202,9 +213,8 @@ module ButtonWrapperWrapper = {
 module UpdateAlternateClicks = {
   type action =
     | Click;
-  let component = component("UpdateAlternateClicks");
-  let createElement = (~rAction, ~children as _, ()) =>
-    component(hooks => {
+  let createElement =
+    component("UpdateAlternateClicks", (~hooks, ~rAction, ~children as _, ()) => {
       let (state, dispatch, hooks) =
         Hooks.reducer(
           ~initialState=ref(0),
@@ -231,9 +241,8 @@ module UpdateAlternateClicks = {
 module ToggleClicks = {
   type action =
     | Click;
-  let component = component("ToggleClicks");
-  let createElement = (~rAction, ~children as _, ()) =>
-    component(hooks => {
+  let createElement =
+    component("ToggleClicks", (~hooks, ~rAction, ~children as _, ()) => {
       let (state, setState, hooks) = Hooks.state(false, hooks);
       let hooks =
         Hooks.effect(
@@ -259,16 +268,16 @@ module ToggleClicks = {
 };
 
 module EmptyComponent = {
-  let component = component("Box");
-  let createElement = (~key=?, ~children as _children, ()) =>
-    component(~key?, hooks => (hooks, listToElement([])));
+  let createElement =
+    component("Box", (~hooks, ~children as _children, ()) =>
+      (hooks, listToElement([]))
+    );
 };
 
 module EmptyComponentWithAlwaysEffect = {
-  let component = component("Box");
   let createElement =
-      (~children as _children, ~onEffect, ~onEffectDispose, ()) =>
-    component(hooks => {
+    component(
+      "Box", (~hooks, ~children as _children, ~onEffect, ~onEffectDispose, ()) => {
       let hooks =
         Hooks.effect(
           Always,
@@ -283,10 +292,9 @@ module EmptyComponentWithAlwaysEffect = {
 };
 
 module EmptyComponentWithOnMountEffect = {
-  let component = component("Box");
   let createElement =
-      (~children as _children, ~onEffect, ~onEffectDispose, ()) =>
-    component(hooks => {
+    component(
+      "Box", (~hooks, ~children as _children, ~onEffect, ~onEffectDispose, ()) => {
       let hooks =
         Hooks.effect(
           OnMount,

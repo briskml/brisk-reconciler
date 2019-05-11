@@ -133,6 +133,33 @@ module Make:
       let executePendingEffects: t => t;
     };
 
+    type outputNodeGroup;
+    type outputNodeContainer;
+    type componentIdentity('a, 'b, 'elementType, 'outputNode);
+
+    type componentFunc('a, 'b, 'ret) =
+      (~hooks: Hooks.t('a, unit, 'b, 'b)) => 'ret;
+
+    type initializedComponentFunc(
+      'a,
+      'b,
+      'ret,
+      'id,
+      'elementType,
+      'outputNode,
+    ) =
+      (
+        ~key: int=?,
+        ~getComponentId: componentIdentity(
+                           'a,
+                           'b,
+                           'elementType,
+                           'outputNode,
+                         ) =>
+                         unit
+      ) =>
+      componentFunc('a, 'b, 'ret);
+
     /**
       * Creates a component. Components are a functions which
       * retain state over time via Hooks. The function you pass to
@@ -143,11 +170,16 @@ module Make:
       (
         ~useDynamicKey: bool=?,
         string,
-        ~key: Key.t=?,
-        Hooks.t('a, 'a) =>
-        (Hooks.t(Hooks.nil, 'a), syntheticElement)
+        componentFunc('hooks, 'initialHooks, 'returnValue)
       ) =>
-      syntheticElement;
+      initializedComponentFunc(
+        'hooks,
+        'initialHooks,
+        'returnValue,
+        'id,
+        syntheticElement,
+        outputNodeGroup,
+      );
 
     /**
       * Creates a component which renders an OutputTree node.
@@ -156,10 +188,31 @@ module Make:
       (
         ~useDynamicKey: bool=?,
         string,
-        ~key: Key.t=?,
-        Hooks.t('a, 'a) =>
-        (Hooks.t(Hooks.nil, 'a), outputTreeElement)
+        componentFunc('hooks, 'initialHooks, 'returnValue)
       ) =>
+      initializedComponentFunc(
+        'hooks,
+        'initialHooks,
+        'returnValue,
+        'id,
+        outputTreeElement,
+        outputNodeContainer,
+      );
+    type component('hooks, 'initialHooks, 'elementType, 'outputNode) =
+      (
+        ~getComponentId: componentIdentity(
+                           'hooks,
+                           'initialHooks,
+                           'elementType,
+                           'outputNode,
+                         ) =>
+                         unit,
+        ~hooks: Hooks.t('hooks, unit, 'initialHooks, 'initialHooks)
+      ) =>
+      (Hooks.t(unit, unit, 'hooks, unit), 'elementType);
+
+    let element:
+      component('hooks, 'initialHooks, 'elementType, 'outputNode) =>
       syntheticElement;
 
     module Hooks = Hooks;
