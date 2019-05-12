@@ -23,10 +23,9 @@ module Update = {
 
 module Unit = {
   open Brisk;
-  let component = nativeComponent("B");
 
-  let createElement = (~depth as _, ~children, ()) => {
-    component(hooks =>
+  let make =
+    nativeComponent("B", (~hooks, ~depth as _, ~children, ()) =>
       (
         hooks,
         {
@@ -36,7 +35,8 @@ module Unit = {
         },
       )
     );
-  };
+  let createElement = (~depth, ~children, ()) =>
+    element(make(~depth, ~children, ()));
 };
 module A = {
   open Brisk;
@@ -78,7 +78,7 @@ module A = {
     | _ => raise(Invalid_argument("List should have 4 elements"))
     };
 
-  let rec componentDefinition = (~depth, ~index, hooks) => {
+  let rec componentDefinition = (~hooks, ~make, ~depth, ~index, ()) => {
     let childrenIndexOffset = index * 4;
     let childrenDepth = depth + 1;
     let (children, dispatch, hooks) =
@@ -130,20 +130,21 @@ module A = {
     } else {
       (hooks, <Unit depth={depth + 1} />);
     };
-  }
-  and componentA = component("A")
-  and componentB = component("B")
-  and makeA = (~depth, ~index, _children) =>
-    componentA(componentDefinition(~depth, ~index))
-  and makeB = (~depth, ~index, _children) =>
-    componentB(componentDefinition(~depth, ~index))
-  and make = (componentType, ~depth, ~index, _children) =>
+  };
+
+  let componentA = (~make) => component("A", componentDefinition(~make));
+  let componentB = (~make) => component("B", componentDefinition(~make));
+
+  let rec make = (componentType, ~depth, ~index, _children: list(unit)) =>
     switch (componentType) {
-    | A
-    | A' => componentA(componentDefinition(~depth, ~index))
+    | ComponentType.A
+    | A' => element(componentA(~make, ~depth, ~index, ()))
     | B
-    | B' => componentB(componentDefinition(~depth, ~index))
+    | B' => element(componentB(~make, ~depth, ~index, ()))
     };
+
+  let makeA = make(ComponentType.A);
+  let makeB = make(ComponentType.B);
 
   let render = () => {
     Brisk.RenderedElement.render((), makeA(~depth=0, ~index=0, []));
