@@ -33,7 +33,7 @@ We are building it in Reason. It's a very fast, scalable, and extremely expressi
 - [DOM](examples/dom/WebReconciler.re)
   - `cd examples/dom`
   - `esy`
-  - `esy run`
+  - `open index.html`
 
 ## Contributing
 
