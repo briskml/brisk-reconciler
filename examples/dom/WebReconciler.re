@@ -29,7 +29,7 @@ module Reconciler = {
     parent;
   };
 
-  let deleteNode = (~parent: node, ~child: node) => {
+  let deleteNode = (~parent: node, ~child: node, ~position as _) => {
     Dom.removeChild(parent, child);
     parent;
   };
@@ -186,8 +186,7 @@ let counterButtons = (~children as _, ()) => {
   component(hooks => {
     let (count, setCount, hooks) =
       JsooReact.Hooks.state(0, hooks);
-    let hooks =
-      JsooReact.Hooks.subscribe(~handler=setCount, action, hooks);
+    RemoteAction.subscribe(~handler=setCount, action) |> ignore;
     (
       hooks,
       <view>

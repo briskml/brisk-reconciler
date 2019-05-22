@@ -32,7 +32,7 @@ module Reconciler = {
     parent;
   };
 
-  let deleteNode = (~parent: node, ~child: node) => {
+  let deleteNode = (~parent: node, ~child: node, ~position as _) => {
     switch (parent, child) {
     | (Container(box), Label(child)) => box#remove(child)
     | (Container(box), Button(child)) => box#remove(child)
