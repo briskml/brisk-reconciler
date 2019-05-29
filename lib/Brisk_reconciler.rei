@@ -133,32 +133,67 @@ module Make:
       let executePendingEffects: t => t;
     };
 
-    type outputNodeGroup;
-    type outputNodeContainer;
-    type componentIdentity('a, 'b, 'elementType, 'outputNode);
-
-    type componentFunc('a, 'b, 'ret) =
-      (~hooks: Hooks.t('a, unit, 'b, 'b)) => 'ret;
-
-    type initializedComponentFunc(
-      'a,
-      'b,
-      'ret,
-      'id,
+    type elementType('elementType, 'outputNode);
+    type id('a);
+    type instance(
+      'hooks,
+      'initialHooks,
       'elementType,
       'outputNode,
-    ) =
-      (
-        ~key: int=?,
-        ~getComponentId: componentIdentity(
-                           'a,
-                           'b,
-                           'elementType,
-                           'outputNode,
-                         ) =>
-                         unit
-      ) =>
-      componentFunc('a, 'b, 'ret);
+      'renderType,
+    );
+    type outputNodeGroup;
+    type outputNodeContainer;
+    type renderFunction('hooks, 'initialHooks, 'elementType) =
+      Hooks.t('hooks, unit, 'initialHooks, 'initialHooks) =>
+      (Hooks.t(unit, unit, 'hooks, unit), 'elementType);
+    type component(
+      'hooks,
+      'initialHooks,
+      'elementType,
+      'outputNode,
+      'renderType,
+    ) = {
+      render: 'renderType,
+      elementType: elementType('elementType, 'outputNode),
+      id:
+        id(
+          instance(
+            'hooks,
+            'initialHooks,
+            'elementType,
+            'outputNode,
+            'renderType,
+          ),
+        ),
+      debugName: string,
+      useDynamicKey: bool,
+      eq:
+        'a.
+        (
+          'a,
+          id('a),
+          id(
+            instance(
+              'hooks,
+              'initialHooks,
+              'elementType,
+              'outputNode,
+              'renderType,
+            ),
+          )
+        ) =>
+        option(
+          instance(
+            'hooks,
+            'initialHooks,
+            'elementType,
+            'outputNode,
+            'renderType,
+          ),
+        ),
+
+    };
 
     /**
       * Creates a component. Components are a functions which
@@ -167,52 +202,40 @@ module Make:
       * handled using Hooks.effect
       */
     let component:
-      (
-        ~useDynamicKey: bool=?,
-        string,
-        componentFunc('hooks, 'initialHooks, 'returnValue)
-      ) =>
-      initializedComponentFunc(
+      (~useDynamicKey: bool=?, string, 'renderType) =>
+      component(
         'hooks,
         'initialHooks,
-        'returnValue,
-        'id,
         syntheticElement,
         outputNodeGroup,
+        'renderType,
       );
 
     /**
       * Creates a component which renders an OutputTree node.
       */
     let nativeComponent:
-      (
-        ~useDynamicKey: bool=?,
-        string,
-        componentFunc('hooks, 'initialHooks, 'returnValue)
-      ) =>
-      initializedComponentFunc(
+      (~useDynamicKey: bool=?, string, 'renderType) =>
+      component(
         'hooks,
         'initialHooks,
-        'returnValue,
-        'id,
         outputTreeElement,
         outputNodeContainer,
+        'renderType,
       );
-    type component('hooks, 'initialHooks, 'elementType, 'outputNode) =
-      (
-        ~getComponentId: componentIdentity(
-                           'hooks,
-                           'initialHooks,
-                           'elementType,
-                           'outputNode,
-                         ) =>
-                         unit,
-        ~hooks: Hooks.t('hooks, unit, 'initialHooks, 'initialHooks)
-      ) =>
-      (Hooks.t(unit, unit, 'hooks, unit), 'elementType);
 
     let element:
-      component('hooks, 'initialHooks, 'elementType, 'outputNode) =>
+      (
+        ~key: Key.t=?,
+        renderFunction('hooks, 'initialHooks, 'elementType),
+        component(
+          'hooks,
+          'initialHooks,
+          'elementType,
+          'outputNode,
+          'renderType,
+        )
+      ) =>
       syntheticElement;
 
     module Hooks = Hooks;

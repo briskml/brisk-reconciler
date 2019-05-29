@@ -1,7 +1,7 @@
 (executable
  (name test)
  (libraries alcotest easy-format patience_diff brisk-reconciler)
- (preprocess (pps ppx_deriving.std)))
+ (preprocess (pps brisk_jsx ppx_deriving.std)))
 
 (alias
  (name runtest)

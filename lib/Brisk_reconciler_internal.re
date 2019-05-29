@@ -43,17 +43,24 @@ module Make = (OutputTree: OutputTree) => {
   type outputNodeContainer = Lazy.t(internalOutputNode);
   type outputNodeGroup = list(outputNodeContainer);
   type id('a) = ..;
-  type instance('hooks, 'initialHooks, 'elementType, 'outputNode) = {
+  type instance('hooks, 'initialHooks, 'elementType, 'outputNode, 'render) = {
     hooks: Hooks.state('hooks, unit),
-    componentId:
-      componentIdentity('hooks, 'initialHooks, 'elementType, 'outputNode),
+    component:
+      component('hooks, 'initialHooks, 'elementType, 'outputNode, 'render),
     element,
     instanceSubForest: instanceForest,
     subElements: 'elementType,
     hostInstance: 'outputNode,
   }
+  and renderFunction('hooks, 'initialHooks, 'elementType) =
+    Hooks.t('hooks, unit, 'initialHooks, 'initialHooks) =>
+    (Hooks.t(unit, unit, 'hooks, unit), 'elementType)
   and element =
-    | Element(component('hooks, 'initialHooks, 'elementType, 'outputNode))
+    | Element(
+        renderFunction('hooks, 'initialHooks, 'elementType),
+        component('hooks, 'initialHooks, 'elementType, 'outputNode, 'render),
+        Key.t,
+      )
       : element
   and syntheticElement =
     | Flat(element)
@@ -67,63 +74,43 @@ module Make = (OutputTree: OutputTree) => {
   and elementType('elementType, 'outputNode) =
     | Host: elementType(outputTreeElement, outputNodeContainer)
     | React: elementType(syntheticElement, outputNodeGroup)
-  and componentIdentity('hooks, 'initialHooks, 'elementType, 'outputNode) = {
+  and component('hooks, 'initialHooks, 'elementType, 'outputNode, 'render) = {
+    render: 'render,
     elementType: elementType('elementType, 'outputNode),
-    id: id(instance('hooks, 'initialHooks, 'elementType, 'outputNode)),
+    id:
+      id(
+        instance('hooks, 'initialHooks, 'elementType, 'outputNode, 'render),
+      ),
     debugName: string,
-    key: int,
+    useDynamicKey: bool,
     eq:
       'a.
       (
         'a,
         id('a),
-        id(instance('hooks, 'initialHooks, 'elementType, 'outputNode))
+        id(
+          instance('hooks, 'initialHooks, 'elementType, 'outputNode, 'render),
+        )
       ) =>
-      option(instance('hooks, 'initialHooks, 'elementType, 'outputNode)),
+      option(
+        instance('hooks, 'initialHooks, 'elementType, 'outputNode, 'render),
+      ),
 
   }
   and instanceForest =
     | IFlat(opaqueInstance)
     | INested(list(instanceForest), int /*subtree size*/)
-  and componentWithoutId('hooks, 'initialHooks, 'elementType, 'outputNode) =
-    (~hooks: Hooks.t('hooks, unit, 'initialHooks, 'initialHooks)) =>
-    (Hooks.t(unit, unit, 'hooks, unit), 'elementType)
-  and component('hooks, 'initialHooks, 'elementType, 'outputNode) =
-    (
-      ~getComponentId: componentIdentity(
-                         'hooks,
-                         'initialHooks,
-                         'elementType,
-                         'outputNode,
-                       ) =>
-                       unit,
-      ~hooks: Hooks.t('hooks, unit, 'initialHooks, 'initialHooks)
-    ) =>
-    (Hooks.t(unit, unit, 'hooks, unit), 'elementType)
   and opaqueInstance =
-    | Instance(instance('hooks, 'initialHooks, 'elementType, 'outputNode))
+    | Instance(
+        instance('hooks, 'initialHooks, 'elementType, 'outputNode, 'render),
+      )
       : opaqueInstance;
 
-  let instantiateComponent = component => {
-    let hooks = Hooks.createState();
-    let componentId = ref(Obj.magic());
-    let (hooks, subElements) =
-      component(
-        ~getComponentId=id => componentId := id,
-        ~hooks=Hooks.ofState(hooks, ~onStateDidChange=OutputTree.markAsStale),
-      );
-    (hooks, subElements, componentId^);
-  };
+  type polymorphicRender = {
+    render:
+      'hooks 'initialHooks 'elementType.
+      renderFunction('hooks, 'initialHooks, 'elementType),
 
-  let getKey = component => {
-    let hooks = Hooks.createState();
-    let componentId = ref(Obj.magic());
-    component(
-      ~getComponentId=id => componentId := id,
-      ~hooks=Hooks.ofState(hooks, ~onStateDidChange=OutputTree.markAsStale),
-    )
-    |> ignore;
-    componentId^.key;
   };
 
   type renderedElement = {
@@ -142,7 +129,7 @@ module Make = (OutputTree: OutputTree) => {
     let getSubtreeSize =
       fun
       | INested(_, x) => x
-      | IFlat(Instance({hostInstance, componentId: {elementType}})) =>
+      | IFlat(Instance({hostInstance, component: {elementType}})) =>
         switch (elementType) {
         | React => List.length(hostInstance)
         | Host => 1
@@ -157,7 +144,7 @@ module Make = (OutputTree: OutputTree) => {
       |> List.fold_left(
            (
              acc: list(outputNodeContainer),
-             Instance({componentId: {elementType}, hostInstance}),
+             Instance({component: {elementType}, hostInstance}),
            ) =>
              switch (elementType) {
              | React => List.append(hostInstance, acc)
@@ -394,7 +381,7 @@ module Make = (OutputTree: OutputTree) => {
     let reorder =
         (
           ~parent,
-          ~instance as Instance({hostInstance, componentId: {elementType}}),
+          ~instance as Instance({hostInstance, component: {elementType}}),
           ~indexShift,
           ~from,
           ~to_,
@@ -483,7 +470,7 @@ module Make = (OutputTree: OutputTree) => {
   module OpaqueInstanceHash = {
     type t = lazy_t(Hashtbl.t(int, (opaqueInstance, int)));
     let addOpaqueInstance = (idTable, index, opaqueInstance) => {
-      let Instance({componentId: {key}}) = opaqueInstance;
+      let Instance({element: Element(_, _, key)}) = opaqueInstance;
       key == Key.none
         ? () : Hashtbl.add(idTable, key, (opaqueInstance, index));
     };
@@ -510,14 +497,19 @@ module Make = (OutputTree: OutputTree) => {
 
   module Instance = {
     let rec ofElement =
-            (Element(component) as element)
+            (Element(render, component, _) as element)
             : (opaqueInstance, EffectSequence.t) => {
-      let (hooks, subElements, componentId) =
-        instantiateComponent(component);
+      let (hooks, subElements) =
+        render(
+          Hooks.ofState(
+            Hooks.createState(),
+            ~onStateDidChange=OutputTree.markAsStale,
+          ),
+        );
       let hooks = Hooks.toState(hooks);
       let (instanceSubForest, mountEffects) =
         (
-          switch (componentId.elementType) {
+          switch (component.elementType) {
           | React => (subElements: syntheticElement)
           | Host => subElements.children
           }
@@ -530,12 +522,8 @@ module Make = (OutputTree: OutputTree) => {
           subElements,
           instanceSubForest,
           hostInstance:
-            Node.make(
-              componentId.elementType,
-              subElements,
-              instanceSubForest,
-            ),
-          componentId,
+            Node.make(component.elementType, subElements, instanceSubForest),
+          component,
         }),
         EffectSequence.chain(
           Hooks.pendingEffects(~lifecycle=Hooks.Effect.Mount, hooks),
@@ -560,11 +548,10 @@ module Make = (OutputTree: OutputTree) => {
   };
 
   module Render = {
-    let getOpaqueInstance = (~useKeyTable, Element(component)) =>
+    let getOpaqueInstance = (~useKeyTable, Element(_, _, key)) =>
       switch (useKeyTable) {
       | None => None
-      | Some(keyTable) =>
-        OpaqueInstanceHash.lookupKey(keyTable, getKey(component))
+      | Some(keyTable) => OpaqueInstanceHash.lookupKey(keyTable, key)
       };
 
     type childElementUpdate = {
@@ -653,7 +640,7 @@ module Make = (OutputTree: OutputTree) => {
         (
           ~updateContext: UpdateContext.t,
           Instance(instance) as originalOpaqueInstance,
-          Element(nextComponent) as nextElement,
+          Element(renderNextElement, nextComponent, _) as nextElement,
         )
         : opaqueInstanceUpdate => {
       let nextState =
@@ -670,16 +657,13 @@ module Make = (OutputTree: OutputTree) => {
           enqueuedEffects: EffectSequence.noop,
         };
       } else {
-        let {componentId: {id}} = instance;
-        let nextComponentId = ref(Obj.magic());
-        let nextComponent =
-          nextComponent(~getComponentId=id => nextComponentId := id);
+        let {component: {id}} = instance;
 
         switch (
-          nextComponentId^.eq(
+          nextComponent.eq(
             {...instance, hooks: nextState},
             id,
-            nextComponentId^.id,
+            nextComponent.id,
           )
         ) {
         /*
@@ -694,8 +678,8 @@ module Make = (OutputTree: OutputTree) => {
             updateInstance(
               ~originalOpaqueInstance,
               ~updateContext,
-              ~componentIdentity=nextComponentId^,
               ~nextComponent,
+              ~renderNextElement,
               ~nextElement,
               ~stateChanged,
               handedInstance,
@@ -748,32 +732,28 @@ module Make = (OutputTree: OutputTree) => {
       };
     }
     and updateInstance:
-      type hooks initialHooks elementType outputNodeType.
+      type hooks initialHooks elementType outputNodeType ret.
         (
           ~originalOpaqueInstance: opaqueInstance,
           ~updateContext: UpdateContext.t,
-          ~componentIdentity: componentIdentity(
-                                hooks,
-                                initialHooks,
-                                elementType,
-                                outputNodeType,
-                              ),
-          ~nextComponent: componentWithoutId(
+          ~nextComponent: component(
                             hooks,
                             initialHooks,
                             elementType,
                             outputNodeType,
+                            ret,
                           ),
+          ~renderNextElement: renderFunction(hooks, initialHooks, elementType),
           ~nextElement: element,
           ~stateChanged: bool,
-          instance(hooks, initialHooks, elementType, outputNodeType)
+          instance(hooks, initialHooks, elementType, outputNodeType, ret)
         ) =>
         opaqueInstanceUpdate =
       (
         ~originalOpaqueInstance,
         ~updateContext,
-        ~componentIdentity,
         ~nextComponent,
+        ~renderNextElement,
         ~nextElement,
         ~stateChanged,
         instance,
@@ -788,12 +768,11 @@ module Make = (OutputTree: OutputTree) => {
         let (initialHooks, nextSubElements) =
           if (shouldRerender) {
             let (initialHooks, nextElement) =
-              nextComponent(
-                ~hooks=
-                  Hooks.ofState(
-                    updatedInstanceWithNewElement.hooks,
-                    ~onStateDidChange=OutputTree.markAsStale,
-                  ),
+              renderNextElement(
+                Hooks.ofState(
+                  updatedInstanceWithNewElement.hooks,
+                  ~onStateDidChange=OutputTree.markAsStale,
+                ),
               );
             (Hooks.toState(initialHooks), nextElement);
           } else {
@@ -811,7 +790,7 @@ module Make = (OutputTree: OutputTree) => {
           updatedInstanceWithNewSubtree,
           enqueuedEffects,
         ) =
-          switch (componentIdentity.elementType) {
+          switch (nextComponent.elementType) {
           | React =>
             let {
               nearestHostOutputNode,
@@ -889,7 +868,13 @@ module Make = (OutputTree: OutputTree) => {
                   subElements: nextSubElements,
                   hostInstance,
                 }:
-                  instance(hooks, initialHooks, elementType, outputNodeType),
+                  instance(
+                    hooks,
+                    initialHooks,
+                    elementType,
+                    outputNodeType,
+                    ret,
+                  ),
                 enqueuedEffects,
               );
             } else {
@@ -1066,10 +1051,10 @@ module Make = (OutputTree: OutputTree) => {
        */
       | (
           IFlat(Instance(oldInstance) as oldOpaqueInstance),
-          Flat(Element(oldComponent)),
-          Flat(Element(nextComponent) as nextReactElement),
+          Flat(Element(_, _, oldKey)),
+          Flat(Element(_, _, nextKey) as nextReactElement),
         ) =>
-        if (getKey(nextComponent) !== getKey(oldComponent)) {
+        if (nextKey !== oldKey) {
           /* Not found: render a new instance */
           let {
             nearestHostOutputNode,
@@ -1186,8 +1171,8 @@ module Make = (OutputTree: OutputTree) => {
        */
       | (
           IFlat(oldOpaqueInstance),
-          Flat(Element(oldComponent)),
-          Flat(Element(nextComponent) as nextReactElement),
+          Flat(Element(_, _, oldKey)),
+          Flat(Element(_, _, nextKey) as nextReactElement),
         ) =>
         let keyTable =
           switch (useKeyTable) {
@@ -1200,8 +1185,7 @@ module Make = (OutputTree: OutputTree) => {
           update,
           newOpaqueInstance,
           enqueuedEffects,
-        ) = {
-          let nextKey = getKey(nextComponent);
+        ) =
           if (nextKey !== Key.none) {
             switch (OpaqueInstanceHash.lookupKey(keyTable, nextKey)) {
             | Some((subOpaqueInstance, previousIndex)) =>
@@ -1267,7 +1251,6 @@ module Make = (OutputTree: OutputTree) => {
               enqueuedEffects,
             );
           };
-        };
         switch (update) {
         | `NewElement =>
           let newInstanceForest = IFlat(newOpaqueInstance);
@@ -1291,8 +1274,6 @@ module Make = (OutputTree: OutputTree) => {
           let changed = oldOpaqueInstance !== newOpaqueInstance;
           let element =
             changed ? IFlat(newOpaqueInstance) : oldInstanceForest;
-          let oldKey = getKey(oldComponent);
-          let nextKey = getKey(nextComponent);
           if (oldKey != nextKey) {
             {
               updatedRenderedElement: {
@@ -1518,30 +1499,15 @@ module Make = (OutputTree: OutputTree) => {
   module Hooks = Hooks;
   module RemoteAction = RemoteAction;
 
-  type componentFunc('a, 'b, 'ret) =
-    (~hooks: Hooks.t('a, unit, 'b, 'b)) => 'ret;
-  type initializedComponentFunc('a, 'b, 'ret, 'id, 'elementType, 'outputNode) =
-    (
-      ~key: int=?,
-      ~getComponentId: componentIdentity('a, 'b, 'elementType, 'outputNode) =>
-                       unit
-    ) =>
-    componentFunc('a, 'b, 'ret);
-
   let component:
-    type hooks initialHooks returnValue.
-      (
-        ~useDynamicKey: bool=?,
-        string,
-        componentFunc(hooks, initialHooks, returnValue)
-      ) =>
-      initializedComponentFunc(
+    type hooks initialHooks renderFunction.
+      (~useDynamicKey: bool=?, string, renderFunction) =>
+      component(
         hooks,
         initialHooks,
-        returnValue,
-        'id,
         syntheticElement,
         outputNodeGroup,
+        renderFunction,
       ) =
     (~useDynamicKey=false, debugName, f) => {
       module Component = {
@@ -1552,6 +1518,7 @@ module Make = (OutputTree: OutputTree) => {
                     initialHooks,
                     syntheticElement,
                     outputNodeGroup,
+                    renderFunction,
                   ),
                 );
 
@@ -1566,6 +1533,7 @@ module Make = (OutputTree: OutputTree) => {
                   initialHooks,
                   syntheticElement,
                   outputNodeGroup,
+                  renderFunction,
                 ),
               )
             ) =>
@@ -1575,6 +1543,7 @@ module Make = (OutputTree: OutputTree) => {
                 initialHooks,
                 syntheticElement,
                 outputNodeGroup,
+                renderFunction,
               ),
             ) =
           (instance, id1, id2) => {
@@ -1584,48 +1553,63 @@ module Make = (OutputTree: OutputTree) => {
             };
           };
       };
-      (~key as argumentKey=Key.none, ~getComponentId) => {
-        let key =
-          argumentKey != Key.none
-            ? argumentKey
-            : {
-              useDynamicKey ? Key.create() : Key.none;
-            };
-        getComponentId({
-          id: Component.Id,
-          elementType: React,
-          debugName,
-          key,
-          eq: Component.eq,
-        });
-        f;
+      {
+        render: f,
+        id: Component.Id,
+        elementType: React,
+        debugName,
+        eq: Component.eq,
+        useDynamicKey,
       };
     };
 
   let nativeComponent:
-    type a b ret.
-      (~useDynamicKey: bool=?, string, componentFunc(a, b, ret)) =>
-      initializedComponentFunc(
-        a,
-        b,
-        ret,
-        'id,
+    type hooks initialHooks renderFunction.
+      (~useDynamicKey: bool=?, string, renderFunction) =>
+      component(
+        hooks,
+        initialHooks,
         outputTreeElement,
         outputNodeContainer,
+        renderFunction,
       ) =
     (~useDynamicKey=false, debugName, f) => {
       module Component = {
         type id('a) +=
-          | Id: id(instance(a, b, outputTreeElement, outputNodeContainer));
+          | Id: id(
+                  instance(
+                    hooks,
+                    initialHooks,
+                    outputTreeElement,
+                    outputNodeContainer,
+                    renderFunction,
+                  ),
+                );
 
         let eq:
           type c.
             (
               c,
               id(c),
-              id(instance(a, b, outputTreeElement, outputNodeContainer))
+              id(
+                instance(
+                  hooks,
+                  initialHooks,
+                  outputTreeElement,
+                  outputNodeContainer,
+                  renderFunction,
+                ),
+              )
             ) =>
-            option(instance(a, b, outputTreeElement, outputNodeContainer)) =
+            option(
+              instance(
+                hooks,
+                initialHooks,
+                outputTreeElement,
+                outputNodeContainer,
+                renderFunction,
+              ),
+            ) =
           (instance, id1, id2) => {
             switch (id1, id2) {
             | (Id, Id) => Some(instance)
@@ -1633,25 +1617,26 @@ module Make = (OutputTree: OutputTree) => {
             };
           };
       };
-      (~key as argumentKey=Key.none, ~getComponentId) => {
-        let key =
-          argumentKey != Key.none
-            ? argumentKey
-            : {
-              useDynamicKey ? Key.create() : Key.none;
-            };
-        getComponentId({
-          id: Component.Id,
-          elementType: Host,
-          debugName,
-          key,
-          eq: Component.eq,
-        });
-        f;
+      {
+        render: f,
+        id: Component.Id,
+        elementType: Host,
+        debugName,
+        eq: Component.eq,
+        useDynamicKey,
       };
     };
 
-  let element = f => Flat(Element(f));
+  let element = (~key=Key.none, render, component) => {
+    let key =
+      key != Key.none
+        ? key
+        : {
+          component.useDynamicKey ? Key.create() : Key.none;
+        };
+
+    Flat(Element(render, component, key));
+  };
 };
 
 module Hooks = Hooks;

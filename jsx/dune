@@ -1,0 +1,7 @@
+(library
+ (name brisk_jsx)
+ (public_name brisk_jsx)
+ (kind ppx_rewriter)
+ (libraries ocaml-migrate-parsetree
+            ppxlib)
+ (preprocess (pps ppxlib.metaquot)))
