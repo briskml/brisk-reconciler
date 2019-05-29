@@ -1,6 +1,7 @@
 module P = Migrate_parsetree.Versions.OCaml_406.Ast.Parsetree
 module AT = Migrate_parsetree.Versions.OCaml_406.Ast.Asttypes
 module ATM = Migrate_parsetree.Versions.OCaml_406.Ast.Ast_mapper
+module ATH = Migrate_parsetree.Versions.OCaml_406.Ast.Ast_helper
 
 let rec props_filter_key ~key:prev_key ~acc =
   P.(
@@ -16,7 +17,7 @@ let rec props_filter_key ~key:prev_key ~acc =
 
 let props_split_key props = props_filter_key ~key:None ~acc:[] props
 
-let rewrite_apply ~loc ~attributes:pexp_attributes props =
+let rewrite_apply ~loc ~attributes:pexp_attributes ~component_name props =
   let open P in
   let key, props = props_split_key props in
   let component_render =
@@ -27,13 +28,18 @@ let rewrite_apply ~loc ~attributes:pexp_attributes props =
   in
   match key with
   | None ->
-      [%expr Brisk_jsx_runtime.element [%e component_render] component]
+      [%expr
+        Brisk_jsx_runtime.element ~debugName:[%e component_name]
+          [%e component_render] component]
   | Some key ->
       [%expr
-        Brisk_jsx_runtime.element ~key:[%e key] [%e component_render] component]
+        Brisk_jsx_runtime.element ~key:[%e key] ~debugName:[%e component_name]
+          [%e component_render] component]
 
-let is_jsx = (fun ({AT.txt}, _) -> String.equal txt "JSX")
+let is_jsx ({AT.txt}, _) = String.equal txt "JSX"
+
 let filter_jsx = List.filter is_jsx
+
 let exists_jsx = List.exists is_jsx
 
 let expr mapper expr =
@@ -45,10 +51,17 @@ let expr mapper expr =
       in
       let open P in
       let loc = expr.P.pexp_loc in
-      [%expr begin let component = [%e fn] in
-      [%e (rewrite_apply ~attributes ~loc:expr.P.pexp_loc args)]
-      end
-      ]
+      let component_name =
+        match fn.P.pexp_desc with
+        | P.Pexp_ident {txt} ->
+            ATH.Exp.constant (P.Pconst_string (Longident.last txt, None))
+        | _ ->
+            [%expr __LOC__]
+      in
+      [%expr
+        let component = [%e fn] in
+        [%e
+          rewrite_apply ~attributes ~component_name ~loc:expr.P.pexp_loc args]]
   | _ ->
       ATM.default_mapper.expr mapper expr
 

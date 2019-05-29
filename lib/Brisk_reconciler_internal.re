@@ -52,12 +52,14 @@ module Make = (OutputTree: OutputTree) => {
     subElements: 'elementType,
     hostInstance: 'outputNode,
   }
-  and renderFunction('hooks, 'initialHooks, 'elementType) =
-    Hooks.t('hooks, unit, 'initialHooks, 'initialHooks) =>
+  and renderFunction('hooks, 'initialHooks, 'render) =
+    (~hooks: Hooks.t('hooks, unit, 'initialHooks, 'initialHooks)) => 'render
+  and elementFunction('hooks, 'initialHooks, 'elementType) =
+    (~hooks: Hooks.t('hooks, unit, 'initialHooks, 'initialHooks)) =>
     (Hooks.t(unit, unit, 'hooks, unit), 'elementType)
   and element =
     | Element(
-        renderFunction('hooks, 'initialHooks, 'elementType),
+        elementFunction('hooks, 'initialHooks, 'elementType),
         component('hooks, 'initialHooks, 'elementType, 'outputNode, 'render),
         Key.t,
       )
@@ -75,7 +77,8 @@ module Make = (OutputTree: OutputTree) => {
     | Host: elementType(outputTreeElement, outputNodeContainer)
     | React: elementType(syntheticElement, outputNodeGroup)
   and component('hooks, 'initialHooks, 'elementType, 'outputNode, 'render) = {
-    render: 'render,
+    render:
+      (~hooks: Hooks.t('hooks, unit, 'initialHooks, 'initialHooks)) => 'render,
     elementType: elementType('elementType, 'outputNode),
     id:
       id(
@@ -109,7 +112,7 @@ module Make = (OutputTree: OutputTree) => {
   type polymorphicRender = {
     render:
       'hooks 'initialHooks 'elementType.
-      renderFunction('hooks, 'initialHooks, 'elementType),
+      elementFunction('hooks, 'initialHooks, 'elementType),
 
   };
 
@@ -501,10 +504,11 @@ module Make = (OutputTree: OutputTree) => {
             : (opaqueInstance, EffectSequence.t) => {
       let (hooks, subElements) =
         render(
-          Hooks.ofState(
-            Hooks.createState(),
-            ~onStateDidChange=OutputTree.markAsStale,
-          ),
+          ~hooks=
+            Hooks.ofState(
+              Hooks.createState(),
+              ~onStateDidChange=OutputTree.markAsStale,
+            ),
         );
       let hooks = Hooks.toState(hooks);
       let (instanceSubForest, mountEffects) =
@@ -743,7 +747,11 @@ module Make = (OutputTree: OutputTree) => {
                             outputNodeType,
                             ret,
                           ),
-          ~renderNextElement: renderFunction(hooks, initialHooks, elementType),
+          ~renderNextElement: elementFunction(
+                                hooks,
+                                initialHooks,
+                                elementType,
+                              ),
           ~nextElement: element,
           ~stateChanged: bool,
           instance(hooks, initialHooks, elementType, outputNodeType, ret)
@@ -769,10 +777,11 @@ module Make = (OutputTree: OutputTree) => {
           if (shouldRerender) {
             let (initialHooks, nextElement) =
               renderNextElement(
-                Hooks.ofState(
-                  updatedInstanceWithNewElement.hooks,
-                  ~onStateDidChange=OutputTree.markAsStale,
-                ),
+                ~hooks=
+                  Hooks.ofState(
+                    updatedInstanceWithNewElement.hooks,
+                    ~onStateDidChange=OutputTree.markAsStale,
+                  ),
               );
             (Hooks.toState(initialHooks), nextElement);
           } else {
@@ -1500,16 +1509,19 @@ module Make = (OutputTree: OutputTree) => {
   module RemoteAction = RemoteAction;
 
   let component:
-    type hooks initialHooks renderFunction.
-      (~useDynamicKey: bool=?, string, renderFunction) =>
+    type hooks initialHooks renderFunctionImpl.
+      (
+        ~useDynamicKey: bool=?,
+        renderFunction(hooks, initialHooks, renderFunctionImpl)
+      ) =>
       component(
         hooks,
         initialHooks,
         syntheticElement,
         outputNodeGroup,
-        renderFunction,
+        renderFunctionImpl,
       ) =
-    (~useDynamicKey=false, debugName, f) => {
+    (~useDynamicKey=false, f) => {
       module Component = {
         type id('a) +=
           | Id: id(
@@ -1518,7 +1530,7 @@ module Make = (OutputTree: OutputTree) => {
                     initialHooks,
                     syntheticElement,
                     outputNodeGroup,
-                    renderFunction,
+                    renderFunctionImpl,
                   ),
                 );
 
@@ -1533,7 +1545,7 @@ module Make = (OutputTree: OutputTree) => {
                   initialHooks,
                   syntheticElement,
                   outputNodeGroup,
-                  renderFunction,
+                  renderFunctionImpl,
                 ),
               )
             ) =>
@@ -1543,7 +1555,7 @@ module Make = (OutputTree: OutputTree) => {
                 initialHooks,
                 syntheticElement,
                 outputNodeGroup,
-                renderFunction,
+                renderFunctionImpl,
               ),
             ) =
           (instance, id1, id2) => {
@@ -1557,23 +1569,26 @@ module Make = (OutputTree: OutputTree) => {
         render: f,
         id: Component.Id,
         elementType: React,
-        debugName,
+        debugName: "",
         eq: Component.eq,
         useDynamicKey,
       };
     };
 
   let nativeComponent:
-    type hooks initialHooks renderFunction.
-      (~useDynamicKey: bool=?, string, renderFunction) =>
+    type hooks initialHooks renderFunctionImpl.
+      (
+        ~useDynamicKey: bool=?,
+        renderFunction(hooks, initialHooks, renderFunctionImpl)
+      ) =>
       component(
         hooks,
         initialHooks,
         outputTreeElement,
         outputNodeContainer,
-        renderFunction,
+        renderFunctionImpl,
       ) =
-    (~useDynamicKey=false, debugName, f) => {
+    (~useDynamicKey=false, f) => {
       module Component = {
         type id('a) +=
           | Id: id(
@@ -1582,7 +1597,7 @@ module Make = (OutputTree: OutputTree) => {
                     initialHooks,
                     outputTreeElement,
                     outputNodeContainer,
-                    renderFunction,
+                    renderFunctionImpl,
                   ),
                 );
 
@@ -1597,7 +1612,7 @@ module Make = (OutputTree: OutputTree) => {
                   initialHooks,
                   outputTreeElement,
                   outputNodeContainer,
-                  renderFunction,
+                  renderFunctionImpl,
                 ),
               )
             ) =>
@@ -1607,7 +1622,7 @@ module Make = (OutputTree: OutputTree) => {
                 initialHooks,
                 outputTreeElement,
                 outputNodeContainer,
-                renderFunction,
+                renderFunctionImpl,
               ),
             ) =
           (instance, id1, id2) => {
@@ -1621,13 +1636,13 @@ module Make = (OutputTree: OutputTree) => {
         render: f,
         id: Component.Id,
         elementType: Host,
-        debugName,
+        debugName: "",
         eq: Component.eq,
         useDynamicKey,
       };
     };
 
-  let element = (~key=Key.none, render, component) => {
+  let element = (~key=Key.none, ~debugName, render, component) => {
     let key =
       key != Key.none
         ? key
@@ -1635,7 +1650,7 @@ module Make = (OutputTree: OutputTree) => {
           component.useDynamicKey ? Key.create() : Key.none;
         };
 
-    Flat(Element(render, component, key));
+    Flat(Element(render, {...component, debugName}, key));
   };
 };
 

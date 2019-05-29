@@ -144,9 +144,11 @@ module Make:
     );
     type outputNodeGroup;
     type outputNodeContainer;
-    type renderFunction('hooks, 'initialHooks, 'elementType) =
-      Hooks.t('hooks, unit, 'initialHooks, 'initialHooks) =>
+    type elementFunction('hooks, 'initialHooks, 'elementType) =
+      (~hooks: Hooks.t('hooks, unit, 'initialHooks, 'initialHooks)) =>
       (Hooks.t(unit, unit, 'hooks, unit), 'elementType);
+    type renderFunction('hooks, 'initialHooks, 'render) =
+      (~hooks: Hooks.t('hooks, unit, 'initialHooks, 'initialHooks)) => 'render;
     type component(
       'hooks,
       'initialHooks,
@@ -154,7 +156,7 @@ module Make:
       'outputNode,
       'renderType,
     ) = {
-      render: 'renderType,
+      render: renderFunction('hooks, 'initialHooks, 'renderType),
       elementType: elementType('elementType, 'outputNode),
       id:
         id(
@@ -202,7 +204,7 @@ module Make:
       * handled using Hooks.effect
       */
     let component:
-      (~useDynamicKey: bool=?, string, 'renderType) =>
+      (~useDynamicKey: bool=?, renderFunction('hooks, 'initialHooks, 'renderType)) =>
       component(
         'hooks,
         'initialHooks,
@@ -215,7 +217,7 @@ module Make:
       * Creates a component which renders an OutputTree node.
       */
     let nativeComponent:
-      (~useDynamicKey: bool=?, string, 'renderType) =>
+      (~useDynamicKey: bool=?, renderFunction('hooks, 'initialHooks, 'renderType)) =>
       component(
         'hooks,
         'initialHooks,
@@ -227,7 +229,8 @@ module Make:
     let element:
       (
         ~key: Key.t=?,
-        renderFunction('hooks, 'initialHooks, 'elementType),
+        ~debugName: string,
+        elementFunction('hooks, 'initialHooks, 'elementType),
         component(
           'hooks,
           'initialHooks,

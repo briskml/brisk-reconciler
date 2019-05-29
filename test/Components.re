@@ -5,7 +5,7 @@ open TestReconciler;
  */
 let box =
   nativeComponent(
-    "Box", (~title="ImABox", ~onClick as _: option(unit => unit)=?, (), h) =>
+    (~hooks as h, ~title="ImABox", ~onClick as _: option(unit => unit)=?, ()) =>
     (
       h,
       {
@@ -19,7 +19,7 @@ let box =
   );
 
 let div =
-  nativeComponent("Div", (~children=[], (), h) =>
+  nativeComponent((~hooks as h, ~children=[], ()) =>
     (
       h,
       {
@@ -32,7 +32,7 @@ let div =
 
 let singleChildDiv =
   nativeComponent(
-    "SingleChildDiv", (~children as child: syntheticElement, (), h) =>
+    (~hooks as h, ~children as child: syntheticElement, ()) =>
     (
       h,
       {
@@ -48,7 +48,7 @@ type state = {
   prev: string,
 };
 let text =
-  nativeComponent("Text", (~title="ImABox", (), hooks) => {
+  nativeComponent((~hooks, ~title="ImABox", ()) => {
     let (prevTitle, setTitle, hooks) = Hooks.ref(title, hooks);
     let hooks =
       Hooks.effect(
@@ -82,7 +82,7 @@ let stringToElement = string => <text title=string />;
 
 let boxWrapper =
   component(
-    "BoxWrapper", (h, ~title="ImABox", ~twoBoxes=false, ~children as _) =>
+    (~hooks as h, ~title="ImABox", ~twoBoxes=false, ~children as _, ()) =>
     (
       h,
       twoBoxes
@@ -94,7 +94,7 @@ let boxWrapper =
  * Box with dynamic keys.
  */
 let boxItemDynamic =
-  component(~useDynamicKey=true, "BoxItemDynamic", (~title="ImABox", (), h) =>
+  component(~useDynamicKey=true, (~hooks as h, ~title="ImABox", ()) =>
     (h, stringToElement(title))
   );
 
@@ -103,7 +103,7 @@ type boxListAction =
   | Reverse;
 
 let boxList =
-  component("boxList", (~rAction, ~useDynamicKeys=false, (), hooks) => {
+  component((~hooks, ~rAction, ~useDynamicKeys=false, ()) => {
     let (state, dispatch, hooks) =
       Hooks.reducer(
         ~initialState=[],
@@ -128,13 +128,13 @@ let boxList =
   });
 
 let statelessButton =
-  component("StatelessButton", (~initialClickCount as _, (), h) =>
+  component((~hooks as h, ~initialClickCount as _, ()) =>
     (h, <div />)
   );
 
 let testWrapper = {
   let make =
-    component("TestWrapper", (hooks, ~wrappedText) =>
+    component((~hooks, ~wrappedText) =>
       (
         hooks,
         <statelessButton
@@ -147,7 +147,7 @@ let testWrapper = {
 };
 
 let buttonWrapper =
-  component("ButtonWrapper", (~wrappedText="default", (), hooks) =>
+  component((~hooks, ~wrappedText="default", ()) =>
     (
       hooks,
       <statelessButton
@@ -159,8 +159,7 @@ let buttonWrapper =
 let buttonWrapperJsx = <buttonWrapper wrappedText="TestButtonUpdated!!!" />;
 let buttonWrapperWrapper =
   component(
-    "ButtonWrapperWrapper",
-    (hooks, ~wrappedText="default", ~children as _: list(syntheticElement)) =>
+    (~hooks, ~wrappedText="default", ()) =>
     (hooks, <div> {stringToElement(wrappedText)} buttonWrapperJsx </div>)
   );
 
@@ -168,8 +167,7 @@ type updateAlternateClicksAction =
   | Click;
 let updateAlternateClicks =
   component(
-    "UpdateAlternateClicks",
-    (~rAction, ~children as _: list(syntheticElement), hooks) => {
+    (~hooks, ~rAction, ()) => {
     let (state, dispatch, hooks) =
       Hooks.reducer(
         ~initialState=ref(0),
@@ -196,7 +194,7 @@ type toggleClicksAction =
   | Click;
 let toggleClicks =
   component(
-    "ToggleClicks", (hooks, ~rAction, ~children as _: list(syntheticElement)) => {
+    (~hooks, ~rAction, ()) => {
     let (state, setState, hooks) = Hooks.state(false, hooks);
     let hooks =
       Hooks.effect(
@@ -221,17 +219,16 @@ let toggleClicks =
   });
 
 let emptyComponent =
-  component("emptyComponent", ((), hooks) => (hooks, listToElement([])));
+  component((~hooks, ()) => (hooks, listToElement([])));
 
 let emptyComponentWithAlwaysEffect =
   component(
-    "emptyComponentWithAlwaysEffect",
     (
+      ~hooks,
       ~children as _children: list(syntheticElement),
       ~onEffect,
       ~onEffectDispose,
       (),
-      hooks,
     ) => {
     let hooks =
       Hooks.effect(
@@ -247,8 +244,7 @@ let emptyComponentWithAlwaysEffect =
 
 let emptyComponentWithOnMountEffect =
   component(
-    "emptyComponentWithOnMountEffect",
-    (~onEffect, ~onEffectDispose, (), hooks) => {
+    (~hooks, ~onEffect, ~onEffectDispose, ()) => {
     let hooks =
       Hooks.effect(
         OnMount,
