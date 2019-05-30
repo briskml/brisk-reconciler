@@ -42,6 +42,18 @@ let filter_jsx = List.filter is_jsx
 
 let exists_jsx = List.exists is_jsx
 
+let rec transform_createElement =
+  let open Longident in
+  function
+  | Ldot (head, "createElement") ->
+      Ldot (head, "make")
+  | Lapply (left, right) ->
+      Lapply (left, transform_createElement right)
+  | Lident _ as ident ->
+      ident
+  | Ldot _ as ldot ->
+      ldot
+
 let expr mapper expr =
   match expr.P.pexp_desc with
   | P.Pexp_apply (fn, args) when exists_jsx expr.pexp_attributes ->
@@ -51,12 +63,14 @@ let expr mapper expr =
       in
       let open P in
       let loc = expr.P.pexp_loc in
-      let component_name =
+      let fn, component_name =
         match fn.P.pexp_desc with
-        | P.Pexp_ident {txt} ->
-            ATH.Exp.constant (P.Pconst_string (Longident.last txt, None))
+        | P.Pexp_ident {txt; loc} ->
+            let txt = transform_createElement txt in
+            ( {fn with pexp_desc= Pexp_ident {txt; loc}}
+            , ATH.Exp.constant ~loc (ATH.Const.string (Longident.last txt)) )
         | _ ->
-            [%expr __LOC__]
+            (fn, [%expr __LOC__])
       in
       [%expr
         let component = [%e fn] in
@@ -65,7 +79,36 @@ let expr mapper expr =
   | _ ->
       ATM.default_mapper.expr mapper expr
 
+  
+let is_component ({AT.txt}, _) = String.equal txt "component"
+
+let exists_component = List.exists is_component
+let filter_component = List.filter is_component
+
+let rec map_component_declaration_expression ~mapper ({P.pexp_loc = loc; pexp_desc ; pexp_attributes = attrs} as mapped_expression) =
+  match pexp_desc with
+  | P.Pexp_fun (arg_label, opt_arg, pat, ({pexp_desc= P.Pexp_fun (_, _, _, _)} as next_fn)) ->
+      let expr = map_component_declaration_expression ~mapper next_fn in
+      let attrs = filter_component attrs in
+      ATH.Exp.fun_ ~loc ~attrs arg_label  opt_arg pat expr
+  | P.Pexp_fun (_, _, _, _) -> 
+      [%expr component([%e mapped_expression])]
+  | _ -> ATM.default_mapper.expr mapper mapped_expression
+
+
+
+let value_binding mapper binding =
+  match binding.P.pvb_pat.ppat_desc, binding.P.pvb_expr.pexp_desc with
+  | P.Ppat_var component_name, P.Pexp_fun (_, _, _, _) when exists_component binding.P.pvb_attributes-> 
+      let loc = component_name.loc in
+      {binding with pvb_expr= 
+        [%expr let component = Brisk_jsx_runtime.component [%e ATH.Exp.constant ~loc (ATH.Const.string component_name.txt)] in
+        [%e map_component_declaration_expression ~mapper binding.P.pvb_expr] ]
+      }
+  | _ -> binding
+
+
 let () =
   Migrate_parsetree.(
     Driver.register ~name:"JSX" Versions.ocaml_406 (fun _config _cookies ->
-        {ATM.default_mapper with expr} ))
+        {ATM.default_mapper with value_binding} ))
