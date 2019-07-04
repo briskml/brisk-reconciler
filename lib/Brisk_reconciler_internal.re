@@ -43,17 +43,16 @@ module Make = (OutputTree: OutputTree) => {
   type outputNodeContainer = Lazy.t(internalOutputNode);
   type outputNodeGroup = list(outputNodeContainer);
   type id('a) = ..;
-  type instance('hooks, 'initialHooks, 'elementType, 'outputNode) = {
-    hooks: Hooks.state('hooks, unit),
-    component: component('hooks, 'initialHooks, 'elementType, 'outputNode),
+  type instance('hooks, 'elementType, 'outputNode) = {
+    hooks: Hooks.state('hooks),
+    component: component('hooks, 'elementType, 'outputNode),
     element,
     instanceSubForest: instanceForest,
     subElements: 'elementType,
     hostInstance: 'outputNode,
   }
   and element =
-    | Element(component('hooks, 'initialHooks, 'elementType, 'outputNode))
-      : element
+    | Element(component('hooks, 'elementType, 'outputNode)): element
   and syntheticElement =
     | Flat(element)
     | Nested(list(syntheticElement))
@@ -69,27 +68,21 @@ module Make = (OutputTree: OutputTree) => {
   and instanceForest =
     | IFlat(opaqueInstance)
     | INested(list(instanceForest), int /*subtree size*/)
-  and component('hooks, 'initialHooks, 'elementType, 'outputNode) = {
+  and component('hooks, 'elementType, 'outputNode) = {
     debugName: string,
     key: int,
     elementType: elementType('elementType, 'outputNode),
-    id: id(instance('hooks, 'initialHooks, 'elementType, 'outputNode)),
+    id: id(instance('hooks, 'elementType, 'outputNode)),
     eq:
       'a.
-      (
-        'a,
-        id('a),
-        id(instance('hooks, 'initialHooks, 'elementType, 'outputNode))
-      ) =>
-      option(instance('hooks, 'initialHooks, 'elementType, 'outputNode)),
+      ('a, id('a), id(instance('hooks, 'elementType, 'outputNode))) =>
+      option(instance('hooks, 'elementType, 'outputNode)),
 
     render:
-      Hooks.t('hooks, unit, 'initialHooks, 'initialHooks) =>
-      (Hooks.t(unit, unit, 'hooks, unit), 'elementType),
+      Hooks.t('hooks, 'hooks) => (Hooks.t(Hooks.nil, 'hooks), 'elementType),
   }
   and opaqueInstance =
-    | Instance(instance('hooks, 'initialHooks, 'elementType, 'outputNode))
-      : opaqueInstance;
+    | Instance(instance('hooks, 'elementType, 'outputNode)): opaqueInstance;
 
   type renderedElement = {
     nearestHostOutputNode: outputNodeContainer,
@@ -147,7 +140,10 @@ module Make = (OutputTree: OutputTree) => {
     let pendingEffects = (~lifecycle, acc, instanceForest) => {
       fold(
         (acc, Instance({hooks})) =>
-          EffectSequence.chain(Hooks.pendingEffects(~lifecycle, hooks), acc),
+          EffectSequence.chain(
+            Hooks.pendingEffects(~lifecycle, Some(hooks)),
+            acc,
+          ),
         acc,
         instanceForest,
       );
@@ -477,10 +473,9 @@ module Make = (OutputTree: OutputTree) => {
     let rec ofElement =
             (Element(component) as element)
             : (opaqueInstance, EffectSequence.t) => {
-      let hooks = Hooks.createState();
       let (hooks, subElements) =
         component.render(
-          Hooks.ofState(hooks, ~onStateDidChange=OutputTree.markAsStale),
+          Hooks.ofState(None, ~onStateDidChange=OutputTree.markAsStale),
         );
       let hooks = Hooks.toState(hooks);
       let (instanceSubForest, mountEffects) =
@@ -502,7 +497,7 @@ module Make = (OutputTree: OutputTree) => {
             Node.make(component.elementType, subElements, instanceSubForest),
         }),
         EffectSequence.chain(
-          Hooks.pendingEffects(~lifecycle=Hooks.Effect.Mount, hooks),
+          Hooks.pendingEffects(~lifecycle=Hooks.Effect.Mount, Some(hooks)),
           mountEffects,
         ),
       );
@@ -515,7 +510,7 @@ module Make = (OutputTree: OutputTree) => {
       InstanceForest.pendingEffects(
         ~lifecycle,
         EffectSequence.chain(
-          Hooks.pendingEffects(~lifecycle, hooks),
+          Hooks.pendingEffects(~lifecycle, Some(hooks)),
           nextEffects,
         ),
         instanceSubForest,
@@ -706,19 +701,14 @@ module Make = (OutputTree: OutputTree) => {
       };
     }
     and updateInstance:
-      type hooks initialHooks elementType outputNodeType.
+      type hooks elementType outputNodeType.
         (
           ~originalOpaqueInstance: opaqueInstance,
           ~updateContext: UpdateContext.t,
-          ~nextComponent: component(
-                            hooks,
-                            initialHooks,
-                            elementType,
-                            outputNodeType,
-                          ),
+          ~nextComponent: component(hooks, elementType, outputNodeType),
           ~nextElement: element,
           ~stateChanged: bool,
-          instance(hooks, initialHooks, elementType, outputNodeType)
+          instance(hooks, elementType, outputNodeType)
         ) =>
         opaqueInstanceUpdate =
       (
@@ -742,7 +732,7 @@ module Make = (OutputTree: OutputTree) => {
             let (initialHooks, nextElement) =
               nextComponent.render(
                 Hooks.ofState(
-                  updatedInstanceWithNewElement.hooks,
+                  Some(updatedInstanceWithNewElement.hooks),
                   ~onStateDidChange=OutputTree.markAsStale,
                 ),
               );
@@ -840,7 +830,7 @@ module Make = (OutputTree: OutputTree) => {
                   subElements: nextSubElements,
                   hostInstance,
                 }:
-                  instance(hooks, initialHooks, elementType, outputNodeType),
+                  instance(hooks, elementType, outputNodeType),
                 enqueuedEffects,
               );
             } else {
@@ -866,7 +856,7 @@ module Make = (OutputTree: OutputTree) => {
               EffectSequence.chain(
                 Hooks.pendingEffects(
                   ~lifecycle=Hooks.Effect.Update,
-                  updatedInstanceWithNewSubtree.hooks,
+                  Some(updatedInstanceWithNewSubtree.hooks),
                 ),
                 enqueuedEffects,
               ),
@@ -1482,28 +1472,28 @@ module Make = (OutputTree: OutputTree) => {
   module RemoteAction = RemoteAction;
 
   let component:
-    type a b.
+    type a.
       (
         ~useDynamicKey: bool=?,
         string,
         ~key: Key.t=?,
-        Hooks.t(a, unit, b, b) =>
-        (Hooks.t(unit, unit, a, unit), syntheticElement)
+        Hooks.t(a, a) =>
+        (Hooks.t(Hooks.nil, a), syntheticElement)
       ) =>
       syntheticElement =
     (~useDynamicKey=false, debugName) => {
       module Component = {
         type id('a) +=
-          | Id: id(instance(a, b, syntheticElement, outputNodeGroup));
+          | Id: id(instance(a, syntheticElement, outputNodeGroup));
 
         let eq:
           type c.
             (
               c,
               id(c),
-              id(instance(a, b, syntheticElement, outputNodeGroup))
+              id(instance(a, syntheticElement, outputNodeGroup))
             ) =>
-            option(instance(a, b, syntheticElement, outputNodeGroup)) =
+            option(instance(a, syntheticElement, outputNodeGroup)) =
           (instance, id1, id2) => {
             switch (id1, id2) {
             | (Id, Id) => Some(instance)
@@ -1526,28 +1516,28 @@ module Make = (OutputTree: OutputTree) => {
     };
 
   let nativeComponent:
-    type a b.
+    type a.
       (
         ~useDynamicKey: bool=?,
         string,
         ~key: Key.t=?,
-        Hooks.t(a, unit, b, b) =>
-        (Hooks.t(unit, unit, a, unit), outputTreeElement)
+        Hooks.t(a, a) =>
+        (Hooks.t(Hooks.nil, a), outputTreeElement)
       ) =>
       syntheticElement =
     (~useDynamicKey=false, debugName) => {
       module Component = {
         type id('a) +=
-          | Id: id(instance(a, b, outputTreeElement, outputNodeContainer));
+          | Id: id(instance(a, outputTreeElement, outputNodeContainer));
 
         let eq:
           type c.
             (
               c,
               id(c),
-              id(instance(a, b, outputTreeElement, outputNodeContainer))
+              id(instance(a, outputTreeElement, outputNodeContainer))
             ) =>
-            option(instance(a, b, outputTreeElement, outputNodeContainer)) =
+            option(instance(a, outputTreeElement, outputNodeContainer)) =
           (instance, id1, id2) => {
             switch (id1, id2) {
             | (Id, Id) => Some(instance)

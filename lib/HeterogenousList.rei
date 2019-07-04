@@ -8,28 +8,40 @@ module type S = {
     toWitness: 'a => witness('a),
   };
 
-  type t('list, 'last) =
-    | []: t('a, 'a)
-    | ::(valueContainer('a), t('l, 't)): t('a => 'l, 't);
+  type nil =
+    | Nil;
+
+  type t('list) =
+    | []: t(nil)
+    | ::(valueContainer('a), t('l)): t('a => 'l);
+
+  type constructor('a) = pri t('tail) => t('after)
+  constraint 'a = ('tail, 'after);
+
+  type init('value) = constructor(('value, 'value));
+
+  let init: init('value);
 
   let append:
-    (t('start, 'mid => 'rest), 'mid, 'mid => witness('mid)) =>
-    t('start, 'rest);
+    (valueContainer('value), constructor(('value => 'b, 'c))) =>
+    constructor(('b, 'c));
 
-  let dropFirst: t('a => 'b, unit) => (valueContainer('a), t('b, unit));
+  let seal: constructor((nil, 'a)) => t('a);
+
+  let dropFirst: t('a => 'b) => (valueContainer('a), t('b));
 
   type opaqueValue =
     | Any(witness('a)): opaqueValue;
 
-  let iter: (opaqueValue => unit, t('a, 'b)) => unit;
+  let iter: (opaqueValue => unit, t('a)) => unit;
 
-  let fold: (('acc, opaqueValue) => 'acc, 'acc, t('a, 'b)) => 'acc;
+  let fold: (('acc, opaqueValue) => 'acc, 'acc, t('a)) => 'acc;
 
   type mapper = {f: 'a. witness('a) => option('a)};
 
-  let map: (mapper, t('a, 'b)) => t('a, 'b);
+  let map: (mapper, t('a)) => t('a);
 
-  let compareElementsIdentity: (t('a, unit), t('a, unit)) => bool;
+  let compareElementsIdentity: (t('a), t('a)) => bool;
 };
 
 module Make: (Witness: Witness) => S with type witness('a) = Witness.t('a);
