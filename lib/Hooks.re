@@ -5,23 +5,38 @@ module HeterogenousList =
     type t('a) = hook('a);
   });
 
-type state('a, 'b) = option(HeterogenousList.t('a, 'b));
+type state('a) = HeterogenousList.t('a);
 
-type t('a, 'b, 'c, 'd) = {
-  remaining: option(HeterogenousList.t('a, 'b)),
-  processed: HeterogenousList.t('c, 'd),
+type t('remaining, 'processed) = {
+  remaining: option(HeterogenousList.t('remaining)),
+  processed: HeterogenousList.constructor(('remaining, 'processed)),
   onStateDidChange: unit => unit,
 };
 
-let createState = () => None;
-
 let ofState = (remaining, ~onStateDidChange) => {
   remaining,
-  processed: HeterogenousList.[],
+  processed: HeterogenousList.init,
   onStateDidChange,
 };
 
-let toState = ({processed}) => Some(processed);
+type nil = HeterogenousList.nil;
+type empty = HeterogenousList.t(nil);
+
+type all('a) = t(nil, 'a);
+
+let toState = ({processed}) => HeterogenousList.seal(processed);
+
+let empty: unit => t(_) =
+  () => {
+    remaining: None,
+    processed: HeterogenousList.init,
+    onStateDidChange: () => (),
+  };
+
+let printState =
+  fun
+  | Some(_) => "<Some>"
+  | None => "<Empty>";
 
 let processNext =
     (
@@ -40,12 +55,15 @@ let processNext =
         remaining: Some(rest),
         processed:
           HeterogenousList.append(
-            processed,
-            switch (merge) {
-            | Some(f) => f(value)
-            | None => value
+            {
+              value:
+                switch (merge) {
+                | Some(f) => f(value)
+                | None => value
+                },
+              toWitness,
             },
-            toWitness,
+            processed,
           ),
         onStateDidChange,
       },
@@ -54,7 +72,8 @@ let processNext =
       default,
       {
         remaining: None,
-        processed: HeterogenousList.append(processed, default, toWitness),
+        processed:
+          HeterogenousList.append({value: default, toWitness}, processed),
         onStateDidChange,
       },
     )
@@ -64,13 +83,18 @@ module State = {
   type t('a) = {
     currentValue: 'a,
     mutable nextValue: 'a,
+    mutable stale: bool,
   };
 
   type hook('a) +=
     | State(t('a)): hook(t('a));
 
   let make: 'a => t('a) =
-    initialValue => {currentValue: initialValue, nextValue: initialValue};
+    initialValue => {
+      currentValue: initialValue,
+      nextValue: initialValue,
+      stale: false,
+    };
 
   let wrapAsHook = s => State(s);
 
@@ -78,11 +102,12 @@ module State = {
     stateContainer.nextValue = nextValue;
   };
 
-  let flush = ({currentValue, nextValue}) =>
+  let flush = ({currentValue, nextValue} as prevHook) =>
     if (currentValue === nextValue) {
       None;
     } else {
-      Some({currentValue: nextValue, nextValue});
+      prevHook.stale = true;
+      Some({currentValue: nextValue, nextValue, stale: false});
     };
 
   let hook = (initialState, hooks) => {
@@ -91,10 +116,25 @@ module State = {
 
     let onStateDidChange = hooks.onStateDidChange;
 
-    let setter = nextState => {
-      setState(nextState, stateContainer);
-      onStateDidChange();
-    };
+    let setter = nextState =>
+      if (stateContainer.stale) {
+        let backtrace = Printexc.get_backtrace();
+        Printf.printf(
+          "
+          WARNING: A stale state setter has been used. The state has been updated and flushed since using state hook here:\n
+          \n
+          %s
+          \n
+          Using stale setters might lead to race conditions which are hard to debug. If you want to update state
+          asynchronously without updating the setter function each time, we recommend using the reducer hook
+          which enforces handling of race conditions.
+          ",
+          backtrace,
+        );
+      } else {
+        setState(nextState, stateContainer);
+        onStateDidChange();
+      };
 
     (stateContainer.currentValue, setter, nextHooks);
   };
@@ -291,23 +331,20 @@ let pendingEffects = (~lifecycle, hooks) =>
   * Not implemented yet. Not sure how to type map,
   * and if it even makes sense.
  */
-let flushPendingStateUpdates = hooks =>
-  switch (hooks) {
-  | Some(prevHooks) =>
-    let nextHooks =
-      HeterogenousList.map(
-        {
-          f: (type a, hook: hook(a)) => {
-            switch (hook) {
-            | Reducer.Reducer(s) => (Reducer.flush(s): option(a))
-            | State.State(s) => (State.flush(s): option(a))
-            | _ => None
-            };
-          },
+let flushPendingStateUpdates = hooks => {
+  let nextHooks =
+    HeterogenousList.map(
+      {
+        f: (type a, hook: hook(a)) => {
+          switch (hook) {
+          | Reducer.Reducer(s) => (Reducer.flush(s): option(a))
+          | State.State(s) => (State.flush(s): option(a))
+          | _ => None
+          };
         },
-        prevHooks,
-      );
-    HeterogenousList.compareElementsIdentity(prevHooks, nextHooks)
-      ? hooks : Some(nextHooks);
-  | None => None
-  };
+      },
+      hooks,
+    );
+  HeterogenousList.compareElementsIdentity(hooks, nextHooks)
+    ? hooks : nextHooks;
+};

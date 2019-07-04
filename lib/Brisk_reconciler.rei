@@ -144,8 +144,8 @@ module Make:
         ~useDynamicKey: bool=?,
         string,
         ~key: Key.t=?,
-        Hooks.t('a, unit, 'b, 'b) =>
-        (Hooks.t(unit, unit, 'a, unit), syntheticElement)
+        Hooks.t('a, 'a) =>
+        (Hooks.t(Hooks.nil, 'a), syntheticElement)
       ) =>
       syntheticElement;
 
@@ -157,8 +157,8 @@ module Make:
         ~useDynamicKey: bool=?,
         string,
         ~key: Key.t=?,
-        Hooks.t('a, unit, 'b, 'b) =>
-        (Hooks.t(unit, unit, 'a, unit), outputTreeElement)
+        Hooks.t('a, 'a) =>
+        (Hooks.t(Hooks.nil, 'a), outputTreeElement)
       ) =>
       syntheticElement;
 

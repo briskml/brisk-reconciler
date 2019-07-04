@@ -1,24 +1,30 @@
 type hook('a) = ..;
 
-type state('a, 'b);
+type state('a);
 
-let createState: unit => state('a, 'b);
+type t('remaining, 'result);
 
-type t('a, 'b, 'c, 'd);
+type nil;
+type empty;
+type all('a) = t(nil, 'a);
+
+let empty: unit => t('value, 'value);
 
 let ofState:
-  (state('a, 'b), ~onStateDidChange: unit => unit) => t('a, 'b, 'c, 'c);
+  (option(state('b)), ~onStateDidChange: unit => unit) => t('b, 'b);
 
-let toState: t('a, 'b, 'c, 'd) => state('c, 'd);
+let toState: all('a) => state('a);
+
+let printState: option(state('a)) => string;
 
 let processNext:
   (
     ~default: 'value,
     ~merge: 'value => 'value=?,
     ~toWitness: 'value => hook('value),
-    t('value => 'b, unit, 'c, 'value => 'd)
+    t('value => 'c, 'd)
   ) =>
-  ('value, t('b, unit, 'c, 'd));
+  ('value, t('c, 'd));
 
 module State: {
   type t('a);
@@ -60,29 +66,28 @@ module Effect: {
 };
 
 let state:
-  ('state, t(State.t('state) => 'b, unit, 'c, State.t('state) => 'd)) =>
-  ('state, 'state => unit, t('b, unit, 'c, 'd));
+  ('value, t(State.t('value) => 'c, 'd)) =>
+  ('value, 'value => unit, t('c, 'd));
 
 let reducer:
   (
-    ~initialState: 'state,
-    ('action, 'state) => 'state,
-    t(Reducer.t('state) => 'b, unit, 'c, Reducer.t('state) => 'd)
+    ~initialState: 'value,
+    ('b, 'value) => 'value,
+    t(Reducer.t('value) => 'c, 'd)
   ) =>
-  ('state, 'action => unit, t('b, unit, 'c, 'd));
+  ('value, 'b => unit, t('c, 'd));
 
 let ref:
-  ('state, t(Ref.t('state) => 'b, unit, 'c, Ref.t('state) => 'd)) =>
-  ('state, 'state => unit, t('b, unit, 'c, 'd));
+  ('value, t(ref('value) => 'c, 'd)) => ('value, 'value => unit, t('c, 'd));
 
 let effect:
   (
-    Effect.condition('condition),
-    Effect.handler,
-    t(Effect.t('condition) => 'b, unit, 'c, Effect.t('condition) => 'd)
+    Effect.condition('value),
+    unit => option(unit => unit),
+    t(Effect.t('value) => 'c, 'd)
   ) =>
-  t('b, unit, 'c, 'd);
+  t('c, 'd);
 
 let pendingEffects:
-  (~lifecycle: Effect.lifecycle, state('a, unit)) => EffectSequence.t;
-let flushPendingStateUpdates: state('a, unit) => state('a, unit);
+  (~lifecycle: Effect.lifecycle, option(state('a))) => EffectSequence.t;
+let flushPendingStateUpdates: state('a) => state('a);
