@@ -133,70 +133,6 @@ module Make:
       let executePendingEffects: t => t;
     };
 
-    type elementType('elementType, 'outputNode);
-    type id('a);
-    type instance(
-      'hooks,
-      'initialHooks,
-      'elementType,
-      'outputNode,
-      'renderType,
-    );
-    type outputNodeGroup;
-    type outputNodeContainer;
-    type elementFunction('hooks, 'initialHooks, 'elementType) =
-      (~hooks: Hooks.t('hooks, unit, 'initialHooks, 'initialHooks)) =>
-      (Hooks.t(unit, unit, 'hooks, unit), 'elementType);
-    type renderFunction('hooks, 'initialHooks, 'render) =
-      (~hooks: Hooks.t('hooks, unit, 'initialHooks, 'initialHooks)) => 'render;
-    type component(
-      'hooks,
-      'initialHooks,
-      'elementType,
-      'outputNode,
-      'renderType,
-    ) = {
-      render: renderFunction('hooks, 'initialHooks, 'renderType),
-      elementType: elementType('elementType, 'outputNode),
-      id:
-        id(
-          instance(
-            'hooks,
-            'initialHooks,
-            'elementType,
-            'outputNode,
-            'renderType,
-          ),
-        ),
-      debugName: string,
-      useDynamicKey: bool,
-      eq:
-        'a.
-        (
-          'a,
-          id('a),
-          id(
-            instance(
-              'hooks,
-              'initialHooks,
-              'elementType,
-              'outputNode,
-              'renderType,
-            ),
-          )
-        ) =>
-        option(
-          instance(
-            'hooks,
-            'initialHooks,
-            'elementType,
-            'outputNode,
-            'renderType,
-          ),
-        ),
-
-    };
-
     /**
       * Creates a component. Components are a functions which
       * retain state over time via Hooks. The function you pass to
@@ -204,40 +140,25 @@ module Make:
       * handled using Hooks.effect
       */
     let component:
-      (~useDynamicKey: bool=?, renderFunction('hooks, 'initialHooks, 'renderType)) =>
-      component(
-        'hooks,
-        'initialHooks,
-        syntheticElement,
-        outputNodeGroup,
-        'renderType,
-      );
+      (
+        ~useDynamicKey: bool=?,
+        string,
+        ~key: Key.t=?,
+        Hooks.t('a, unit, 'b, 'b) =>
+        (Hooks.t(unit, unit, 'a, unit), syntheticElement)
+      ) =>
+      syntheticElement;
 
     /**
       * Creates a component which renders an OutputTree node.
       */
     let nativeComponent:
-      (~useDynamicKey: bool=?, renderFunction('hooks, 'initialHooks, 'renderType)) =>
-      component(
-        'hooks,
-        'initialHooks,
-        outputTreeElement,
-        outputNodeContainer,
-        'renderType,
-      );
-
-    let element:
       (
+        ~useDynamicKey: bool=?,
+        string,
         ~key: Key.t=?,
-        ~debugName: string,
-        elementFunction('hooks, 'initialHooks, 'elementType),
-        component(
-          'hooks,
-          'initialHooks,
-          'elementType,
-          'outputNode,
-          'renderType,
-        )
+        Hooks.t('a, unit, 'b, 'b) =>
+        (Hooks.t(unit, unit, 'a, unit), outputTreeElement)
       ) =>
       syntheticElement;
 
