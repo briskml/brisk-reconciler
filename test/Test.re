@@ -770,6 +770,53 @@ let core = [
     },
   ),
   (
+    "Test 'OnMount' effect in extra-nested component",
+    `Quick,
+    () => {
+      let effectCallCount = ref(0);
+      let effectDisposeCallCount = ref(0);
+      let onEffect = () => effectCallCount := effectCallCount^ + 1;
+      let onEffectDispose = () =>
+        effectDisposeCallCount := effectDisposeCallCount^ + 1;
+
+      /* 
+       * When a parent-of-a-parent of a component with an OnMountEffect is removed,
+       * the OnMount effect doesn't get disposed on removal
+       */
+      let testState =
+        render(
+          Components.(
+            <Div>
+              <Div>
+                <EmptyComponentWithOnMountEffect onEffect onEffectDispose />
+              </Div>
+            </Div>
+          ),
+        )
+        |> executeSideEffects;
+
+      expectInt(~label="The effect should've been run", 1, effectCallCount^);
+
+      expectInt(
+        ~label="The dispose should not have been run yet",
+        0,
+        effectDisposeCallCount^,
+      );
+
+      testState
+      |> update(Components.(<Div />))
+      |> executeSideEffects
+      |> ignore;
+
+      expectInt(
+        ~label=
+          "The effect dispose callback should have been called since the component was un-mounted.",
+        1,
+        effectDisposeCallCount^,
+      );
+    },
+  ),
+  (
     "Test transition from empty list to non-empty list",
     `Quick,
     () => {
