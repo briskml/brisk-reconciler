@@ -19,8 +19,7 @@ module JSX_ppx = struct
   let rewrite_apply ~loc ~attributes:pexp_attributes props =
     let open P in
     let props = props_filter_children props in
-    { P.pexp_desc=
-        P.Pexp_apply ([%expr component], props)
+    { P.pexp_desc= P.Pexp_apply ([%expr component], props)
     ; pexp_loc= loc
     ; pexp_attributes }
 
@@ -80,7 +79,8 @@ module Declaration_ppx = struct
     | `Native ->
         "nativeComponent"
 
-  let transform_component_expr ~attribute ~component_name mapper expr =
+  let transform_component_expr ~useDynamicKey ~attribute ~component_name
+      mapper expr =
     let rec map_component_expression ~mapper ({P.pexp_loc= loc} as expr) =
       match_ func_pattern loc expr
         ~with_:(fun lbl opt_arg pat child_expression ->
@@ -113,17 +113,32 @@ module Declaration_ppx = struct
           [%expr Brisk_jsx_runtime.component]
     in
     [%expr
-      let component = [%e create_component_expr] [%e component_name] in
+      let component =
+        [%e create_component_expr]
+          ~useDynamicKey:
+            [%e Ppxlib.Ast_builder.Default.(ebool ~loc useDynamicKey)]
+          [%e component_name]
+      in
       fun ?(key = Key.none) -> [%e map_component_expression ~mapper expr]]
 
-  let declare_expr_attribute typ =
+  let declare_attribute ctx typ =
     let open Ppxlib.Attribute in
-    declare (attribute_name typ) Context.expression Ppxlib.Ast_pattern.__
-      ignore
+    declare (attribute_name typ) ctx
+      Ppxlib.Ast_pattern.(
+        alt_option (single_expr_payload (pexp_ident (lident __'))) (pstr nil))
+      (function
+        | Some {txt= "useDynamicKey"} ->
+            true
+        | Some {loc} ->
+            Location.raise_errorf ~loc "A labelled argument or () was expected"
+        | None ->
+            false )
 
-  let expr_attribute_component = declare_expr_attribute `Component
+  let expr_attribute_component =
+    declare_attribute Ppxlib.Attribute.Context.expression `Component
 
-  let expr_attribute_nativeComponent = declare_expr_attribute `Native
+  let expr_attribute_nativeComponent =
+    declare_attribute Ppxlib.Attribute.Context.expression `Native
 
   let expr_attribute = function
     | `Component ->
@@ -135,31 +150,26 @@ module Declaration_ppx = struct
     let consume_attr attr =
       Ppxlib.Attribute.consume (expr_attribute attr) unmatched_expr
     in
-    let transform attribute expr =
+    let transform ~useDynamicKey attribute expr =
       let loc = expr.P.pexp_loc in
-      transform_component_expr ~attribute ~component_name:[%expr __LOC__]
+      transform_component_expr ~useDynamicKey ~attribute ~component_name:[%expr __LOC__]
         mapper expr
     in
     match consume_attr `Component with
-    | Some (expr, ()) ->
-        transform `Component expr
+    | Some (expr, useDynamicKey) ->
+        transform ~useDynamicKey `Component expr
     | None -> (
       match consume_attr `Native with
-      | Some (expr, ()) ->
-          transform `Native expr
+      | Some (expr, useDynamicKey) ->
+          transform ~useDynamicKey `Native expr
       | None ->
           ATM.default_mapper.expr mapper unmatched_expr )
 
-  let declare_value_binding_attribute typ =
-    let open Ppxlib.Attribute in
-    declare (attribute_name typ) Context.value_binding Ppxlib.Ast_pattern.__
-      ignore
-
   let value_binding_attribute_component =
-    declare_value_binding_attribute `Component
+    declare_attribute Ppxlib.Attribute.Context.value_binding `Component
 
   let value_binding_attribute_nativeComponent =
-    declare_value_binding_attribute `Native
+    declare_attribute Ppxlib.Attribute.Context.value_binding `Native
 
   let value_binding_attribute = function
     | `Component ->
@@ -173,7 +183,7 @@ module Declaration_ppx = struct
         (value_binding_attribute attr)
         unmatched_value_binding
     in
-    let transform attribute value_binding =
+    let transform ~useDynamicKey attribute value_binding =
       let value_binding_loc = value_binding.P.pvb_loc in
       Ppxlib.Ast_pattern.(parse (value_binding ~pat:(ppat_var __) ~expr:__))
         value_binding_loc value_binding (fun var_pat expr ->
@@ -182,19 +192,20 @@ module Declaration_ppx = struct
           in
           let component_pat = value_binding.pvb_pat in
           let transformed_expr =
-            transform_component_expr ~attribute ~component_name mapper expr
+            transform_component_expr ~useDynamicKey ~attribute ~component_name
+              mapper expr
           in
           Ppxlib.Ast_builder.Default.(
             value_binding ~pat:component_pat ~loc:value_binding_loc
               ~expr:transformed_expr) )
     in
     match consume_attr `Component with
-    | Some (value_binding, ()) ->
-        transform `Component value_binding
+    | Some (value_binding, useDynamicKey) ->
+        transform ~useDynamicKey `Component value_binding
     | None -> (
       match consume_attr `Native with
-      | Some (value_binding, ()) ->
-          transform `Native value_binding
+      | Some (value_binding, useDynamicKey) ->
+          transform ~useDynamicKey `Native value_binding
       | None ->
           ATM.default_mapper.value_binding mapper unmatched_value_binding )
 end
