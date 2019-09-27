@@ -35,15 +35,3 @@ let fold3 = (f, list1, list2, list3, initialValue) => {
     | _ => assert(false);
   aux(initialValue, (list1, list2, list3));
 };
-
-let fold_map = (f, init, t) => {
-  let acc = ref(init);
-  let result =
-    map(x => {
-      let (new_acc, y) = f(acc^, x);
-      acc := new_acc;
-      (y, t);
-    });
-
-  (acc^, result);
-};
