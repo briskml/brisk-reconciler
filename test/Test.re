@@ -775,11 +775,10 @@ let core = [
     () => {
       let effectCallCount = ref(0);
       let effectDisposeCallCount = ref(0);
-      let onEffect = () => effectCallCount := effectCallCount^ + 1;
-      let onEffectDispose = () =>
-        effectDisposeCallCount := effectDisposeCallCount^ + 1;
+      let onEffect = () => incr(effectCallCount);
+      let onEffectDispose = () => incr(effectDisposeCallCount);
 
-      /* 
+      /*
        * When a parent-of-a-parent of a component with an OnMountEffect is removed,
        * the OnMount effect doesn't get disposed on removal
        */
