@@ -1,7 +1,6 @@
-module P = Migrate_parsetree.Versions.OCaml_current.Ast.Parsetree
-module AT = Migrate_parsetree.Versions.OCaml_current.Ast.Asttypes
-module ATM = Migrate_parsetree.Versions.OCaml_current.Ast.Ast_mapper
-module ATH = Migrate_parsetree.Versions.OCaml_current.Ast.Ast_helper
+module P = Ppxlib.Parsetree
+module AT = Ppxlib.Asttypes
+module ATH = Ppxlib.Ast_helper
 
 module JSX_ppx = struct
   let rec props_filter_children ~acc =
@@ -41,15 +40,11 @@ module JSX_ppx = struct
     | Ldot _ as ldot ->
         ldot
 
-  let expr mapper expr =
+  let expr expr =
     match expr.P.pexp_desc with
     | P.Pexp_apply (fn, args) when exists_jsx expr.pexp_attributes ->
         let attributes = filter_jsx expr.pexp_attributes in
-        let args =
-          List.map
-            (fun (label, arg) -> (label, mapper.ATM.expr mapper arg))
-            args
-        in
+        let args = List.map (fun (label, arg) -> (label, arg)) args in
         let open P in
         let loc = expr.P.pexp_loc in
         let fn =
@@ -64,7 +59,7 @@ module JSX_ppx = struct
           let component = [%e fn] in
           [%e rewrite_apply ~attributes ~loc:expr.P.pexp_loc args]]
     | _ ->
-        ATM.default_mapper.expr mapper expr
+        expr
 end
 
 module Declaration_ppx = struct
@@ -79,9 +74,8 @@ module Declaration_ppx = struct
     | `Native ->
         "nativeComponent"
 
-  let transform_component_expr ~useDynamicKey ~attribute ~component_name
-      mapper expr =
-    let rec map_component_expression ~mapper ({P.pexp_loc= loc} as expr) =
+  let transform_component_expr ~useDynamicKey ~attribute ~component_name expr =
+    let rec map_component_expression ({P.pexp_loc= loc} as expr) =
       match_ func_pattern loc expr
         ~with_:(fun lbl opt_arg pat child_expression ->
           let make_fun_with_expr ~expr =
@@ -91,14 +85,11 @@ module Declaration_ppx = struct
           match (lbl, pat) with
           | (Ppxlib.Labelled _ | Optional _), _ ->
               make_fun_with_expr
-                ~expr:(map_component_expression ~mapper child_expression)
+                ~expr:(map_component_expression child_expression)
           | Ppxlib.Nolabel, [%pat? ()] ->
               let loc = child_expression.pexp_loc in
               make_fun_with_expr
-                ~expr:
-                  [%expr
-                    component ~key
-                      [%e ATM.default_mapper.expr mapper child_expression]]
+                ~expr:[%expr component ~key [%e child_expression]]
           | _ ->
               Location.raise_errorf ~loc
                 "A labelled argument or () was expected" )
@@ -119,7 +110,7 @@ module Declaration_ppx = struct
             [%e Ppxlib.Ast_builder.Default.(ebool ~loc useDynamicKey)]
           [%e component_name]
       in
-      fun ?(key = Key.none) -> [%e map_component_expression ~mapper expr]]
+      fun ?(key = Key.none) -> [%e map_component_expression expr]]
 
   let declare_attribute ctx typ =
     let open Ppxlib.Attribute in
@@ -146,14 +137,14 @@ module Declaration_ppx = struct
     | `Native ->
         expr_attribute_nativeComponent
 
-  let expr mapper unmatched_expr =
+  let expr unmatched_expr =
     let consume_attr attr =
       Ppxlib.Attribute.consume (expr_attribute attr) unmatched_expr
     in
     let transform ~useDynamicKey attribute expr =
       let loc = expr.P.pexp_loc in
-      transform_component_expr ~useDynamicKey ~attribute ~component_name:[%expr __LOC__]
-        mapper expr
+      transform_component_expr ~useDynamicKey ~attribute
+        ~component_name:[%expr __LOC__] expr
     in
     match consume_attr `Component with
     | Some (expr, useDynamicKey) ->
@@ -163,7 +154,7 @@ module Declaration_ppx = struct
       | Some (expr, useDynamicKey) ->
           transform ~useDynamicKey `Native expr
       | None ->
-          ATM.default_mapper.expr mapper unmatched_expr )
+          unmatched_expr )
 
   let value_binding_attribute_component =
     declare_attribute Ppxlib.Attribute.Context.value_binding `Component
@@ -177,7 +168,7 @@ module Declaration_ppx = struct
     | `Native ->
         value_binding_attribute_nativeComponent
 
-  let value_binding mapper unmatched_value_binding =
+  let value_binding unmatched_value_binding =
     let consume_attr attr =
       Ppxlib.Attribute.consume
         (value_binding_attribute attr)
@@ -193,7 +184,7 @@ module Declaration_ppx = struct
           let component_pat = value_binding.pvb_pat in
           let transformed_expr =
             transform_component_expr ~useDynamicKey ~attribute ~component_name
-              mapper expr
+              expr
           in
           Ppxlib.Ast_builder.Default.(
             value_binding ~pat:component_pat ~loc:value_binding_loc
@@ -207,15 +198,32 @@ module Declaration_ppx = struct
       | Some (value_binding, useDynamicKey) ->
           transform ~useDynamicKey `Native value_binding
       | None ->
-          ATM.default_mapper.value_binding mapper unmatched_value_binding )
+          unmatched_value_binding )
 end
 
+let declaration_mapper =
+  object
+    inherit Ppxlib.Ast_traverse.map as super
+
+    method! expression e =
+      let e = super#expression e in
+      Declaration_ppx.expr e
+
+    method! value_binding binding =
+      let binding = super#value_binding binding in
+      Declaration_ppx.value_binding binding
+  end
+
+let jsx_mapper =
+  object
+    inherit Ppxlib.Ast_traverse.map as super
+
+    method! expression e = 
+      let e = super#expression e in
+      JSX_ppx.expr e
+  end
+
 let () =
-  let open Migrate_parsetree in
-  Driver.register ~name:"component" Versions.ocaml_current
-    (fun _config _cookies ->
-      let open Declaration_ppx in
-      {ATM.default_mapper with expr; value_binding} ) ;
-  Driver.register ~name:"JSX" Versions.ocaml_current (fun _config _cookies ->
-      let open JSX_ppx in
-      {ATM.default_mapper with expr} )
+  Ppxlib.Driver.register_transformation "component"
+    ~impl:declaration_mapper#structure ;
+  Ppxlib.Driver.register_transformation "JSX" ~impl:jsx_mapper#structure
