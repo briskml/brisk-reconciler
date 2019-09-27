@@ -106,18 +106,6 @@ module Make = (OutputTree: OutputTree) => {
         | Host => 1
         };
 
-    let rec fold = (f, acc, instanceForest) => {
-      switch (instanceForest) {
-      | IFlat(opaqueInstance) => f(acc, opaqueInstance)
-      | INested(l, _) =>
-        List.fold_left(
-          (acc, instanceForest) => fold(f, acc, instanceForest),
-          acc,
-          l,
-        )
-      };
-    };
-
     let rec flatten =
       fun
       | IFlat(l) => [l]
@@ -138,15 +126,24 @@ module Make = (OutputTree: OutputTree) => {
       |> List.rev;
 
     let pendingEffects = (~lifecycle, acc, instanceForest) => {
-      fold(
-        (acc, Instance({hooks})) =>
-          EffectSequence.chain(
-            Hooks.pendingEffects(~lifecycle, Some(hooks)),
+      let f = (acc, Instance({hooks})) =>
+        EffectSequence.chain(
+          Hooks.pendingEffects(~lifecycle, Some(hooks)),
+          acc,
+        );
+      let rec fold = (acc, instanceForest) => {
+        switch (instanceForest) {
+        | IFlat(Instance({instanceSubForest}) as opaqueInstance) =>
+          f(fold(acc, instanceSubForest), opaqueInstance)
+        | INested(l, _) =>
+          List.fold_left(
+            (acc, instanceForest) => fold(acc, instanceForest),
             acc,
-          ),
-        acc,
-        instanceForest,
-      );
+            l,
+          )
+        };
+      };
+      fold(acc, instanceForest);
     };
   };
 
@@ -1477,8 +1474,7 @@ module Make = (OutputTree: OutputTree) => {
         ~useDynamicKey: bool=?,
         string,
         ~key: Key.t=?,
-        Hooks.t(a, a) =>
-        (Hooks.t(Hooks.nil, a), syntheticElement)
+        Hooks.t(a, a) => (Hooks.t(Hooks.nil, a), syntheticElement)
       ) =>
       syntheticElement =
     (~useDynamicKey=false, debugName) => {
@@ -1521,8 +1517,7 @@ module Make = (OutputTree: OutputTree) => {
         ~useDynamicKey: bool=?,
         string,
         ~key: Key.t=?,
-        Hooks.t(a, a) =>
-        (Hooks.t(Hooks.nil, a), outputTreeElement)
+        Hooks.t(a, a) => (Hooks.t(Hooks.nil, a), outputTreeElement)
       ) =>
       syntheticElement =
     (~useDynamicKey=false, debugName) => {
