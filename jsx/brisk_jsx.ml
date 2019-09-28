@@ -4,23 +4,19 @@ module ATH = Ppxlib.Ast_helper
 
 module JSX_ppx = struct
   let rec props_filter_children ~acc =
-    P.(
       function
       | [] ->
           List.rev acc
-      | (AT.Labelled "children", [%expr []]) :: tail ->
+      | (AT.Labelled "children", P.([%expr []])) :: tail ->
           props_filter_children ~acc tail
       | prop :: tail ->
-          props_filter_children ~acc:(prop :: acc) tail)
+          props_filter_children ~acc:(prop :: acc) tail
 
   let props_filter_children props = props_filter_children ~acc:[] props
 
-  let rewrite_apply ~loc ~attributes:pexp_attributes props =
-    let open P in
-    let props = props_filter_children props in
-    { P.pexp_desc= P.Pexp_apply ([%expr component], props)
-    ; pexp_loc= loc
-    ; pexp_attributes }
+  let rewrite_apply ~loc ~attributes:attrs props =
+    let args = props_filter_children props in
+    ATH.Exp.apply ~loc ~attrs [%expr component] args
 
   let is_jsx ({AT.txt}, _) = String.equal txt "JSX"
 
@@ -45,7 +41,6 @@ module JSX_ppx = struct
     | P.Pexp_apply (fn, args) when exists_jsx expr.pexp_attributes ->
         let attributes = filter_jsx expr.pexp_attributes in
         let args = List.map (fun (label, arg) -> (label, arg)) args in
-        let open P in
         let loc = expr.P.pexp_loc in
         let fn =
           match fn.P.pexp_desc with
@@ -55,9 +50,9 @@ module JSX_ppx = struct
           | _ ->
               fn
         in
-        [%expr
+        P.([%expr
           let component = [%e fn] in
-          [%e rewrite_apply ~attributes ~loc:expr.P.pexp_loc args]]
+          [%e rewrite_apply ~attributes ~loc:expr.P.pexp_loc args]])
     | _ ->
         expr
 end
