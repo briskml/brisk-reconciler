@@ -1,6 +1,6 @@
 (library
  (name brisk_jsx)
- (public_name brisk_jsx)
+ (public_name brisk-reconciler.ppx)
  (kind ppx_rewriter)
  (libraries ocaml-migrate-parsetree
             ppxlib)
