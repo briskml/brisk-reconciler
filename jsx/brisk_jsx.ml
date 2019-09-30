@@ -105,7 +105,7 @@ module Declaration_ppx = struct
             [%e Ppxlib.Ast_builder.Default.(ebool ~loc useDynamicKey)]
           [%e component_name]
       in
-      fun ?(key = Key.none) -> [%e map_component_expression expr]]
+      fun ?(key = Brisk_jsx_runtime.Key.none) -> [%e map_component_expression expr]]
 
   let declare_attribute ctx typ =
     let open Ppxlib.Attribute in
