@@ -70,6 +70,11 @@ module Make:
         * Create unique a component key.
         */
       let create: unit => t;
+
+      /**
+        * Default key
+        */
+      let none: t;
     };
 
     /** Type of element returned from render */
