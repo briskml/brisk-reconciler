@@ -8,7 +8,7 @@ module Box = {
   let make = (~title="ImABox", (), h) => (
     h,
     {
-      children: listToElement([]),
+      children: empty,
       make: () => Implementation.{name: "Box", element: Text(title)},
       configureInstance: (~isFirstRender, instance) =>
         isFirstRender
@@ -19,24 +19,24 @@ module Box = {
 
 module Div = {
   [@nativeComponent]
-  let make = (~children=[], (), h) => (
+  let make = (~children=empty, (), h) => (
     h,
     {
       make: () => Implementation.{name: "Div", element: View},
       configureInstance: (~isFirstRender as _, d) => d,
-      children: listToElement(children),
+      children,
     },
   );
 };
 
 module SingleChildDiv = {
   [@nativeComponent]
-  let make = (~children as child: syntheticElement, (), h) => (
+  let make = (~children, (), h) => (
     h,
     {
       make: () => Implementation.{name: "SingleChildDiv", element: View},
       configureInstance: (~isFirstRender as _, d) => d,
-      children: child,
+      children,
     },
   );
 };
@@ -72,7 +72,7 @@ module Text = {
           };
           t;
         },
-        children: listToElement([]),
+        children: empty,
       },
     );
   };
@@ -213,7 +213,7 @@ module ToggleClicks = {
 
 module EmptyComponent = {
   [@component]
-  let make = ((), hooks) => (hooks, listToElement([]));
+  let make = ((), hooks) => (hooks, empty);
 };
 
 module EmptyComponentWithAlwaysEffect = {
@@ -228,7 +228,7 @@ module EmptyComponentWithAlwaysEffect = {
         },
         hooks,
       );
-    (hooks, listToElement([]));
+    (hooks, empty);
   };
 };
 
@@ -244,6 +244,6 @@ module EmptyComponentWithOnMountEffect = {
         },
         hooks,
       );
-    (hooks, listToElement([]));
+    (hooks, empty);
   };
 };

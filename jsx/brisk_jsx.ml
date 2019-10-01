@@ -3,14 +3,21 @@ module AT = Ppxlib.Asttypes
 module ATH = Ppxlib.Ast_helper
 
 module JSX_ppx = struct
-  let rec props_filter_children ~acc =
-      function
-      | [] ->
-          List.rev acc
-      | (AT.Labelled "children", P.([%expr []])) :: tail ->
-          props_filter_children ~acc tail
-      | prop :: tail ->
-          props_filter_children ~acc:(prop :: acc) tail
+  let rec props_filter_children ~acc = function
+    | [] ->
+        List.rev acc
+    | (AT.Labelled "children", P.([%expr []])) :: tail ->
+        props_filter_children ~acc tail
+    | (AT.Labelled "children", P.([%expr [%e? h] :: [%e? t]] as exp)) :: tail
+      ->
+        let loc = exp.P.pexp_loc in
+        let prop =
+          ( AT.Labelled "children"
+          , P.([%expr Brisk_jsx_runtime.Expert.jsx_list ([%e h] :: [%e t])]) )
+        in
+        props_filter_children ~acc:(prop :: acc) tail
+    | prop :: tail ->
+        props_filter_children ~acc:(prop :: acc) tail
 
   let props_filter_children props = props_filter_children ~acc:[] props
 
@@ -50,9 +57,10 @@ module JSX_ppx = struct
           | _ ->
               fn
         in
-        P.([%expr
-          let component = [%e fn] in
-          [%e rewrite_apply ~attributes ~loc:expr.P.pexp_loc args]])
+        P.(
+          [%expr
+            let component = [%e fn] in
+            [%e rewrite_apply ~attributes ~loc:expr.P.pexp_loc args]])
     | _ ->
         expr
 end
@@ -87,7 +95,7 @@ module Declaration_ppx = struct
                 ~expr:[%expr component ~key [%e child_expression]]
           | _ ->
               Location.raise_errorf ~loc
-                "A labelled argument or () was expected" )
+                "A labelled argument or () was expected")
     in
     let open P in
     let loc = expr.P.pexp_loc in
@@ -105,7 +113,8 @@ module Declaration_ppx = struct
             [%e Ppxlib.Ast_builder.Default.(ebool ~loc useDynamicKey)]
           [%e component_name]
       in
-      fun ?(key = Brisk_jsx_runtime.Key.none) -> [%e map_component_expression expr]]
+      fun ?(key = Brisk_jsx_runtime.Key.none) ->
+        [%e map_component_expression expr]]
 
   let declare_attribute ctx typ =
     let open Ppxlib.Attribute in
@@ -118,7 +127,7 @@ module Declaration_ppx = struct
         | Some {loc} ->
             Location.raise_errorf ~loc "A labelled argument or () was expected"
         | None ->
-            false )
+            false)
 
   let expr_attribute_component =
     declare_attribute Ppxlib.Attribute.Context.expression `Component
@@ -183,7 +192,7 @@ module Declaration_ppx = struct
           in
           Ppxlib.Ast_builder.Default.(
             value_binding ~pat:component_pat ~loc:value_binding_loc
-              ~expr:transformed_expr) )
+              ~expr:transformed_expr))
     in
     match consume_attr `Component with
     | Some (value_binding, useDynamicKey) ->
@@ -213,7 +222,7 @@ let jsx_mapper =
   object
     inherit Ppxlib.Ast_traverse.map as super
 
-    method! expression e = 
+    method! expression e =
       let e = super#expression e in
       JSX_ppx.expr e
   end

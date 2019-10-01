@@ -15,7 +15,8 @@ module type S = {
     | []: t(nil)
     | ::(valueContainer('a), t('l)): t('a => 'l);
 
-  type constructor('a) = pri t('tail) => t('after) constraint 'a = ('tail, 'after);
+  type constructor('a) = pri t('tail) => t('after)
+  constraint 'a = ('tail, 'after);
 
   type init('value) = constructor(('value, 'value));
 
@@ -58,7 +59,8 @@ module Make = (Witness: Witness) : (S with type witness('a) = Witness.t('a)) => 
     | []: t(nil)
     | ::(valueContainer('a), t('l)): t('a => 'l);
 
-  type constructor('a) = t('tail) => t('after) constraint 'a = ('tail, 'after);
+  type constructor('a) = t('tail) => t('after)
+  constraint 'a = ('tail, 'after);
 
   type init('value) = constructor(('value, 'value));
 

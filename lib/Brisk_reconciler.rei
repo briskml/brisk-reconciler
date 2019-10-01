@@ -149,8 +149,7 @@ module Make:
         ~useDynamicKey: bool=?,
         string,
         ~key: Key.t=?,
-        Hooks.t('a, 'a) =>
-        (Hooks.t(Hooks.nil, 'a), syntheticElement)
+        Hooks.t('a, 'a) => (Hooks.t(Hooks.nil, 'a), syntheticElement)
       ) =>
       syntheticElement;
 
@@ -162,13 +161,17 @@ module Make:
         ~useDynamicKey: bool=?,
         string,
         ~key: Key.t=?,
-        Hooks.t('a, 'a) =>
-        (Hooks.t(Hooks.nil, 'a), outputTreeElement)
+        Hooks.t('a, 'a) => (Hooks.t(Hooks.nil, 'a), outputTreeElement)
       ) =>
       syntheticElement;
 
     module Hooks = Hooks;
     module RemoteAction = RemoteAction;
+
+    module Expert: {
+      /* Create a constant list of element */
+      let jsx_list: list(syntheticElement) => syntheticElement;
+    };
   };
 
 module Hooks = Hooks;
