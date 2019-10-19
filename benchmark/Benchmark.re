@@ -23,20 +23,14 @@ module Update = {
 
 module Unit = {
   open Brisk;
-
-  let make =
-    nativeComponent("B", (hooks, ~depth as _, ~children) =>
-      (
-        hooks,
-        {
-          make: () => (),
-          configureInstance: (~isFirstRender as _, ()) => (),
-          children: listToElement(children),
-        },
-      )
-    );
-  let createElement = (~depth, ~children, ()) =>
-    element(make.render(~depth, ~children), make);
+  let%nativeComponent make = (~depth as _, (), hooks) => (
+    {
+      make: () => (),
+      configureInstance: (~isFirstRender as _, ()) => (),
+      children: empty,
+    },
+    hooks,
+  );
 };
 module A = {
   open Brisk;
@@ -78,10 +72,10 @@ module A = {
     | _ => raise(Invalid_argument("List should have 4 elements"))
     };
 
-  let rec componentDefinition = (hooks, ~make, ~depth, ~index) => {
+  let rec componentDefinition = (~depth, ~index, hooks) => {
     let childrenIndexOffset = index * 4;
     let childrenDepth = depth + 1;
-    let (children, dispatch, hooks) =
+    let ((children, dispatch), hooks) =
       Hooks.reducer(
         ComponentType.[A, A, A, A],
         ({depth, index, switchComponent}, state) => {
@@ -106,7 +100,7 @@ module A = {
         },
         hooks,
       );
-    let hooks =
+    let ((), hooks) =
       Hooks.effect(
         OnMount,
         () =>
@@ -130,24 +124,23 @@ module A = {
     } else {
       (hooks, <Unit depth={depth + 1} />);
     };
-  };
-
-  let componentA = component("A", componentDefinition);
-  let componentB = component("B", componentDefinition);
-
-  let rec make = (componentType, ~depth, ~index, _children: list(unit)) =>
+  }
+  and componentA = component("A")
+  and componentB = component("B")
+  and makeA = (~depth, ~index) =>
+    componentA(componentDefinition(~depth, ~index))
+  and makeB = (~depth, ~index) =>
+    componentB(componentDefinition(~depth, ~index))
+  and make = (componentType, ~depth, ~index, _children) =>
     switch (componentType) {
-    | ComponentType.A
-    | A' => element(componentA.render(~make, ~depth, ~index), componentA)
+    | A
+    | A' => makeA(~depth, ~index)
     | B
-    | B' => element(componentB.render(~make, ~depth, ~index), componentB)
+    | B' => makeB(~depth, ~index)
     };
 
-  let makeA = make(ComponentType.A);
-  let makeB = make(ComponentType.B);
-
   let render = () => {
-    Brisk.RenderedElement.render((), makeA(~depth=0, ~index=0, []));
+    Brisk.RenderedElement.render((), makeA(~depth=0, ~index=0));
   };
 };
 
