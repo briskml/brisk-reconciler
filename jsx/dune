@@ -1,0 +1,6 @@
+(library
+ (name brisk_jsx)
+ (public_name brisk-reconciler.ppx)
+ (kind ppx_rewriter)
+ (libraries ppxlib)
+ (preprocess (pps ppxlib.metaquot)))

@@ -1,23 +1,23 @@
 module Implementation = {
-  [@deriving (show({with_path: false}), eq)]
+  [@deriving (show, eq)]
   type hostElement =
     | Text(string)
     | View;
 
-  [@deriving (show({with_path: false}), eq)]
+  [@deriving (show, eq)]
   type node = {
     name: string,
     element: hostElement,
   };
 
-  [@deriving eq]
+  [@deriving (show, eq)]
   type testMountEntry =
     | MountChild(node, node, int)
     | UnmountChild(node, node)
     | RemountChild(node, node, int, int)
     | ChangeText(string, string);
 
-  [@deriving eq]
+  [@deriving (show, eq)]
   type testMountLog = list(testMountEntry);
 
   let mountLog = ref([]);

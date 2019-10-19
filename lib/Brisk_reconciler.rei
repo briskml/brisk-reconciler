@@ -70,6 +70,11 @@ module Make:
         * Create unique a component key.
         */
       let create: unit => t;
+
+      /**
+        * Default key
+        */
+      let none: t;
     };
 
     /** Type of element returned from render */
@@ -139,31 +144,52 @@ module Make:
       * component should be pure and all side effects should be
       * handled using Hooks.effect
       */
+    [@ocaml.deprecated "Use let%component instead."]
     let component:
       (
         ~useDynamicKey: bool=?,
         string,
         ~key: Key.t=?,
-        Hooks.t('a, 'a) =>
-        (Hooks.t(Hooks.nil, 'a), syntheticElement)
+        Hooks.t('a, 'a) => (Hooks.t(Hooks.nil, 'a), syntheticElement)
       ) =>
       syntheticElement;
 
     /**
       * Creates a component which renders an OutputTree node.
       */
+    [@ocaml.deprecated "Use let%nativeComponent instead."]
     let nativeComponent:
       (
         ~useDynamicKey: bool=?,
         string,
         ~key: Key.t=?,
-        Hooks.t('a, 'a) =>
-        (Hooks.t(Hooks.nil, 'a), outputTreeElement)
+        Hooks.t('a, 'a) => (Hooks.t(Hooks.nil, 'a), outputTreeElement)
       ) =>
       syntheticElement;
 
     module Hooks = Hooks;
     module RemoteAction = RemoteAction;
+
+    module Expert: {
+      /* Create a constant list of element */
+      let jsx_list: list(syntheticElement) => syntheticElement;
+      let component:
+        (
+          ~useDynamicKey: bool=?,
+          string,
+          ~key: Key.t=?,
+          Hooks.t('a, 'a) => (syntheticElement, Hooks.t(Hooks.nil, 'a))
+        ) =>
+        syntheticElement;
+      let nativeComponent:
+        (
+          ~useDynamicKey: bool=?,
+          string,
+          ~key: Key.t=?,
+          Hooks.t('a, 'a) => (outputTreeElement, Hooks.t(Hooks.nil, 'a))
+        ) =>
+        syntheticElement;
+    };
   };
 
 module Hooks = Hooks;

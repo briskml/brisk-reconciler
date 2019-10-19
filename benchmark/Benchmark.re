@@ -23,20 +23,14 @@ module Update = {
 
 module Unit = {
   open Brisk;
-  let component = nativeComponent("B");
-
-  let createElement = (~depth as _, ~children, ()) => {
-    component(hooks =>
-      (
-        hooks,
-        {
-          make: () => (),
-          configureInstance: (~isFirstRender as _, ()) => (),
-          children: listToElement(children),
-        },
-      )
-    );
-  };
+  let%nativeComponent make = (~depth as _, (), hooks) => (
+    {
+      make: () => (),
+      configureInstance: (~isFirstRender as _, ()) => (),
+      children: empty,
+    },
+    hooks,
+  );
 };
 module A = {
   open Brisk;
@@ -81,7 +75,7 @@ module A = {
   let rec componentDefinition = (~depth, ~index, hooks) => {
     let childrenIndexOffset = index * 4;
     let childrenDepth = depth + 1;
-    let (children, dispatch, hooks) =
+    let ((children, dispatch), hooks) =
       Hooks.reducer(
         ComponentType.[A, A, A, A],
         ({depth, index, switchComponent}, state) => {
@@ -106,7 +100,7 @@ module A = {
         },
         hooks,
       );
-    let hooks =
+    let ((), hooks) =
       Hooks.effect(
         OnMount,
         () =>
@@ -133,20 +127,20 @@ module A = {
   }
   and componentA = component("A")
   and componentB = component("B")
-  and makeA = (~depth, ~index, _children) =>
+  and makeA = (~depth, ~index) =>
     componentA(componentDefinition(~depth, ~index))
-  and makeB = (~depth, ~index, _children) =>
+  and makeB = (~depth, ~index) =>
     componentB(componentDefinition(~depth, ~index))
   and make = (componentType, ~depth, ~index, _children) =>
     switch (componentType) {
     | A
-    | A' => componentA(componentDefinition(~depth, ~index))
+    | A' => makeA(~depth, ~index)
     | B
-    | B' => componentB(componentDefinition(~depth, ~index))
+    | B' => makeB(~depth, ~index)
     };
 
   let render = () => {
-    Brisk.RenderedElement.render((), makeA(~depth=0, ~index=0, []));
+    Brisk.RenderedElement.render((), makeA(~depth=0, ~index=0));
   };
 };
 

@@ -23,6 +23,7 @@ let map3 = (f, list1, list2, list3) => {
     | _ => assert(false);
   aux([], (List.rev(list1), List.rev(list2), List.rev(list3)));
 };
+
 let fold3 = (f, list1, list2, list3, initialValue) => {
   let rec aux = acc =>
     fun

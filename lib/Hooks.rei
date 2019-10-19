@@ -67,7 +67,7 @@ module Effect: {
 
 let state:
   ('value, t(State.t('value) => 'c, 'd)) =>
-  ('value, 'value => unit, t('c, 'd));
+  (('value, 'value => unit), t('c, 'd));
 
 let reducer:
   (
@@ -75,10 +75,11 @@ let reducer:
     ('b, 'value) => 'value,
     t(Reducer.t('value) => 'c, 'd)
   ) =>
-  ('value, 'b => unit, t('c, 'd));
+  (('value, 'b => unit), t('c, 'd));
 
 let ref:
-  ('value, t(ref('value) => 'c, 'd)) => ('value, 'value => unit, t('c, 'd));
+  ('value, t(ref('value) => 'c, 'd)) =>
+  (('value, 'value => unit), t('c, 'd));
 
 let effect:
   (
@@ -86,7 +87,7 @@ let effect:
     unit => option(unit => unit),
     t(Effect.t('value) => 'c, 'd)
   ) =>
-  t('c, 'd);
+  (unit, t('c, 'd));
 
 let pendingEffects:
   (~lifecycle: Effect.lifecycle, option(state('a))) => EffectSequence.t;

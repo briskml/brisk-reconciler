@@ -1,4 +1,5 @@
 (executable
   (name benchmark)
   (public_name benchmark.exe)
-  (libraries core core_bench brisk-reconciler))
+  (libraries core core_bench brisk-reconciler)
+  (preprocess (pps brisk-reconciler.ppx)))
