@@ -136,7 +136,7 @@ module State = {
         onStateDidChange();
       };
 
-    (stateContainer.currentValue, setter, nextHooks);
+    ((stateContainer.currentValue, setter), nextHooks);
   };
 };
 
@@ -186,7 +186,7 @@ module Reducer = {
       onStateDidChange();
     };
 
-    (stateContainer.currentValue, dispatch, hooks);
+    ((stateContainer.currentValue, dispatch), hooks);
   };
 };
 
@@ -202,7 +202,7 @@ module Ref = {
 
     let setter = nextValue => internalRef := nextValue;
 
-    (internalRef^, setter, hooks);
+    ((internalRef^, setter), hooks);
   };
 };
 
@@ -299,7 +299,7 @@ module Effect = {
         ~toWitness=wrapAsHook,
         hooks,
       );
-    hooks;
+    ((), hooks);
   };
 };
 

@@ -102,9 +102,9 @@ module Declaration_ppx = struct
     let create_component_expr =
       match attribute with
       | `Native ->
-          [%expr Brisk_jsx_runtime.nativeComponent]
+          [%expr Brisk_jsx_runtime.Expert.nativeComponent]
       | `Component ->
-          [%expr Brisk_jsx_runtime.component]
+          [%expr Brisk_jsx_runtime.Expert.component]
     in
     [%expr
       let component =
@@ -203,6 +203,77 @@ module Declaration_ppx = struct
           transform ~useDynamicKey `Native value_binding
       | None ->
           unmatched_value_binding )
+
+  let register attribute =
+    let open Ppxlib in
+    Extension.declare (attribute_name attribute)
+      Extension.Context.structure_item
+      Ast_pattern.(
+        pstr
+          ( pstr_value __ (value_binding ~pat:(ppat_var __) ~expr:__ ^:: nil)
+          ^:: nil ))
+      (fun ~loc ~path recursive pat expr ->
+        let component_name =
+          ATH.Exp.constant ~loc (ATH.Const.string (path ^ "." ^ pat))
+        in
+        let transformed_expression =
+          transform_component_expr ~useDynamicKey:false ~attribute
+            ~component_name expr
+        in
+        let pat = ATH.Pat.var ~loc (Ast_builder.Default.Located.mk ~loc pat) in
+        match recursive with
+        | Recursive ->
+            [%stri let rec [%p pat] = [%e transformed_expression]]
+        | Nonrecursive ->
+            [%stri let [%p pat] = [%e transformed_expression]])
+end
+
+module Hooks_ppx = struct
+  open Ppxlib
+
+  (* Grab a list of all the output expressions *)
+  let lint_hook_usage =
+    object
+      inherit [bool] Ast_traverse.fold as super
+
+      method! expression expr _ =
+        let open Extension.Context in
+        match get_extension expression expr with
+        | Some (({txt= "hook"}, _), _) ->
+            true
+        | Some _ |  None ->
+            super#expression expr false
+    end
+
+  let contains_hook_expression expr = lint_hook_usage#expression expr false
+
+  let expand ~loc expr =
+    let expansion =
+      match expr.pexp_desc with
+      | Pexp_let (Nonrecursive, [binding], next_expression) ->
+          let wrapped_next_expression =
+            if contains_hook_expression expr then
+              [%expr [%e next_expression] __brisk_ppx_hooks__]
+            else [%expr [%e next_expression], __brisk_ppx_hooks__]
+          in
+          [%expr
+            fun __brisk_ppx_hooks__ ->
+              let [%p binding.pvb_pat], __brisk_ppx_hooks__ =
+                [%e binding.pvb_expr] __brisk_ppx_hooks__
+              in
+              [%e wrapped_next_expression]]
+      | Pexp_let (Recursive, _, _) ->
+          Location.raise_errorf ~loc "'let%%hook' may not be recursive"
+      | _ ->
+          Location.raise_errorf ~loc "'hook' can only be used with 'let'"
+    in
+    { expansion with
+      pexp_attributes= expr.pexp_attributes @ expansion.pexp_attributes }
+
+  let extension =
+    Extension.declare "hook" Extension.Context.expression
+      Ast_pattern.(single_expr_payload __)
+      (fun ~loc ~path:_ expr -> expand ~loc expr)
 end
 
 let declaration_mapper =
@@ -229,5 +300,9 @@ let jsx_mapper =
 
 let () =
   Ppxlib.Driver.register_transformation "component"
-    ~impl:declaration_mapper#structure ;
+    ~impl:declaration_mapper#structure
+    ~extensions:
+      [ Declaration_ppx.register `Component
+      ; Declaration_ppx.register `Native
+      ; Hooks_ppx.extension ] ;
   Ppxlib.Driver.register_transformation "JSX" ~impl:jsx_mapper#structure

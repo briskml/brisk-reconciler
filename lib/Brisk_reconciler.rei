@@ -144,6 +144,7 @@ module Make:
       * component should be pure and all side effects should be
       * handled using Hooks.effect
       */
+    [@ocaml.deprecated "Use let%component instead."]
     let component:
       (
         ~useDynamicKey: bool=?,
@@ -156,6 +157,7 @@ module Make:
     /**
       * Creates a component which renders an OutputTree node.
       */
+    [@ocaml.deprecated "Use let%nativeComponent instead."]
     let nativeComponent:
       (
         ~useDynamicKey: bool=?,
@@ -171,6 +173,22 @@ module Make:
     module Expert: {
       /* Create a constant list of element */
       let jsx_list: list(syntheticElement) => syntheticElement;
+      let component:
+        (
+          ~useDynamicKey: bool=?,
+          string,
+          ~key: Key.t=?,
+          Hooks.t('a, 'a) => (syntheticElement, Hooks.t(Hooks.nil, 'a))
+        ) =>
+        syntheticElement;
+      let nativeComponent:
+        (
+          ~useDynamicKey: bool=?,
+          string,
+          ~key: Key.t=?,
+          Hooks.t('a, 'a) => (outputTreeElement, Hooks.t(Hooks.nil, 'a))
+        ) =>
+        syntheticElement;
     };
   };
 
