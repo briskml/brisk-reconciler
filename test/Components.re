@@ -174,7 +174,7 @@ module ToggleClicks = {
       Hooks.effect(Always, () =>
         Some(
           RemoteAction.subscribe(
-            ~handler=(_: action) => setState(!state),
+            ~handler=(_: action) => setState(state => !state),
             rAction,
           ),
         )

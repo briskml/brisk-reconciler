@@ -116,7 +116,7 @@ module State = {
 
     let onStateDidChange = hooks.onStateDidChange;
 
-    let setter = nextState =>
+    let setter = updater =>
       if (stateContainer.stale) {
         let backtrace = Printexc.get_backtrace();
         Printf.printf(
@@ -132,7 +132,7 @@ module State = {
           backtrace,
         );
       } else {
-        setState(nextState, stateContainer);
+        setState(updater(stateContainer.currentValue), stateContainer);
         onStateDidChange();
       };
 

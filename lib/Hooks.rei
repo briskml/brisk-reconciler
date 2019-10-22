@@ -67,7 +67,7 @@ module Effect: {
 
 let state:
   ('value, t(State.t('value) => 'c, 'd)) =>
-  (('value, 'value => unit), t('c, 'd));
+  (('value, ('value => 'value) => unit), t('c, 'd));
 
 let reducer:
   (
