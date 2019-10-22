@@ -89,10 +89,7 @@ module State = {
     | State(t('a)): hook(t('a));
 
   let make: 'a => t('a) =
-    initialValue => {
-      currentValue: initialValue,
-      nextValue: initialValue,
-    };
+    initialValue => {currentValue: initialValue, nextValue: initialValue};
 
   let wrapAsHook = s => State(s);
 
@@ -104,7 +101,7 @@ module State = {
     if (currentValue === nextValue) {
       None;
     } else {
-      Some({currentValue: nextValue, nextValue });
+      Some({currentValue: nextValue, nextValue});
     };
 
   let hook = (initialState, hooks) => {
@@ -114,8 +111,8 @@ module State = {
     let onStateDidChange = hooks.onStateDidChange;
 
     let setter = updater => {
-        setState(updater(stateContainer.currentValue), stateContainer);
-        onStateDidChange();
+      setState(updater(stateContainer.currentValue), stateContainer);
+      onStateDidChange();
     };
 
     ((stateContainer.currentValue, setter), nextHooks);
