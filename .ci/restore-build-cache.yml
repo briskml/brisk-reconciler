@@ -1,31 +1,43 @@
-# Steps for restoring project cache
-
+# The cache key is built up of the following:
+# We use a string that we can change to bust the cache
+# The string "esy"
+# The string for the OS
+# The hash of the lock file
 steps:
-  - task: DownloadBuildArtifacts@0
-    condition: and(succeeded(), ne(variables['Build.SourceBranch'], 'refs/heads/master'))
-    displayName: "[Cache][Restore] Restore install"
+  - bash: |
+      # COMPUTE THE ESY INSTALL CACHE LOCATION AHEAD OF TIME
+      DESIRED_LEN="86"
+      # Note: This will need to change when upgrading esy version
+      # that reenables long paths on windows.
+      if [ "$AGENT_OS" == "Windows_NT" ]; then
+        DESIRED_LEN="33"
+      fi
+      HOME_ESY3="$HOME/.esy/3"
+      HOME_ESY3_LEN=${#HOME_ESY3}
+      NUM_UNDERS=$(echo "$(($DESIRED_LEN-$HOME_ESY3_LEN))")
+      UNDERS=$(printf "%-${NUM_UNDERS}s" "_")
+      UNDERS="${UNDERS// /_}"
+      THE_ESY__CACHE_INSTALL_PATH=${HOME_ESY3}${UNDERS}/i
+      if [ "$AGENT_OS" == "Windows_NT" ]; then
+        THE_ESY__CACHE_INSTALL_PATH=$( cygpath --mixed --absolute "$THE_ESY__CACHE_INSTALL_PATH")
+      fi
+      echo "THE_ESY__CACHE_INSTALL_PATH: $THE_ESY__CACHE_INSTALL_PATH"
+      # This will be exposed as an env var ESY__CACHE_INSTALL_PATH, or an
+      # Azure var esy__cache_install_path
+      echo "##vso[task.setvariable variable=esy__cache_install_path]$THE_ESY__CACHE_INSTALL_PATH"
+    displayName: '[Cache] calculate esy store path'
+      
+  - task: CacheBeta@1
     inputs:
-      buildType: "specific"
-      project: "$(System.TeamProject)"
-      pipeline: "$(Build.DefinitionName)"
-      branchName: "refs/heads/master"
-      buildVersionToDownload: "latestFromBranch"
-      downloadType: "single"
-      artifactName: "cache-$(Agent.OS)-install"
-      downloadPath: "$(STAGING_DIRECTORY)"
-    continueOnError: true
+      key: test_calculate_cache | esy | $(Agent.OS) | esy.lock/index.json
+      path: $(CACHE_FOLDER)
+      cacheHitVar: CACHE_RESTORED
+    displayName: '[Cache] esy packages'
 
-  - bash: "mkdir -p $(ESY__CACHE_INSTALL_PATH)"
-    condition: and(succeeded(), ne(variables['Build.SourceBranch'], 'refs/heads/master'))
-    displayName: "[Cache][Restore] Create cache directory"
+  - script: 'mkdir -p $(ESY__CACHE_INSTALL_PATH)'
+    condition: eq(variables.CACHE_RESTORED, 'true')
+    displayName: '[Cache][Restore] Create esy cache directory'
 
-  - bash: "cd $(ESY__CACHE_INSTALL_PATH) && tar -xf $(STAGING_DIRECTORY_UNIX)/cache-$(Agent.OS)-install/esy-cache.tar -C ."
-    continueOnError: true
-    condition: and(succeeded(), ne(variables['Build.SourceBranch'], 'refs/heads/master'))
-    displayName: "[Cache][Restore] Untar esy cache directory"
-
-  - bash: "rm -rf *"
-    continueOnError: true
-    workingDirectory: "$(STAGING_DIRECTORY)"
-    condition: and(succeeded(), ne(variables['Build.SourceBranch'], 'refs/heads/master'))
-    displayName: "[Cache][Restore] Clean up"
+  - pwsh: Move-Item -Path $(CACHE_FOLDER)/* -Destination $(ESY__CACHE_INSTALL_PATH)
+    displayName: '[Cache][Restore] Move downloaded cache in place'
+    condition: eq(variables.CACHE_RESTORED, 'true')
