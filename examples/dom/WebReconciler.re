@@ -186,11 +186,11 @@ let counterButtons = (~children as _, ()) => {
   component(hooks => {
     let (count, setCount, hooks) =
       JsooReact.Hooks.state(0, hooks);
-    RemoteAction.subscribe(~handler=setCount, action) |> ignore;
+    RemoteAction.subscribe(~handler=(n => setCount(_ => n)), action) |> ignore;
     (
       hooks,
       <view>
-        <button title="Decrement" onPress={() => setCount(count - 1)} />
+        <button title="Decrement" onPress={() => setCount(count => count - 1)} />
         <text text={"Counter: " ++ str(count)} />
         <button
           title="Reset (Race condition)"
@@ -198,7 +198,7 @@ let counterButtons = (~children as _, ()) => {
             ignore(Js_of_ocaml.Dom_html.setTimeout(() => RemoteAction.send(0, action), 3000.))
           }
         />
-        <button title="Increment" onPress={() => setCount(count + 1)} />
+        <button title="Increment" onPress={() => setCount(count => count + 1)} />
       </view>,
     );
   });

@@ -83,18 +83,13 @@ module State = {
   type t('a) = {
     currentValue: 'a,
     mutable nextValue: 'a,
-    mutable stale: bool,
   };
 
   type hook('a) +=
     | State(t('a)): hook(t('a));
 
   let make: 'a => t('a) =
-    initialValue => {
-      currentValue: initialValue,
-      nextValue: initialValue,
-      stale: false,
-    };
+    initialValue => {currentValue: initialValue, nextValue: initialValue};
 
   let wrapAsHook = s => State(s);
 
@@ -102,12 +97,11 @@ module State = {
     stateContainer.nextValue = nextValue;
   };
 
-  let flush = ({currentValue, nextValue} as prevHook) =>
+  let flush = ({currentValue, nextValue}) =>
     if (currentValue === nextValue) {
       None;
     } else {
-      prevHook.stale = true;
-      Some({currentValue: nextValue, nextValue, stale: false});
+      Some({currentValue: nextValue, nextValue});
     };
 
   let hook = (initialState, hooks) => {
@@ -116,25 +110,10 @@ module State = {
 
     let onStateDidChange = hooks.onStateDidChange;
 
-    let setter = nextState =>
-      if (stateContainer.stale) {
-        let backtrace = Printexc.get_backtrace();
-        Printf.printf(
-          "
-          WARNING: A stale state setter has been used. The state has been updated and flushed since using state hook here:\n
-          \n
-          %s
-          \n
-          Using stale setters might lead to race conditions which are hard to debug. If you want to update state
-          asynchronously without updating the setter function each time, we recommend using the reducer hook
-          which enforces handling of race conditions.
-          ",
-          backtrace,
-        );
-      } else {
-        setState(nextState, stateContainer);
-        onStateDidChange();
-      };
+    let setter = updater => {
+      setState(updater(stateContainer.nextValue^), stateContainer);
+      onStateDidChange();
+    };
 
     ((stateContainer.currentValue, setter), nextHooks);
   };

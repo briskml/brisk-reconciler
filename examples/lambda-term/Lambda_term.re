@@ -212,7 +212,7 @@ let clock = {
           LambdaReact.Hooks.Effect.Always,
           () => {
             let evt =
-              Lwt_engine.on_timer(1.0, true, _ => setTime(Unix.time()));
+              Lwt_engine.on_timer(1.0, true, _ => setTime(_ => Unix.time()));
             Some(() => Lwt_engine.stop_event(evt));
           },
           hooks,
