@@ -1,9 +1,10 @@
 open Alcotest;
 open TestReconciler;
+open Brisk_reconciler__Brisk_reconciler_internal;
 
-type mountElement = RenderedElement.t;
+type mountElement = RenderedElement.t(node, node);
 
-type mount = list(Implementation.testMountEntry);
+type mount = list(testMountEntry);
 
 type testHostItem('a) =
   | MountElement(mountElement): testHostItem(mount);
@@ -11,7 +12,7 @@ type testHostItem('a) =
 let mountLog =
   Alcotest.testable(
     (formatter, t) => TestPrinter.printMountLog(formatter, t),
-    Implementation.equal_testMountLog,
+    equal_testMountLog,
   );
 
 let diffOutput = (expected, actual) => {
@@ -93,28 +94,40 @@ let check = (t, msg, x, y) =>
   };
 
 let assertMountLog = (~label="", expected, actual) => {
-  Implementation.mountLog := [];
+  TestReconciler.mountLog := [];
   check(mountLog, label, expected, List.rev(actual));
 };
 
 type testState = {
-  syntheticElement,
-  renderedElement: RenderedElement.t,
+  element: element(node),
+  renderedElement: RenderedElement.t(node, node),
 };
 
-let render = (root, syntheticElement) => {
-  syntheticElement,
-  renderedElement: RenderedElement.render(root, syntheticElement),
+let render = (root, element) => {
+  element,
+  renderedElement:
+    RenderedElement.render(
+      root,
+      {
+        make: () => root,
+        configureInstance: (~isFirstRender as _, _) => root,
+        children: empty,
+        insertNode,
+        deleteNode,
+        moveNode,
+      },
+      element,
+    ),
 };
 
 let reset = x => {
-  Implementation.mountLog := [];
+  TestReconciler.mountLog := [];
   x;
 };
 
 let update =
-    (nextReactElement, {syntheticElement: previousElement, renderedElement}) => {
-  syntheticElement: nextReactElement,
+    (nextReactElement, {element: previousElement, renderedElement}) => {
+  element: nextReactElement,
   renderedElement:
     RenderedElement.update(
       ~previousElement,
@@ -123,12 +136,12 @@ let update =
     ),
 };
 
-let flushPendingUpdates = ({renderedElement, syntheticElement} as testState) =>
-  Implementation.isDirty^
+let flushPendingUpdates = ({renderedElement, element} as testState) =>
+  isDirty^
     ? {
-      Implementation.isDirty := false;
+      isDirty := false;
       {
-        syntheticElement,
+        element,
         renderedElement: RenderedElement.flushPendingUpdates(renderedElement),
       };
     }
@@ -144,7 +157,7 @@ let executeSideEffects = ({renderedElement} as testState) => {
 };
 
 let expect = (~label=?, expected, testState) => {
-  let mountLog = Implementation.mountLog^;
+  let mountLog = TestReconciler.mountLog^;
   assertMountLog(~label?, expected, mountLog);
   reset(testState);
 };

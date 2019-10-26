@@ -28,6 +28,9 @@ module Unit = {
       make: () => (),
       configureInstance: (~isFirstRender as _, ()) => (),
       children: empty,
+      insertNode,
+      deleteNode,
+      moveNode,
     },
     hooks,
   );
@@ -140,7 +143,18 @@ module A = {
     };
 
   let render = () => {
-    Brisk.RenderedElement.render((), makeA(~depth=0, ~index=0));
+    Brisk.RenderedElement.render(
+      (),
+      {
+        make: () => (),
+        configureInstance: (~isFirstRender as _, i) => i,
+        children: empty,
+        insertNode,
+        deleteNode,
+        moveNode,
+      },
+      makeA(~depth=0, ~index=0),
+    );
   };
 };
 
