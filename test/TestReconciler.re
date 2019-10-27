@@ -22,7 +22,7 @@ type testMountLog = list(testMountEntry);
 let mountLog = ref([]);
 
 let isDirty = ref(false);
-Brisk_reconciler.GlobalState.addStaleTreeHandler(() => isDirty := true);
+Brisk_reconciler.addStaleTreeHandler(() => isDirty := true);
 
 let insertNode = (~parent: node, ~child: node, ~position: int) => {
   switch (child.element) {

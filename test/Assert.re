@@ -107,15 +107,7 @@ let render = (root, element) => {
   element,
   renderedElement:
     RenderedElement.render(
-      root,
-      {
-        make: () => root,
-        configureInstance: (~isFirstRender as _, _) => root,
-        children: empty,
-        insertNode,
-        deleteNode,
-        moveNode,
-      },
+      {node: root, insertNode, deleteNode, moveNode},
       element,
     ),
 };
@@ -125,8 +117,7 @@ let reset = x => {
   x;
 };
 
-let update =
-    (nextReactElement, {element: previousElement, renderedElement}) => {
+let update = (nextReactElement, {element: previousElement, renderedElement}) => {
   element: nextReactElement,
   renderedElement:
     RenderedElement.update(

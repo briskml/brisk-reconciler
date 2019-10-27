@@ -144,11 +144,8 @@ module A = {
 
   let render = () => {
     Brisk.RenderedElement.render(
-      (),
       {
-        make: () => (),
-        configureInstance: (~isFirstRender as _, i) => i,
-        children: empty,
+        node: (),
         insertNode,
         deleteNode,
         moveNode,

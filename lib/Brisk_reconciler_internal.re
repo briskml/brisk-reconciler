@@ -1,22 +1,21 @@
 module GlobalState = {
-  type handler = unit => unit;
-  type unregisterF = handler;
-
-  let debug = ref(true);
   let componentKeyCounter = ref(0);
   let reset = () => {
-    debug := true;
     componentKeyCounter := 0;
   };
-  let staleHandlers = ref([]);
-  let addStaleTreeHandler = (handler: handler) => {
-    staleHandlers := [handler, ...staleHandlers^];
-    () => {
-      staleHandlers := List.filter(f => f === handler, staleHandlers^);
-    };
-  };
-  let callStaleHanlders = () => List.iter(f => f(), staleHandlers^);
 };
+
+type handler = unit => unit;
+type unregisterF = handler;
+
+let staleHandlers = ref([]);
+let addStaleTreeHandler = (handler: handler) => {
+  staleHandlers := [handler, ...staleHandlers^];
+  () => {
+    staleHandlers := List.filter(f => f === handler, staleHandlers^);
+  };
+};
+let callStaleHanlders = () => List.iter(f => f(), staleHandlers^);
 
 module Key = {
   type t = int;
@@ -519,10 +518,7 @@ module Instance = {
       {
         let (children_, hooks) =
           component.render(
-            Hooks.ofState(
-              None,
-              ~onStateDidChange=GlobalState.callStaleHanlders,
-            ),
+            Hooks.ofState(None, ~onStateDidChange=callStaleHanlders),
           );
         let hooks = Hooks.toState(hooks);
         let childElements =
@@ -835,7 +831,7 @@ module Render = {
             nextComponent.render(
               Hooks.ofState(
                 Some(updatedInstanceWithNewElement.hooks),
-                ~onStateDidChange=GlobalState.callStaleHanlders,
+                ~onStateDidChange=callStaleHanlders,
               ),
             );
           (nextElement, Hooks.toState(initialHooks));
@@ -1465,6 +1461,13 @@ module RenderedElement = {
       * Rendering produces a list of instance trees.
       */
   type t('node, 'childNode) = renderedElement('node, 'childNode);
+  type root('node, 'childNode) = {
+    node: 'node,
+    insertNode: (~parent: 'node, ~child: 'childNode, ~position: int) => 'node,
+    deleteNode: (~parent: 'node, ~child: 'childNode, ~position: int) => 'node,
+    moveNode:
+      (~parent: 'node, ~child: 'childNode, ~from: int, ~to_: int) => 'node,
+  };
 
   let listToRenderedElement = renderedElements =>
     INested(
@@ -1475,10 +1478,17 @@ module RenderedElement = {
            0,
          ),
     );
-  let render = (nearestHostNode, nodeElement, syntheticElement) => {
-    let (instanceForest, mountEffects) = Instance.ofList(syntheticElement);
+  let render = (root, children) => {
+    let (instanceForest, mountEffects) = Instance.ofList(children);
     {
-      nodeElement,
+      nodeElement: {
+        make: () => root.node,
+        configureInstance: (~isFirstRender as _, i) => i,
+        children,
+        insertNode: root.insertNode,
+        deleteNode: root.deleteNode,
+        moveNode: root.moveNode,
+      },
       instanceForest,
       nearestHostNode:
         lazy(
@@ -1492,11 +1502,11 @@ module RenderedElement = {
                        let Node(child) | UpdatedNode(_, child) =
                          Lazy.force(child);
                        let parent =
-                         nodeElement.insertNode(~parent, ~child, ~position);
+                         root.insertNode(~parent, ~child, ~position);
                        parent;
                      },
                    ),
-                 (0, nearestHostNode),
+                 (0, root.node),
                )
             |> snd,
           )
