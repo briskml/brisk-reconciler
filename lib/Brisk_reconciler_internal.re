@@ -123,18 +123,6 @@ module InstanceForest = {
       | Host => 1
       };
 
-  let rec fold = (f, acc, instanceForest) => {
-    switch (instanceForest) {
-    | IFlat(opaqueInstance) => f(acc, opaqueInstance)
-    | INested(l, _) =>
-      List.fold_left(
-        (acc, instanceForest) => fold(f, acc, instanceForest),
-        acc,
-        l,
-      )
-    };
-  };
-
   let rec flatten =
     fun
     | IFlat(l) => [l]
@@ -164,15 +152,26 @@ module InstanceForest = {
       |> List.rev;
 
   let pendingEffects = (~lifecycle, acc, instanceForest) => {
-    fold(
-      (acc, Instance({hooks})) =>
-        EffectSequence.chain(
-          Hooks.pendingEffects(~lifecycle, Some(hooks)),
-          acc,
-        ),
-      acc,
-      instanceForest,
-    );
+    let f = (acc, Instance({hooks})) =>
+      EffectSequence.chain(
+        Hooks.pendingEffects(~lifecycle, Some(hooks)),
+        acc,
+      );
+    let rec fold:
+      type any. (EffectSequence.t, instanceForest(any)) => EffectSequence.t =
+      (acc, instanceForest) => {
+        switch (instanceForest) {
+        | IFlat(Instance({childInstances}) as opaqueInstance) =>
+          f(fold(acc, childInstances), opaqueInstance)
+        | INested(l, _) =>
+          List.fold_left(
+            (acc, instanceForest) => fold(acc, instanceForest),
+            acc,
+            l,
+          )
+        };
+      };
+    fold(acc, instanceForest);
   };
 };
 
