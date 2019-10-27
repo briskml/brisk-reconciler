@@ -26,8 +26,8 @@ let diffOutput = (expected, actual) => {
       ~transform=x => x,
       ~big_enough=?None,
       ~context=-1,
-      ~mine=expected,
-      ~other=actual,
+      ~prev=expected,
+      ~next=actual,
     );
   diff
   |> Diff.Hunks.ranges
@@ -40,14 +40,14 @@ let diffOutput = (expected, actual) => {
              Array.map(((line, _)) => " " ++ line, lines) |> Array.to_list,
            ),
          )
-       | Old(lines) =>
+       | Prev(lines) =>
          red(
            String.concat(
              "\n",
              lines |> Array.map(line => "-" ++ line) |> Array.to_list,
            ),
          )
-       | New(lines) =>
+       | Next(lines) =>
          green(
            String.concat(
              "\n",
