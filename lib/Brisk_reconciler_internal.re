@@ -873,7 +873,10 @@ module Render = {
                 ...updatedInstanceWithNewState,
                 children_: nextSubElements,
                 childInstances: nextInstanceSubForest,
-              },
+              }:
+                instance(
+                  (hooks, (node, children, childNode, wrappedHostNode)),
+                ),
               enqueuedEffects,
               nodeElement,
             )

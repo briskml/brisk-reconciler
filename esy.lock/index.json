@@ -1,5 +1,5 @@
 {
-  "checksum": "a2389265e135c61af7f623eb3fc85916",
+  "checksum": "d0f41f619caac30f21e36f32b8b1b85c",
   "root": "brisk-reconciler@link-dev:./package.json",
   "node": {
     "ocaml@4.8.1000@d41d8cd9": {
@@ -34,7 +34,7 @@
         "ocaml@4.8.1000@d41d8cd9", "@opam/ppx_deriving@opam:4.4@21d6c7a5",
         "@opam/patience_diff@opam:v0.12.0@402171a4",
         "@opam/ocamlformat@opam:0.11.0@ec74e6e8",
-        "@opam/merlin-lsp@github:ocaml/merlin:merlin-lsp.opam#517f577@d41d8cd9",
+        "@opam/merlin-lsp@github:ocaml/merlin:merlin-lsp.opam#c8b0f03@d41d8cd9",
         "@opam/merlin@opam:3.3.2@7a364181",
         "@opam/easy-format@opam:1.3.2@0484b3c4",
         "@opam/alcotest@opam:0.8.5@68e6c66c"
@@ -1892,24 +1892,24 @@
       ],
       "devDependencies": [ "ocaml@4.8.1000@d41d8cd9" ]
     },
-    "@opam/merlin-lsp@github:ocaml/merlin:merlin-lsp.opam#517f577@d41d8cd9": {
+    "@opam/merlin-lsp@github:ocaml/merlin:merlin-lsp.opam#c8b0f03@d41d8cd9": {
       "id":
-        "@opam/merlin-lsp@github:ocaml/merlin:merlin-lsp.opam#517f577@d41d8cd9",
+        "@opam/merlin-lsp@github:ocaml/merlin:merlin-lsp.opam#c8b0f03@d41d8cd9",
       "name": "@opam/merlin-lsp",
-      "version": "github:ocaml/merlin:merlin-lsp.opam#517f577",
+      "version": "github:ocaml/merlin:merlin-lsp.opam#c8b0f03",
       "source": {
         "type": "install",
-        "source": [ "github:ocaml/merlin:merlin-lsp.opam#517f577" ]
+        "source": [ "github:ocaml/merlin:merlin-lsp.opam#c8b0f03" ]
       },
       "overrides": [],
       "dependencies": [
-        "@opam/yojson@opam:1.7.0@7056d985",
+        "ocaml@4.8.1000@d41d8cd9", "@opam/yojson@opam:1.7.0@7056d985",
         "@opam/ppx_deriving_yojson@opam:3.5.1@06a1c37f",
         "@opam/ocamlfind@opam:1.8.1@ff07b0f9",
         "@opam/dune@opam:1.11.4@21d66ccd", "@esy-ocaml/substs@0.0.1@d41d8cd9"
       ],
       "devDependencies": [
-        "@opam/yojson@opam:1.7.0@7056d985",
+        "ocaml@4.8.1000@d41d8cd9", "@opam/yojson@opam:1.7.0@7056d985",
         "@opam/ppx_deriving_yojson@opam:3.5.1@06a1c37f",
         "@opam/ocamlfind@opam:1.8.1@ff07b0f9"
       ]
