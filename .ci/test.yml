@@ -3,8 +3,5 @@ parameters:
 
 steps:
   - script: |
-      esy @package-ci-${{parameters.OCAML_VERSION}}
-    displayName: "Install and build ${{parameters.OCAML_VERSION}}"
-  - script: |
       esy @package-ci-${{parameters.OCAML_VERSION}} dune runtest --no-buffer
     displayName: "Test ${{parameters.OCAML_VERSION}}"
