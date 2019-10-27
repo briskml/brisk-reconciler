@@ -12,7 +12,6 @@ let moveNode = (~parent, ~child as _, ~from as _, ~to_ as _) => {
   parent;
 };
 
-let markAsStale = () => ();
 let beginChanges = () => ();
 let commitChanges = () => ();
 

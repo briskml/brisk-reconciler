@@ -333,13 +333,13 @@ module SubtreeChange = {
       ? parentWrapper : UpdatedNode(oldParent, newParent);
   };
 
-  let prependElement = (~nodeElement, ~parent, ~children) =>
+  let insertElement = (~nodeElement, ~parent, ~children, ~position) =>
     lazy(
       insertNodes(
         ~nodeElement,
         ~parent=Lazy.force(parent),
         ~children,
-        ~position=0,
+        ~position,
       )
     );
 
@@ -519,7 +519,12 @@ module Instance = {
     (opaqueComponent, component) => (
       {
         let (children_, hooks) =
-          component.render(Hooks.ofState(None, ~onStateDidChange=GlobalState.callStaleHanlders));
+          component.render(
+            Hooks.ofState(
+              None,
+              ~onStateDidChange=GlobalState.callStaleHanlders,
+            ),
+          );
         let hooks = Hooks.toState(hooks);
         let childElements =
           switch (component.childrenType) {
@@ -550,7 +555,6 @@ module Instance = {
         opaqueInstance(node),
         EffectSequence.t,
       )
-      
     )
 
   and ofOpaqueComponent:
@@ -832,8 +836,8 @@ module Render = {
             nextComponent.render(
               Hooks.ofState(
                 Some(updatedInstanceWithNewElement.hooks),
-                ~onStateDidChange=GlobalState.callStaleHanlders
-              )
+                ~onStateDidChange=GlobalState.callStaleHanlders,
+              ),
             );
           (nextElement, Hooks.toState(initialHooks));
         } else {
@@ -1031,10 +1035,11 @@ module Render = {
         {
           nodeElement,
           nearestHostNode:
-            SubtreeChange.prependElement(
+            SubtreeChange.insertElement(
               ~nodeElement,
               ~parent=nearestHostNode,
               ~children=InstanceForest.outputTreeNodes(addedElement),
+              ~position=updateContext.absoluteSubtreeIndex,
             ),
           /*** Prepend element */
           instanceForest:
@@ -1201,7 +1206,6 @@ module Render = {
         /* Notice that all elements which are queried successfully
          *  from the hash table must have been here in the previous render
          * No, it's not true. What if the key is the same but element type changes
-         * Wtf, stop thinking
          */
         let keyTable =
           switch (updateContext.useKeyTable) {
