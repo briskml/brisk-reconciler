@@ -2,5 +2,5 @@
   (name WebReconciler)
   (public_name WebReconciler.bc.js)
   (libraries brisk-reconciler)
-  (preprocess (pps js_of_ocaml-ppx))
+  (preprocess (pps js_of_ocaml-ppx brisk-reconciler.ppx))
 )
