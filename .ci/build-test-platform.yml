@@ -24,13 +24,29 @@ jobs:
       - template: restore-build-cache.yml
       - template: esy-build-steps.yml
       - ${{ if ne(parameters.platform, 'Windows') }}:
-          - template: build-test.yml
+          - template: build.yml
             parameters:
               OCAML_VERSION: "4.04"
-      - template: build-test.yml
+      - template: build.yml
         parameters:
           OCAML_VERSION: "4.06"
-      - template: build-test.yml
+      - template: build.yml
         parameters:
           OCAML_VERSION: "4.07"
+      - template: build.yml
+        parameters:
+          OCAML_VERSION: "4.08"
       - template: publish-build-cache.yml
+      - ${{ if ne(parameters.platform, 'Windows') }}:
+          - template: test.yml
+            parameters:
+              OCAML_VERSION: "4.04"
+      - template: test.yml
+        parameters:
+          OCAML_VERSION: "4.06"
+      - template: test.yml
+        parameters:
+          OCAML_VERSION: "4.07"
+      - template: test.yml
+        parameters:
+          OCAML_VERSION: "4.08"

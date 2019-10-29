@@ -1,11 +1,12 @@
 open TestReconciler;
 open Assert;
+open Brisk_reconciler__Brisk_reconciler_internal;
 
-let root = Implementation.{name: "root", element: View};
-let div = Implementation.{name: "Div", element: View};
-let singleChildDiv = Implementation.{name: "SingleChildDiv", element: View};
-let text = t => Implementation.{name: "Text", element: Text(t)};
-let box = t => Implementation.{name: "Box", element: Text(t)};
+let root = {name: "root", element: View};
+let div = {name: "Div", element: View};
+let singleChildDiv = {name: "SingleChildDiv", element: View};
+let text = t => {name: "Text", element: Text(t)};
+let box = t => {name: "Box", element: Text(t)};
 
 let render = render(root);
 
@@ -69,8 +70,6 @@ let core = [
     "Test top level reorder",
     `Quick,
     () => {
-      GlobalState.useTailHack := true;
-
       let key1 = Key.create();
       let key2 = Key.create();
 
@@ -218,7 +217,6 @@ let core = [
     "Test top level prepend",
     `Quick,
     () => {
-      GlobalState.useTailHack := true;
       let key1 = Key.create();
       let key2 = Key.create();
       let commonElement = [<Components.Text key=key1 title="x" />];
@@ -279,7 +277,7 @@ let core = [
       |> expect(
            ~label=
              "It changes components from ChangeCounter to ButtonWrapperWrapper",
-           Implementation.[
+           [
              ChangeText("initial text", "initial text"),
              MountChild(div, text("initial text"), 0),
              MountChild(div, div, 1),
@@ -292,7 +290,7 @@ let core = [
       |> executeSideEffects
       |> expect(
            ~label="It updates text in the ButtonWrapper",
-           Implementation.[ChangeText("initial text", "updated text")],
+           [ChangeText("initial text", "updated text")],
          )
       |> ignore,
   ),
@@ -309,7 +307,7 @@ let core = [
       |> executeSideEffects
       |> expect(
            ~label="It adds a new BoxItem and then flushes",
-           Implementation.[
+           [
              ChangeText("Hello", "Hello"),
              MountChild(root, text("Hello"), 0),
            ],
@@ -319,7 +317,7 @@ let core = [
       |> executeSideEffects
       |> expect(
            ~label="It prepends one more BoxItem and then flushes",
-           Implementation.[
+           [
              ChangeText("World", "World"),
              MountChild(root, text("World"), 0),
            ],
@@ -329,7 +327,7 @@ let core = [
       |> executeSideEffects
       |> expect(
            ~label="It reverses the items list in the BoxList",
-           Implementation.[RemountChild(root, text("Hello"), 1, 0)],
+           [RemountChild(root, text("Hello"), 1, 0)],
          )
       |> ignore;
     },
@@ -347,21 +345,21 @@ let core = [
       |> executeSideEffects
       |> expect(
            ~label="It adds a new Box",
-           Implementation.[MountChild(root, box("Hello"), 0)],
+           [MountChild(root, box("Hello"), 0)],
          )
       |> act(~action=Components.BoxList.Create("World"), rAction)
       |> flushPendingUpdates
       |> executeSideEffects
       |> expect(
            ~label="It prepends one more Box",
-           Implementation.[MountChild(root, box("World"), 0)],
+           [MountChild(root, box("World"), 0)],
          )
       |> act(~action=Components.BoxList.Reverse, rAction)
       |> flushPendingUpdates
       |> executeSideEffects
       |> expect(
            ~label="It reverses the boxes list in the BoxList",
-           Implementation.[
+           [
              UnmountChild(root, box("World")),
              MountChild(root, box("Hello"), 0),
              UnmountChild(root, box("Hello")),
@@ -381,7 +379,7 @@ let core = [
         |> executeSideEffects
         |> expect(
              ~label="It renders the initial BoxItemDynamic",
-             Implementation.[
+             [
                ChangeText("box to move", "box to move"),
                MountChild(root, text("box to move"), 0),
              ],
@@ -398,7 +396,7 @@ let core = [
         |> expect(
              ~label=
                "It adds new element before BoxItemDynamic (it replaces the whole tree)",
-             Implementation.[
+             [
                UnmountChild(root, text("box to move")),
                ChangeText("before", "before"),
                MountChild(root, text("before"), 0),
@@ -431,7 +429,7 @@ let core = [
       |> executeSideEffects
       |> expect(
            ~label="It renders the initial Boxes list",
-           Implementation.[
+           [
              MountChild(root, box("Box1unchanged"), 0),
              MountChild(root, box("Box2unchanged"), 1),
            ],
@@ -445,7 +443,7 @@ let core = [
       |> executeSideEffects
       |> expect(
            ~label="It reorders the list",
-           Implementation.[
+           [
              UnmountChild(root, box("Box2unchanged")),
              MountChild(root, box("Box2changed"), 1),
              RemountChild(root, box("Box2changed"), 1, 0),
@@ -465,7 +463,7 @@ let core = [
       |> executeSideEffects
       |> expect(
            ~label="It renders UpdateAlternateClicks element",
-           Implementation.[
+           [
              ChangeText("0", "0"),
              MountChild(root, text("0"), 0),
            ],
@@ -479,7 +477,7 @@ let core = [
       |> executeSideEffects
       |> expect(
            ~label="It changes both state and contents on second click",
-           Implementation.[ChangeText("0", "2")],
+           [ChangeText("0", "2")],
          )
       |> act(~action=Components.UpdateAlternateClicks.Click, rAction)
       |> flushPendingUpdates
@@ -490,7 +488,7 @@ let core = [
       |> executeSideEffects
       |> expect(
            ~label="It changes both state and contents on fourth click",
-           Implementation.[ChangeText("2", "4")],
+           [ChangeText("2", "4")],
          )
       |> ignore;
     },
@@ -510,7 +508,7 @@ let core = [
       |> executeSideEffects
       |> expect(
            ~label="It renders list with Text elements",
-           Implementation.[
+           [
              ChangeText("x", "x"),
              MountChild(root, text("x"), 0),
              ChangeText("y", "y"),
@@ -541,7 +539,7 @@ let core = [
       |> executeSideEffects
       |> expect(
            ~label="it reorders the list",
-           Implementation.[RemountChild(root, text("y"), 1, 0)],
+           [RemountChild(root, text("y"), 1, 0)],
          )
       |> ignore;
     },
@@ -550,7 +548,6 @@ let core = [
     "Test prepending new element",
     `Quick,
     () => {
-      GlobalState.useTailHack := true;
       let key1 = Key.create();
       let key2 = Key.create();
       let commonElement = [<Components.Text key=key1 title="x" />];
@@ -558,7 +555,7 @@ let core = [
       |> executeSideEffects
       |> expect(
            ~label="It renders a new Text element",
-           Implementation.[
+           [
              ChangeText("x", "x"),
              MountChild(root, text("x"), 0),
            ],
@@ -572,7 +569,7 @@ let core = [
       |> executeSideEffects
       |> expect(
            ~label="It prepends a new Text element to the list",
-           Implementation.[
+           [
              ChangeText("y", "y"),
              MountChild(root, text("y"), 0),
            ],
@@ -819,7 +816,6 @@ let core = [
     "Test transition from empty list to non-empty list",
     `Quick,
     () => {
-      GlobalState.useTailHack := false;
       render(
         Components.(<Div> {listToElement([])} <Box title="ImABox1" /> </Div>),
       )

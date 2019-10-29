@@ -1,4 +1,6 @@
 open TestReconciler;
+module Brisk_reconciler = Brisk_reconciler__Brisk_reconciler_internal;
+open Brisk_reconciler;
 
 /**
  * The simplest component. Composes nothing!
@@ -6,11 +8,13 @@ open TestReconciler;
 module Box = {
   let%nativeComponent make = (~title="ImABox", (), h) => (
     {
-      children: empty,
-      make: () => Implementation.{name: "Box", element: Text(title)},
+      children: Brisk_reconciler.empty,
+      make: () => {name: "Box", element: Text(title)},
       configureInstance: (~isFirstRender, instance) =>
-        isFirstRender
-          ? instance : Implementation.{name: "Box", element: Text(title)},
+        isFirstRender ? instance : {name: "Box", element: Text(title)},
+      insertNode,
+      moveNode,
+      deleteNode,
     },
     h,
   );
@@ -19,9 +23,12 @@ module Box = {
 module Div = {
   let%nativeComponent make = (~children=empty, (), h) => (
     {
-      make: () => Implementation.{name: "Div", element: View},
+      make: () => {name: "Div", element: View},
       configureInstance: (~isFirstRender as _, d) => d,
       children,
+      insertNode,
+      moveNode,
+      deleteNode,
     },
     h,
   );
@@ -30,9 +37,12 @@ module Div = {
 module SingleChildDiv = {
   let%nativeComponent make = (~children, (), h) => (
     {
-      make: () => Implementation.{name: "SingleChildDiv", element: View},
+      make: () => {name: "SingleChildDiv", element: View},
       configureInstance: (~isFirstRender as _, d) => d,
       children,
+      insertNode,
+      moveNode,
+      deleteNode,
     },
     h,
   );
@@ -54,18 +64,17 @@ module Text = {
         },
       );
     {
-      make: () => Implementation.{name: "Text", element: Text(title)},
+      make: () => {name: "Text", element: Text(title)},
       configureInstance: (~isFirstRender, t) => {
         if (prevTitle != title || isFirstRender) {
-          Implementation.mountLog :=
-            [
-              Implementation.ChangeText(prevTitle, title),
-              ...Implementation.mountLog^,
-            ];
+          mountLog := [ChangeText(prevTitle, title), ...mountLog^];
         };
         t;
       },
       children: empty,
+      insertNode,
+      moveNode,
+      deleteNode,
     };
   };
 };
@@ -190,6 +199,8 @@ module ToggleClicks = {
     };
   };
 };
+
+let empty: element(node) = empty;
 
 module EmptyComponent = {
   let%component make = ((), hooks) => (empty, hooks);

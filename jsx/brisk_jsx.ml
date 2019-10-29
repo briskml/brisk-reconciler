@@ -13,7 +13,7 @@ module JSX_ppx = struct
         let loc = exp.P.pexp_loc in
         let prop =
           ( AT.Labelled "children"
-          , P.([%expr Brisk_jsx_runtime.Expert.jsx_list ([%e h] :: [%e t])]) )
+          , P.([%expr Brisk_reconciler.Expert.jsx_list ([%e h] :: [%e t])]) )
         in
         props_filter_children ~acc:(prop :: acc) tail
     | prop :: tail ->
@@ -102,9 +102,9 @@ module Declaration_ppx = struct
     let create_component_expr =
       match attribute with
       | `Native ->
-          [%expr Brisk_jsx_runtime.Expert.nativeComponent]
+          [%expr Brisk_reconciler.Expert.nativeComponent]
       | `Component ->
-          [%expr Brisk_jsx_runtime.Expert.component]
+          [%expr Brisk_reconciler.Expert.component]
     in
     [%expr
       let component =
@@ -113,7 +113,7 @@ module Declaration_ppx = struct
             [%e Ppxlib.Ast_builder.Default.(ebool ~loc useDynamicKey)]
           [%e component_name]
       in
-      fun ?(key = Brisk_jsx_runtime.Key.none) ->
+      fun ?(key = Brisk_reconciler.Key.none) ->
         [%e map_component_expression expr]]
 
   let declare_attribute ctx typ =

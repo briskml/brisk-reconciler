@@ -13,7 +13,7 @@ let makeField = (key, value) =>
   Label((Atom(key ++ ":", atom), field), value);
 
 let formatMountLogItem =
-  TestReconciler.Implementation.(
+  TestReconciler.(
     fun
     | MountChild(root, child, position) =>
       List(

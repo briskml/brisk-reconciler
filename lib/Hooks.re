@@ -111,7 +111,7 @@ module State = {
     let onStateDidChange = hooks.onStateDidChange;
 
     let setter = updater => {
-      setState(updater(stateContainer.nextValue^), stateContainer);
+      setState(updater(stateContainer.nextValue), stateContainer);
       onStateDidChange();
     };
 
