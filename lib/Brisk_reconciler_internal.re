@@ -862,7 +862,6 @@ module Render = {
             updateInstanceSubtree(
               ~updateContext,
               ~oldInstanceForest=childInstances,
-              ~oldReactElement=children_,
               ~nextReactElement=nextSubElements,
               (),
             );
@@ -928,7 +927,6 @@ module Render = {
                 ),
               },
               ~oldInstanceForest=childInstances,
-              ~oldReactElement=children_.children,
               ~nextReactElement=nextSubElements.children,
               (),
             );
@@ -999,7 +997,6 @@ module Render = {
       (
         ~updateContext: UpdateContext.t(parentNode, node),
         ~oldInstanceForest: instanceForest(node),
-        ~oldReactElement: element(node),
         ~nextReactElement: element(node),
         unit
       ) =>
@@ -1007,49 +1004,12 @@ module Render = {
     (
       ~updateContext,
       ~oldInstanceForest,
-      ~oldReactElement,
       ~nextReactElement,
       (),
     ) =>
-      switch (oldInstanceForest, oldReactElement, nextReactElement) {
-      | (
-          INested(instanceSubTrees, subtreeSize),
-          Nested(oldReactElements),
-          Nested([nextReactElement, ...nextReactElements]),
-        )
-          when nextReactElements === oldReactElements =>
-        /* Detected that nextReactElement was obtained by adding one element */
-        let {
-          nearestHostNode,
-          nodeElement,
-          instanceForest: addedElement,
-          enqueuedEffects,
-        } =
-          renderReactElement(
-            updateContext.nearestHostNode,
-            nextReactElement,
-            updateContext.nodeElement,
-          );
-        {
-          nodeElement,
-          nearestHostNode:
-            SubtreeChange.insertElement(
-              ~nodeElement,
-              ~parent=nearestHostNode,
-              ~children=InstanceForest.outputTreeNodes(addedElement),
-              ~position=updateContext.absoluteSubtreeIndex,
-            ),
-          /*** Prepend element */
-          instanceForest:
-            INested(
-              [addedElement, ...instanceSubTrees],
-              subtreeSize + InstanceForest.getSubtreeSize(addedElement),
-            ),
-          enqueuedEffects,
-        };
+      switch (oldInstanceForest, nextReactElement) {
       | (
           INested(oldInstanceForests, _),
-          Nested(oldReactElements),
           Nested(nextReactElements),
         )
           when
@@ -1064,7 +1024,7 @@ module Render = {
           enqueuedEffects,
           nodeElement,
         ) =
-          ListTR.fold3(
+          List.fold_left2(
             (
               (
                 nearestHostNode,
@@ -1075,7 +1035,6 @@ module Render = {
                 nodeElement,
               ),
               oldInstanceForest,
-              oldReactElement,
               nextReactElement,
             ) => {
               let {
@@ -1097,7 +1056,6 @@ module Render = {
                   },
                   ~indexShift,
                   ~oldInstanceForest,
-                  ~oldReactElement,
                   ~nextReactElement,
                   (),
                 );
@@ -1111,9 +1069,6 @@ module Render = {
                 nodeElement,
               );
             },
-            oldInstanceForests,
-            oldReactElements,
-            nextReactElements,
             (
               updateContext.nearestHostNode,
               [],
@@ -1122,6 +1077,8 @@ module Render = {
               EffectSequence.noop,
               updateContext.nodeElement,
             ),
+            oldInstanceForests,
+            nextReactElements,
           );
         let newInstanceForests = List.rev(newInstanceForests);
         {
@@ -1139,8 +1096,11 @@ module Render = {
        * Note: components are matched for key across the entire syntheticElement structure.
        */
       | (
-          IFlat(Instance(oldInstance) as oldOpaqueInstance),
-          Flat(OpaqueComponent({key: oldKey})),
+          IFlat(
+            Instance(
+              {opaqueComponent: OpaqueComponent({key: oldKey})} as oldInstance,
+            ) as oldOpaqueInstance,
+          ),
           Flat(OpaqueComponent({key: nextKey}) as nextReactElement),
         ) =>
         if (nextKey !== oldKey) {
@@ -1200,7 +1160,7 @@ module Render = {
             enqueuedEffects,
           };
         }
-      | (oldInstanceForest, _, _) =>
+      | (oldInstanceForest, _) =>
         /* Notice that all elements which are queried successfully
          *  from the hash table must have been here in the previous render
          * No, it's not true. What if the key is the same but element type changes
@@ -1250,7 +1210,6 @@ module Render = {
         ~updateContext: UpdateContext.t(parentNode, node),
         ~indexShift: int,
         ~oldInstanceForest: instanceForest(node),
-        ~oldReactElement: element(node),
         ~nextReactElement: element(node),
         unit
       ) =>
@@ -1265,11 +1224,10 @@ module Render = {
       },
       ~indexShift,
       ~oldInstanceForest,
-      ~oldReactElement,
       ~nextReactElement,
       (),
     ) =>
-      switch (oldInstanceForest, oldReactElement, nextReactElement) {
+      switch (oldInstanceForest, nextReactElement) {
       /*
        * Key Policy for syntheticElement.
        * Nested elements determine shape: if the shape is not identical, re-render.
@@ -1279,8 +1237,9 @@ module Render = {
        * Note: components are matched for key across the entire syntheticElement structure.
        */
       | (
-          IFlat(oldOpaqueInstance),
-          Flat(OpaqueComponent({key: oldKey})),
+          IFlat(
+            Instance({opaqueComponent: OpaqueComponent({key: oldKey})}) as oldOpaqueInstance,
+          ),
           Flat(OpaqueComponent({key: nextKey}) as nextReactElement),
         ) =>
         let keyTable =
@@ -1418,7 +1377,7 @@ module Render = {
             };
           };
         };
-      | (_, _, _) => {
+      | (_, _) => {
           updatedRenderedElement:
             updateInstanceSubtree(
               ~updateContext={
@@ -1430,7 +1389,6 @@ module Render = {
                 useKeyTable,
               },
               ~oldInstanceForest,
-              ~oldReactElement,
               ~nextReactElement,
               (),
             ),
@@ -1519,7 +1477,6 @@ module RenderedElement = {
   };
   let update =
       (
-        ~previousElement,
         ~renderedElement as {instanceForest, nearestHostNode, nodeElement},
         nextReactElement,
       ) =>
@@ -1533,7 +1490,6 @@ module RenderedElement = {
           shouldExecutePendingUpdates: false,
         },
       ~oldInstanceForest=instanceForest,
-      ~oldReactElement=previousElement,
       ~nextReactElement,
       (),
     );
