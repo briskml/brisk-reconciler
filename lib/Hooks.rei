@@ -58,7 +58,8 @@ module Effect: {
   type condition('a) =
     | Always: condition(always)
     | OnMount: condition(onMount)
-    | If(('a, 'a) => bool, 'a): condition('a);
+    | If(('a, 'a) => bool, 'a): condition('a)
+    | OnMountAndIf(('a, 'a) => bool, 'a): condition('a);
   type handler = unit => option(unit => unit);
   type hook('a) +=
     pri

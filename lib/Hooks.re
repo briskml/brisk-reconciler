@@ -195,7 +195,8 @@ module Effect = {
   type condition('a) =
     | Always: condition(always)
     | OnMount: condition(onMount)
-    | If(('a, 'a) => bool, 'a): condition('a);
+    | If(('a, 'a) => bool, 'a): condition('a)
+    | OnMountAndIf(('a, 'a) => bool, 'a): condition('a);
   type handler = unit => option(unit => unit);
   type t('a) = {
     condition: condition('a),
@@ -234,12 +235,13 @@ module Effect = {
         | Update =>
           let currentConditionValue =
             switch (condition) {
-            | If(_, currentConditionValue) => currentConditionValue
+            | If(_, currentConditionValue)
+            | OnMountAndIf(_, currentConditionValue) => currentConditionValue
             /* The following cases are unreachable because it's
              * Impossible to create a value of type condition(always)
              * Or condition(onMount) using the If constructor
              */
-            | Always => previousConditionValue
+            | Always
             | OnMount => previousConditionValue
             };
           if (comparator(previousConditionValue, currentConditionValue)) {
@@ -261,6 +263,35 @@ module Effect = {
         | Mount => Some(() => state.cleanupHandler = handler())
         | Unmount => cleanupHandler
         | _ => None
+        }
+      | OnMountAndIf(comparator, previousConditionValue) =>
+        switch (lifecycle) {
+        | Mount => Some(() => state.cleanupHandler = handler())
+        | Update =>
+          let currentConditionValue =
+            switch (condition) {
+            | If(_, currentConditionValue)
+            | OnMountAndIf(_, currentConditionValue) => currentConditionValue
+            /* The following cases are unreachable because it's
+             * Impossible to create a value of type condition(always)
+             * Or condition(onMount) using the If constructor
+             */
+            | Always
+            | OnMount => previousConditionValue
+            };
+          if (comparator(previousConditionValue, currentConditionValue)) {
+            state.previousCondition = condition;
+            Some(
+              () => {
+                ignore(executeOptionalHandler(cleanupHandler));
+                state.cleanupHandler = handler();
+              },
+            );
+          } else {
+            state.previousCondition = condition;
+            None;
+          };
+        | Unmount => cleanupHandler
         }
       };
     };
