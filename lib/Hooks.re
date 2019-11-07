@@ -231,7 +231,7 @@ module Effect = {
         )
       | If(comparator, previousConditionValue) =>
         switch (lifecycle) {
-        | Mount
+        | Mount => None
         | Update =>
           let currentConditionValue =
             switch (condition) {
