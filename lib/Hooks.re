@@ -238,7 +238,7 @@ module Effect = {
           state.previousCondition = condition;
           Some(
             () => {
-              ignore(executeOptionalHandler(cleanupHandler));
+              executeOptionalHandler(cleanupHandler);
               state.cleanupHandler = handler();
             },
           );
