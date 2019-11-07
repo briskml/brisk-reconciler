@@ -221,6 +221,33 @@ module Effect = {
       (~lifecycle: lifecycle, t(conditionValue)) => option(unit => unit) =
     (~lifecycle, state) => {
       let {condition, previousCondition, handler, cleanupHandler} = state;
+
+      let updateIf = (comparator, previousConditionValue) => {
+        let currentConditionValue =
+          switch (condition) {
+          | If(_, currentConditionValue)
+          | OnMountAndIf(_, currentConditionValue) => currentConditionValue
+          /* The following cases are unreachable because it's
+           * Impossible to create a value of type condition(always)
+           * Or condition(onMount) using the If constructor
+           */
+          | Always
+          | OnMount => previousConditionValue
+          };
+        if (comparator(previousConditionValue, currentConditionValue)) {
+          state.previousCondition = condition;
+          Some(
+            () => {
+              ignore(executeOptionalHandler(cleanupHandler));
+              state.cleanupHandler = handler();
+            },
+          );
+        } else {
+          state.previousCondition = condition;
+          None;
+        };
+      };
+
       switch (previousCondition) {
       | Always =>
         Some(
@@ -229,68 +256,22 @@ module Effect = {
             state.cleanupHandler = handler();
           },
         )
-      | If(comparator, previousConditionValue) =>
-        switch (lifecycle) {
-        | Mount => None
-        | Update =>
-          let currentConditionValue =
-            switch (condition) {
-            | If(_, currentConditionValue)
-            | OnMountAndIf(_, currentConditionValue) => currentConditionValue
-            /* The following cases are unreachable because it's
-             * Impossible to create a value of type condition(always)
-             * Or condition(onMount) using the If constructor
-             */
-            | Always
-            | OnMount => previousConditionValue
-            };
-          if (comparator(previousConditionValue, currentConditionValue)) {
-            state.previousCondition = condition;
-            Some(
-              () => {
-                ignore(executeOptionalHandler(cleanupHandler));
-                state.cleanupHandler = handler();
-              },
-            );
-          } else {
-            state.previousCondition = condition;
-            None;
-          };
-        | Unmount => cleanupHandler
-        }
       | OnMount =>
         switch (lifecycle) {
         | Mount => Some(() => state.cleanupHandler = handler())
+        | Update => None
         | Unmount => cleanupHandler
-        | _ => None
+        }
+      | If(comparator, previousConditionValue) =>
+        switch (lifecycle) {
+        | Mount => None
+        | Update => updateIf(comparator, previousConditionValue)
+        | Unmount => cleanupHandler
         }
       | OnMountAndIf(comparator, previousConditionValue) =>
         switch (lifecycle) {
         | Mount => Some(() => state.cleanupHandler = handler())
-        | Update =>
-          let currentConditionValue =
-            switch (condition) {
-            | If(_, currentConditionValue)
-            | OnMountAndIf(_, currentConditionValue) => currentConditionValue
-            /* The following cases are unreachable because it's
-             * Impossible to create a value of type condition(always)
-             * Or condition(onMount) using the If constructor
-             */
-            | Always
-            | OnMount => previousConditionValue
-            };
-          if (comparator(previousConditionValue, currentConditionValue)) {
-            state.previousCondition = condition;
-            Some(
-              () => {
-                ignore(executeOptionalHandler(cleanupHandler));
-                state.cleanupHandler = handler();
-              },
-            );
-          } else {
-            state.previousCondition = condition;
-            None;
-          };
+        | Update => updateIf(comparator, previousConditionValue)
         | Unmount => cleanupHandler
         }
       };
