@@ -1,6 +1,13 @@
 module P = Ppxlib.Parsetree
 module AT = Ppxlib.Asttypes
 module ATH = Ppxlib.Ast_helper
+module Ast_builder = Ppxlib.Ast_builder.Default
+
+let component_ident ~loc =
+  Ast_builder.(pexp_ident ~loc (Located.lident ~loc "brisk-component"))
+
+let component_ident_pattern ~loc =
+  Ast_builder.(ppat_var ~loc AT.{ txt = "brisk-component"; loc })
 
 module JSX_ppx = struct
   let rec props_filter_children ~acc = function
@@ -23,7 +30,7 @@ module JSX_ppx = struct
 
   let rewrite_apply ~loc ~attributes:attrs props =
     let args = props_filter_children props in
-    ATH.Exp.apply ~loc ~attrs [%expr component] args
+    ATH.Exp.apply ~loc ~attrs (component_ident ~loc) args
 
   let is_jsx ({AT.txt}, _) = String.equal txt "JSX"
 
@@ -59,7 +66,7 @@ module JSX_ppx = struct
         in
         P.(
           [%expr
-            let component = [%e fn] in
+            let [%p component_ident_pattern ~loc] = [%e fn] in
             [%e rewrite_apply ~attributes ~loc:expr.P.pexp_loc args]])
     | _ ->
         expr
@@ -92,7 +99,7 @@ module Declaration_ppx = struct
           | Ppxlib.Nolabel, [%pat? ()] ->
               let loc = child_expression.pexp_loc in
               make_fun_with_expr
-                ~expr:[%expr component ~key [%e child_expression]]
+                ~expr:[%expr [%e component_ident ~loc] ~key [%e child_expression]]
           | _ ->
               Location.raise_errorf ~loc
                 "A labelled argument or () was expected")
@@ -107,7 +114,7 @@ module Declaration_ppx = struct
           [%expr Brisk_reconciler.Expert.component]
     in
     [%expr
-      let component =
+      let [%p component_ident_pattern ~loc] =
         [%e create_component_expr]
           ~useDynamicKey:
             [%e Ppxlib.Ast_builder.Default.(ebool ~loc useDynamicKey)]
