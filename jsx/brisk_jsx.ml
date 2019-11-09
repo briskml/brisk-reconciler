@@ -9,6 +9,12 @@ let component_ident ~loc =
 let component_ident_pattern ~loc =
   Ast_builder.(ppat_var ~loc AT.{ txt = "brisk-component"; loc })
 
+let hooks_ident ~loc =
+  Ast_builder.(pexp_ident ~loc (Located.lident ~loc "brisk-hooks"))
+
+let hooks_ident_pattern ~loc =
+  Ast_builder.(ppat_var ~loc AT.{ txt = "brisk-hooks"; loc })
+
 module JSX_ppx = struct
   let rec props_filter_children ~acc = function
     | [] ->
@@ -260,13 +266,13 @@ module Hooks_ppx = struct
       | Pexp_let (Nonrecursive, [binding], next_expression) ->
           let wrapped_next_expression =
             if contains_hook_expression expr then
-              [%expr [%e next_expression] __brisk_ppx_hooks__]
-            else [%expr [%e next_expression], __brisk_ppx_hooks__]
+              [%expr [%e next_expression] [%e hooks_ident ~loc]]
+            else [%expr [%e next_expression], [%e hooks_ident ~loc]]
           in
           [%expr
-            fun __brisk_ppx_hooks__ ->
-              let [%p binding.pvb_pat], __brisk_ppx_hooks__ =
-                [%e binding.pvb_expr] __brisk_ppx_hooks__
+            fun [%p hooks_ident_pattern ~loc] ->
+              let [%p binding.pvb_pat], [%p hooks_ident_pattern ~loc] =
+                [%e binding.pvb_expr] [%e hooks_ident ~loc]
               in
               [%e wrapped_next_expression]]
       | Pexp_let (Recursive, _, _) ->
