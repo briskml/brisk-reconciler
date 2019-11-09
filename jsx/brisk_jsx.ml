@@ -91,24 +91,33 @@ module Declaration_ppx = struct
         "nativeComponent"
 
   let transform_component_expr ~useDynamicKey ~attribute ~component_name expr =
-    let rec map_component_expression ({P.pexp_loc= loc} as expr) =
-      match_ func_pattern loc expr
-        ~with_:(fun lbl opt_arg pat child_expression ->
-          let make_fun_with_expr ~expr =
-            Ast_builder.pexp_fun ~loc lbl opt_arg pat expr
-          in
-          let loc = pat.Ppxlib.ppat_loc in
-          match (lbl, pat) with
-          | (Ppxlib.Labelled _ | Optional _), _ ->
-              make_fun_with_expr
-                ~expr:(map_component_expression child_expression)
-          | Ppxlib.Nolabel, [%pat? ()] ->
-              let loc = child_expression.pexp_loc in
-              make_fun_with_expr
-                ~expr:[%expr [%e component_ident ~loc] ~key [%e child_expression]]
-          | _ ->
-              Location.raise_errorf ~loc
-                "A labelled argument or () was expected")
+    let map_component_expression expr =
+      let rec loop ~seenUnit ({P.pexp_loc= loc} as expr) = 
+        try
+          match_ func_pattern loc expr
+            ~with_:(fun lbl opt_arg pat child_expression ->
+              let make_fun_with_expr ~expr =
+                Ast_builder.pexp_fun ~loc lbl opt_arg pat expr
+              in
+              let loc = pat.Ppxlib.ppat_loc in
+              match (lbl, pat) with
+              | (Ppxlib.Labelled _ | Optional _), _ ->
+                  make_fun_with_expr
+                    ~expr:(loop ~seenUnit child_expression)
+              | Ppxlib.Nolabel, [%pat? ()] ->
+                  make_fun_with_expr
+                    ~expr:(loop ~seenUnit:true child_expression)
+              | _ ->
+                if seenUnit then
+                  let loc = child_expression.pexp_loc in
+                  [%expr [%e component_ident ~loc] ~key [%e make_fun_with_expr ~expr:child_expression]]
+                else
+                  Location.raise_errorf ~loc
+                    "A labelled argument or () was expected")
+        with
+        | _ -> [%expr [%e component_ident ~loc] ~key [%e expr]]
+      in
+      loop ~seenUnit:false expr
     in
     let open P in
     let loc = expr.P.pexp_loc in
