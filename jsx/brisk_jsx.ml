@@ -89,7 +89,7 @@ module Declaration_ppx = struct
       match_ func_pattern loc expr
         ~with_:(fun lbl opt_arg pat child_expression ->
           let make_fun_with_expr ~expr =
-            Ppxlib.Ast_builder.Default.pexp_fun ~loc lbl opt_arg pat expr
+            Ast_builder.pexp_fun ~loc lbl opt_arg pat expr
           in
           let loc = pat.Ppxlib.ppat_loc in
           match (lbl, pat) with
@@ -117,7 +117,7 @@ module Declaration_ppx = struct
       let [%p component_ident_pattern ~loc] =
         [%e create_component_expr]
           ~useDynamicKey:
-            [%e Ppxlib.Ast_builder.Default.(ebool ~loc useDynamicKey)]
+            [%e Ast_builder.(ebool ~loc useDynamicKey)]
           [%e component_name]
       in
       fun ?(key = Brisk_reconciler.Key.none) ->
@@ -197,7 +197,7 @@ module Declaration_ppx = struct
             transform_component_expr ~useDynamicKey ~attribute ~component_name
               expr
           in
-          Ppxlib.Ast_builder.Default.(
+          Ast_builder.(
             value_binding ~pat:component_pat ~loc:value_binding_loc
               ~expr:transformed_expr))
     in
