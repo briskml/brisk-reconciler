@@ -238,3 +238,15 @@ module ShouldAllowComponentProp = {
   let%component make = (~component, (), hooks) =>
     (<Div> component </Div>, hooks);
 }
+
+module PartiallyAppliedComponent = {
+  let%component make = ((), ~arg: string, hooks) =>
+    (<Text title=arg />, hooks);
+};
+
+module PartiallyAppliedComponentConsumer = {
+  let%component make = ((), hooks) => {
+    let comp = <PartiallyAppliedComponent />;
+    (comp(~arg="foo"), hooks);
+  }
+};
