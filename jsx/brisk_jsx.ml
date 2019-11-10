@@ -7,13 +7,13 @@ let component_ident ~loc =
   Ast_builder.(pexp_ident ~loc (Located.lident ~loc "brisk-component"))
 
 let component_ident_pattern ~loc =
-  Ast_builder.(ppat_var ~loc AT.{ txt = "brisk-component"; loc })
+  Ast_builder.(ppat_var ~loc (Located.mk ~loc "brisk-component"))
 
 let hooks_ident ~loc =
   Ast_builder.(pexp_ident ~loc (Located.lident ~loc "brisk-hooks"))
 
 let hooks_ident_pattern ~loc =
-  Ast_builder.(ppat_var ~loc AT.{ txt = "brisk-hooks"; loc })
+  Ast_builder.(ppat_var ~loc (Located.mk ~loc "brisk-hooks"))
 
 module JSX_ppx = struct
   let rec props_filter_children ~acc = function
