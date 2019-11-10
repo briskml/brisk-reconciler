@@ -23,6 +23,8 @@ jobs:
         run: npm install -g esy@0.5.8
       - name: Install dependencies
         run: esy install -P package-ci-${{ matrix.ocaml_version }}
+      - name: Build dependencies
+        run: esy build-dependencies -P package-ci-${{ matrix.ocaml_version }}
       - name: Build
         run: esy build -P package-ci-${{ matrix.ocaml_version }}
       - name: Test
