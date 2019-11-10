@@ -233,3 +233,8 @@ module EmptyComponentWithOnMountEffect = {
     empty;
   };
 };
+
+module ShouldAllowComponentProp = {
+  let%component make = (~component, (), hooks) =>
+    (<Div> component </Div>, hooks);
+}

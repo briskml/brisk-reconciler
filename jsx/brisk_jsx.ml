@@ -1,6 +1,19 @@
 module P = Ppxlib.Parsetree
 module AT = Ppxlib.Asttypes
 module ATH = Ppxlib.Ast_helper
+module Ast_builder = Ppxlib.Ast_builder.Default
+
+let component_ident ~loc =
+  Ast_builder.(pexp_ident ~loc (Located.lident ~loc "brisk-component"))
+
+let component_ident_pattern ~loc =
+  Ast_builder.(ppat_var ~loc (Located.mk ~loc "brisk-component"))
+
+let hooks_ident ~loc =
+  Ast_builder.(pexp_ident ~loc (Located.lident ~loc "brisk-hooks"))
+
+let hooks_ident_pattern ~loc =
+  Ast_builder.(ppat_var ~loc (Located.mk ~loc "brisk-hooks"))
 
 module JSX_ppx = struct
   let rec props_filter_children ~acc = function
@@ -23,7 +36,7 @@ module JSX_ppx = struct
 
   let rewrite_apply ~loc ~attributes:attrs props =
     let args = props_filter_children props in
-    ATH.Exp.apply ~loc ~attrs [%expr component] args
+    ATH.Exp.apply ~loc ~attrs (component_ident ~loc) args
 
   let is_jsx ({AT.txt}, _) = String.equal txt "JSX"
 
@@ -59,7 +72,7 @@ module JSX_ppx = struct
         in
         P.(
           [%expr
-            let component = [%e fn] in
+            let [%p component_ident_pattern ~loc] = [%e fn] in
             [%e rewrite_apply ~attributes ~loc:expr.P.pexp_loc args]])
     | _ ->
         expr
@@ -82,7 +95,7 @@ module Declaration_ppx = struct
       match_ func_pattern loc expr
         ~with_:(fun lbl opt_arg pat child_expression ->
           let make_fun_with_expr ~expr =
-            Ppxlib.Ast_builder.Default.pexp_fun ~loc lbl opt_arg pat expr
+            Ast_builder.pexp_fun ~loc lbl opt_arg pat expr
           in
           let loc = pat.Ppxlib.ppat_loc in
           match (lbl, pat) with
@@ -92,7 +105,7 @@ module Declaration_ppx = struct
           | Ppxlib.Nolabel, [%pat? ()] ->
               let loc = child_expression.pexp_loc in
               make_fun_with_expr
-                ~expr:[%expr component ~key [%e child_expression]]
+                ~expr:[%expr [%e component_ident ~loc] ~key [%e child_expression]]
           | _ ->
               Location.raise_errorf ~loc
                 "A labelled argument or () was expected")
@@ -107,10 +120,10 @@ module Declaration_ppx = struct
           [%expr Brisk_reconciler.Expert.component]
     in
     [%expr
-      let component =
+      let [%p component_ident_pattern ~loc] =
         [%e create_component_expr]
           ~useDynamicKey:
-            [%e Ppxlib.Ast_builder.Default.(ebool ~loc useDynamicKey)]
+            [%e Ast_builder.(ebool ~loc useDynamicKey)]
           [%e component_name]
       in
       fun ?(key = Brisk_reconciler.Key.none) ->
@@ -190,7 +203,7 @@ module Declaration_ppx = struct
             transform_component_expr ~useDynamicKey ~attribute ~component_name
               expr
           in
-          Ppxlib.Ast_builder.Default.(
+          Ast_builder.(
             value_binding ~pat:component_pat ~loc:value_binding_loc
               ~expr:transformed_expr))
     in
@@ -253,13 +266,13 @@ module Hooks_ppx = struct
       | Pexp_let (Nonrecursive, [binding], next_expression) ->
           let wrapped_next_expression =
             if contains_hook_expression expr then
-              [%expr [%e next_expression] __brisk_ppx_hooks__]
-            else [%expr [%e next_expression], __brisk_ppx_hooks__]
+              [%expr [%e next_expression] [%e hooks_ident ~loc]]
+            else [%expr [%e next_expression], [%e hooks_ident ~loc]]
           in
           [%expr
-            fun __brisk_ppx_hooks__ ->
-              let [%p binding.pvb_pat], __brisk_ppx_hooks__ =
-                [%e binding.pvb_expr] __brisk_ppx_hooks__
+            fun [%p hooks_ident_pattern ~loc] ->
+              let [%p binding.pvb_pat], [%p hooks_ident_pattern ~loc] =
+                [%e binding.pvb_expr] [%e hooks_ident ~loc]
               in
               [%e wrapped_next_expression]]
       | Pexp_let (Recursive, _, _) ->
