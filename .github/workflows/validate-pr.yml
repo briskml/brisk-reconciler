@@ -28,13 +28,13 @@ jobs:
         with:
           path: ~/.esy
           key: ${{ matrix.os }}-${{ matrix.ocaml_version }}-${{ hashFiles('**/index.json') }}
-        - name: Try to restore dependencies cache
-          if: matrix.os == 'windows-latest'
-          id: deps-cache
-          uses: actions/cache@v1
-          with:
-            path: ~\.esy
-            key: ${{ matrix.os }}-${{ matrix.ocaml_version }}-${{ hashFiles('**\index.json') }}
+      - name: Try to restore dependencies cache
+        if: matrix.os == 'windows-latest'
+        id: deps-cache
+        uses: actions/cache@v1
+        with:
+          path: ~\.esy
+          key: ${{ matrix.os }}-${{ matrix.ocaml_version }}-${{ hashFiles('**\index.json') }}
       - name: Install dependencies
         run: esy install -P package-ci-${{ matrix.ocaml_version }}
       - name: Build dependencies
