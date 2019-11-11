@@ -48,3 +48,9 @@ jobs:
         run: |
           esy add -P package-ci-${{ matrix.ocaml_version }} "@opam/patience_diff"
           esy -P package-ci-${{ matrix.ocaml_version }} -- dune runtest --no-buffer --force
+      - name: Cleanup global store
+        if: matrix.os != 'windows-latest'
+        run: rm -rf ~/.esy/b
+      - name: Cleanup global store
+        if: matrix.os == 'windows-latest'
+        run: rd /S/Q ~\.esy\b
