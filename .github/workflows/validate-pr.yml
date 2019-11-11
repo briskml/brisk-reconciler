@@ -49,4 +49,4 @@ jobs:
           esy add -P package-ci-${{ matrix.ocaml_version }} "@opam/patience_diff"
           esy -P package-ci-${{ matrix.ocaml_version }} -- dune runtest --no-buffer --force
       - name: Cleanup global store
-        run: esy -P package-ci-${{ matrix.ocaml_version }} cleanup .
+        run: esy cleanup .
