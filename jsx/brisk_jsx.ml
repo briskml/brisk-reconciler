@@ -100,7 +100,9 @@ module Declaration_ppx = struct
                 Ast_builder.pexp_fun ~loc lbl opt_arg pat expr
               in
               let loc = pat.Ppxlib.ppat_loc in
-              match (lbl, pat) with
+          | (Ppxlib.Optional _), _ when seenUnit ->
+              Location.raise_errorf ~loc
+                "Optional arguments not allowed after ()"
               | (Ppxlib.Labelled _ | Optional _), _ ->
                   make_fun_with_expr
                     ~expr:(loop ~seenUnit child_expression)
