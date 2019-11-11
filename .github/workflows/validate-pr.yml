@@ -28,4 +28,7 @@ jobs:
       - name: Build
         run: esy build -P package-ci-${{ matrix.ocaml_version }}
       - name: Test
-        run: esy -P package-ci-${{ matrix.ocaml_version }} -- dune runtest --no-buffer --force
+        if: matrix.os != 'windows-latest'
+        run: |
+          esy add -P package-ci-${{ matrix.ocaml_version }} "@opam/patience_diff"
+          esy -P package-ci-${{ matrix.ocaml_version }} -- dune runtest --no-buffer --force
