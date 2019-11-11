@@ -23,6 +23,6 @@
     "@opam/merlin-lsp": "ocaml/merlin:merlin-lsp.opam#c8b0f03",
     "@opam/patience_diff": "v0.12.0",
     "@opam/ppx_deriving": "^4.2.1",
-    "@opam/ocamlformat": "0.11.0"
+    "@opam/ocamlformat": "0.12"
   }
 }
