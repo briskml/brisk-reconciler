@@ -25,7 +25,7 @@ jobs:
         id: deps-cache
         uses: actions/cache@v1
         with:
-          path: ${{ home }}/.esy
+          path: ${{ runner.home }}/.esy
           key: ${{ matrix.os }}-${{ matrix.ocaml_version }}-${{ hashFiles('package-ci.esy.lock/index.json') }}
       - name: Install dependencies
         run: esy install -P package-ci-${{ matrix.ocaml_version }}
