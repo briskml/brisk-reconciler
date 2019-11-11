@@ -50,4 +50,5 @@ jobs:
       - name: Cleanup global store
         run: |
           esy install
+          esy cleanup --dry-run .
           esy cleanup .
