@@ -41,7 +41,6 @@ jobs:
         if: steps.deps-cache-win.outputs.cache-hit != 'true' && steps.deps-cache-non-win.outputs.cache-hit != 'true'
         run: esy build-dependencies -P package-ci-${{ matrix.ocaml_version }}
       - name: Build
-        if: steps.deps-cache-win.outputs.cache-hit != 'true' && steps.deps-cache-non-win.outputs.cache-hit != 'true'
         run: esy build -P package-ci-${{ matrix.ocaml_version }}
       - name: Test
         if: matrix.os != 'windows-latest'
