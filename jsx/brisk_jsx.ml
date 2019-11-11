@@ -79,11 +79,6 @@ module JSX_ppx = struct
 end
 
 module Declaration_ppx = struct
-  let func_pattern = Ppxlib.Ast_pattern.(pexp_fun __ __ __ __)
-
-  let match_ pattern ?on_error loc ast_node ~with_ =
-    Ppxlib.Ast_pattern.parse pattern ?on_error loc ast_node with_
-
   let attribute_name = function
     | `Component ->
         "component"
@@ -92,31 +87,30 @@ module Declaration_ppx = struct
 
   let transform_component_expr ~useDynamicKey ~attribute ~component_name expr =
     let map_component_expression expr =
-      let rec loop ~seenUnit ({P.pexp_loc= loc} as expr) = 
-        try
-          match_ func_pattern loc expr
-            ~with_:(fun lbl opt_arg pat child_expression ->
-              let make_fun_with_expr ~expr =
-                Ast_builder.pexp_fun ~loc lbl opt_arg pat expr
-              in
-              let loc = pat.Ppxlib.ppat_loc in
+      let rec loop ~seenUnit ({P.pexp_loc=loc; pexp_desc} as expr) = 
+        match pexp_desc with
+        | P.Pexp_fun (lbl, opt_arg, pat, child_expression) ->
+          let make_fun_with_expr ~expr =
+            Ast_builder.pexp_fun ~loc lbl opt_arg pat expr
+          in
+          let loc = pat.Ppxlib.ppat_loc in
+          ( match (lbl, pat) with
           | (Ppxlib.Optional _), _ when seenUnit ->
               Location.raise_errorf ~loc
                 "Optional arguments not allowed after ()"
-              | (Ppxlib.Labelled _ | Optional _), _ ->
-                  make_fun_with_expr
-                    ~expr:(loop ~seenUnit child_expression)
-              | Ppxlib.Nolabel, [%pat? ()] ->
-                  make_fun_with_expr
-                    ~expr:(loop ~seenUnit:true child_expression)
-              | _ ->
-                if seenUnit then
-                  let loc = child_expression.pexp_loc in
-                  [%expr [%e component_ident ~loc] ~key [%e make_fun_with_expr ~expr:child_expression]]
-                else
-                  Location.raise_errorf ~loc
-                    "A labelled argument or () was expected")
-        with
+          | (Ppxlib.Labelled _ | Optional _), _ ->
+              make_fun_with_expr
+                ~expr:(loop ~seenUnit child_expression)
+          | Ppxlib.Nolabel, [%pat? ()] ->
+              make_fun_with_expr
+                ~expr:(loop ~seenUnit:true child_expression)
+          | _ ->
+            if seenUnit then
+              let loc = child_expression.pexp_loc in
+              [%expr [%e component_ident ~loc] ~key [%e make_fun_with_expr ~expr:child_expression]]
+            else
+              Location.raise_errorf ~loc
+                "A labelled argument or () was expected")
         | _ -> [%expr [%e component_ident ~loc] ~key [%e expr]]
       in
       loop ~seenUnit:false expr
