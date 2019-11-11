@@ -1,5 +1,5 @@
 {
-  "checksum": "5bb061f24453a3e41d52954413c57011",
+  "checksum": "e40e6fa24788da549f9cda698e6f126e",
   "root": "brisk-reconciler@link-dev:./package.json",
   "node": {
     "ocaml@4.8.1000@d41d8cd9": {
@@ -28,6 +28,7 @@
       "overrides": [],
       "dependencies": [
         "ocaml@4.8.1000@d41d8cd9", "@opam/ppxlib@opam:0.8.1@67aec471",
+        "@opam/ppx_let@opam:v0.12.0@b52d29f3",
         "@opam/dune@opam:1.11.4@21d66ccd", "@esy-ocaml/reason@3.5.2@d41d8cd9"
       ],
       "devDependencies": [
