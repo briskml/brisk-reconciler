@@ -23,14 +23,14 @@ jobs:
         run: npm install -g esy@0.5.8
       - name: Try to restore dependencies cache
         if: matrix.os != 'windows-latest'
-        id: deps-cache
+        id: deps-cache-non-win
         uses: actions/cache@v1
         with:
           path: ~/.esy
           key: ${{ matrix.os }}-${{ matrix.ocaml_version }}-${{ hashFiles('**/index.json') }}
       - name: Try to restore dependencies cache
         if: matrix.os == 'windows-latest'
-        id: deps-cache
+        id: deps-cache-win
         uses: actions/cache@v1
         with:
           path: ~\.esy
@@ -38,10 +38,10 @@ jobs:
       - name: Install dependencies
         run: esy install -P package-ci-${{ matrix.ocaml_version }}
       - name: Build dependencies
-        if: steps.deps-cache.outputs.cache-hit != 'true'
+        if: steps.deps-cache-win.outputs.cache-hit != 'true' && steps.deps-cache-non-win.outputs.cache-hit != 'true'
         run: esy build-dependencies -P package-ci-${{ matrix.ocaml_version }}
       - name: Build
-        if: steps.deps-cache.outputs.cache-hit != 'true'
+        if: steps.deps-cache-win.outputs.cache-hit != 'true' && steps.deps-cache-non-win.outputs.cache-hit != 'true'
         run: esy build -P package-ci-${{ matrix.ocaml_version }}
       - name: Test
         if: matrix.os != 'windows-latest'
