@@ -26,7 +26,7 @@ jobs:
         uses: actions/cache@v1
         with:
           path: ${{ runner.home }}/.esy
-          key: ${{ matrix.os }}-${{ matrix.ocaml_version }}-${{ hashFiles('package-ci-*.*.esy.lock/index.json') }}
+          key: ${{ matrix.os }}-${{ matrix.ocaml_version }}-${{ hashFiles('**/index.json') }}
       - name: Install dependencies
         run: esy install -P package-ci-${{ matrix.ocaml_version }}
       - name: Build dependencies
