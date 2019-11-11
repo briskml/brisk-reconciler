@@ -50,7 +50,7 @@ jobs:
           esy -P package-ci-${{ matrix.ocaml_version }} -- dune runtest --no-buffer --force
       - name: Cleanup global store
         if: matrix.os != 'windows-latest'
-        run: rm -rf ~/.esy/b
+        run: rm -rf ~/.esy/3*/b
       - name: Cleanup global store
         if: matrix.os == 'windows-latest'
-        run: rd /S/Q ~\.esy\b
+        run: rd /S/Q ~\.esy\3_\b
