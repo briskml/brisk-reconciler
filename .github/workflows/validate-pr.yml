@@ -20,7 +20,7 @@ jobs:
           node-version: 12
       - uses: actions/checkout@v1
       - name: Install esy
-        run: npm install -g esy@0.5.8
+        run: npm install -g @esy-nightly/esy
       - name: Try to restore dependencies cache
         if: matrix.os != 'windows-latest'
         id: deps-cache-non-win
@@ -49,8 +49,4 @@ jobs:
           esy add -P package-ci-${{ matrix.ocaml_version }} "@opam/patience_diff"
           esy -P package-ci-${{ matrix.ocaml_version }} -- dune runtest --no-buffer --force
       - name: Cleanup global store
-        if: matrix.os != 'windows-latest'
-        run: rm -rf ~/.esy/3*/b
-      - name: Cleanup global store
-        if: matrix.os == 'windows-latest'
-        run: rd /S/Q ~\.esy\3_\b
+        run: esy -P package-ci-${{ matrix.ocaml_version }} cleanup .
