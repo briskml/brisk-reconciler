@@ -239,14 +239,28 @@ module ShouldAllowComponentProp = {
     (<Div> component </Div>, hooks);
 }
 
-module PartiallyAppliedComponent = {
-  let%component make = ((), ~arg: string, hooks) =>
-    (<Text title=arg />, hooks);
+module PartiallyAppliedComponent : {
+  type t;
+  type dispatcher = int => unit;
+  let make: (~key:int=?, ~title: string, unit) => t;
+  let render: (dispatcher, t) => element(node);
+} = {
+  type dispatcher = int => unit;
+  type t = (~dispatch:dispatcher) => element(node);
+
+  let%component make = (~title, (), ~dispatch as _:dispatcher, hooks) =>
+    (<Text title />, hooks);
+
+  let render = (dispatch, component) =>
+    component(~dispatch);
 };
 
-module PartiallyAppliedComponentConsumer = {
+module PartiallyAppliedComponentConsumer : {
+  let make: (~key:int=?, unit) => element(node);
+} = {
   let%component make = ((), hooks) => {
-    let comp = <PartiallyAppliedComponent />;
-    (comp(~arg="foo"), hooks);
+    let dispatch = _ => ();
+    let comp = <PartiallyAppliedComponent title="" />;
+    (PartiallyAppliedComponent.render(dispatch, comp), hooks);
   }
 };
