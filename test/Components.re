@@ -235,32 +235,35 @@ module EmptyComponentWithOnMountEffect = {
 };
 
 module ShouldAllowComponentProp = {
-  let%component make = (~component, (), hooks) =>
-    (<Div> component </Div>, hooks);
-}
+  let%component make = (~component, (), hooks) => (
+    <Div> component </Div>,
+    hooks,
+  );
+};
 
-module PartiallyAppliedComponent : {
+module PartiallyAppliedComponent: {
   type t;
   type dispatcher = int => unit;
-  let make: (~key:int=?, ~title: string, unit) => t;
+  let make: (~key: int=?, ~title: string, unit) => t;
   let render: (dispatcher, t) => element(node);
 } = {
   type dispatcher = int => unit;
-  type t = (~dispatch:dispatcher) => element(node);
+  type t = (~dispatch: dispatcher) => element(node);
 
-  let%component make = (~title, (), ~dispatch as _:dispatcher, hooks) =>
-    (<Text title />, hooks);
+  let%component make = (~title, (), ~dispatch as _: dispatcher, hooks) => (
+    <Text title />,
+    hooks,
+  );
 
-  let render = (dispatch, component) =>
-    component(~dispatch);
+  let render = (dispatch, component) => component(~dispatch);
 };
 
-module PartiallyAppliedComponentConsumer : {
-  let make: (~key:int=?, unit) => element(node);
+module PartiallyAppliedComponentConsumer: {
+  let make: (~key: int=?, unit) => element(node);
 } = {
   let%component make = ((), hooks) => {
     let dispatch = _ => ();
     let comp = <PartiallyAppliedComponent title="" />;
     (PartiallyAppliedComponent.render(dispatch, comp), hooks);
-  }
+  };
 };
