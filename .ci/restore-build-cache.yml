@@ -29,7 +29,7 @@ steps:
       
   - task: CacheBeta@1
     inputs:
-      key: cache_key_0 | esy | $(Agent.OS) | "$(OCAML_VERSION)" | esy.lock/index.json
+      key: cache_key_1 | esy | $(Agent.OS) | "$(OCAML_VERSION)" | esy.lock/index.json
       path: $(CACHE_FOLDER)
       cacheHitVar: CACHE_RESTORED
     displayName: '[Cache] esy packages'
