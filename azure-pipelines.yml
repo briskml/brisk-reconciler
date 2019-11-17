@@ -10,7 +10,7 @@ stages:
         windows_407: { OCAML_VERSION: "4.07", platform: Windows, vmImage: windows-latest, CACHE_FOLDER: $(Pipeline.Workspace)\cache },
         windows_408: { OCAML_VERSION: "4.08", platform: Windows, vmImage: windows-latest, CACHE_FOLDER: $(Pipeline.Workspace)\cache },
         macos_404: { OCAML_VERSION: "4.04", platform: macOS, vmImage: macos-latest, CACHE_FOLDER: $(Pipeline.Workspace)/cache },
-        macos_406: { OCAML_VERSION: "4.06", platform: macOS, vmImage: macos-lates, CACHE_FOLDER: $(Pipeline.Workspace)/cachet },
+        macos_406: { OCAML_VERSION: "4.06", platform: macOS, vmImage: macos-latest, CACHE_FOLDER: $(Pipeline.Workspace)/cachet },
         macos_407: { OCAML_VERSION: "4.07", platform: macOS, vmImage: macos-latest, CACHE_FOLDER: $(Pipeline.Workspace)/cache },
         macos_408: { OCAML_VERSION: "4.08", platform: macOS, vmImage: macos-latest, CACHE_FOLDER: $(Pipeline.Workspace)/cache },
         linux_404: { OCAML_VERSION: "4.04", platform: Linux, vmImage: ubuntu-latest, CACHE_FOLDER: $(Pipeline.Workspace)/cache },
