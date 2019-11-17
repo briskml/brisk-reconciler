@@ -2,7 +2,8 @@ parameters:
   OCAML_VERSION: "4.07"
 
 steps:
-  - script: |
-      esy "@package-ci-${{parameters.OCAML_VERSION}}" install
-      esy "@package-ci-${{parameters.OCAML_VERSION}}" build
-    displayName: "Install and build ${{parameters.OCAML_VERSION}}"
+  - script: esy "@package-ci-${{parameters.OCAML_VERSION}}" install
+    displayName: "Install packages"
+  
+  - script: esy "@package-ci-${{parameters.OCAML_VERSION}}" build
+    displayName: "Build"
