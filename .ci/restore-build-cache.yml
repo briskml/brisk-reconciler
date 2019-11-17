@@ -34,7 +34,7 @@ steps:
       cacheHitVar: CACHE_RESTORED
     displayName: '[Cache] esy packages'
 
-  - script: 'mkdir -p $(ESY__CACHE_INSTALL_PATH)'
+  - pwsh: 'New-Item $(ESY__CACHE_INSTALL_PATH) -ItemType Directory'
     condition: eq(variables.CACHE_RESTORED, 'true')
     displayName: '[Cache][Restore] Create esy cache directory'
 
