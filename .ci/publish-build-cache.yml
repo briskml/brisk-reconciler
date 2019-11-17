@@ -2,7 +2,7 @@ steps:
   - pwsh: Get-ChildItem -Path $(ESY__CACHE_INSTALL_PATH)
     displayName: '[Cache][Publish] Print what will be copied'
 
-  - pwsh: Copy-Item -Path $(ESY__CACHE_INSTALL_PATH) -Destination $(CACHE_FOLDER) 
+  - pwsh: Copy-Item -Path $(ESY__CACHE_INSTALL_PATH) -Destination $(CACHE_FOLDER) -Recurse
     displayName: '[Cache][Publish] Copy builds to be cached'
 
   - pwsh: Get-ChildItem -Path $(CACHE_FOLDER)
