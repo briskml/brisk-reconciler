@@ -53,6 +53,7 @@ jobs:
           esy -P package-ci-${{ matrix.ocaml_version }} -- dune runtest --no-buffer --force
       - name: Cleanup global store
         run: |
+          exit 0
           esy install
           esy cleanup --dry-run .
           esy cleanup .
