@@ -3,6 +3,6 @@ parameters:
 
 steps:
   - script: |
-      esy @package-ci-${{parameters.OCAML_VERSION}} install
-      esy @package-ci-${{parameters.OCAML_VERSION}} build
+      esy "@package-ci-${{parameters.OCAML_VERSION}}" install
+      esy "@package-ci-${{parameters.OCAML_VERSION}}" build
     displayName: "Install and build ${{parameters.OCAML_VERSION}}"
