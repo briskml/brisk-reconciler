@@ -2,8 +2,5 @@ parameters:
   OCAML_VERSION: "4.07"
 
 steps:
-  - script: |
-      esy @package-ci-${{parameters.OCAML_VERSION}} install
-      esy @package-ci-${{parameters.OCAML_VERSION}} build
-      esy @package-ci-${{parameters.OCAML_VERSION}} dune runtest --no-buffer
-    displayName: "Test ${{parameters.OCAML_VERSION}}"
+  - script: esy "@package-ci-${{parameters.OCAML_VERSION}}" dune runtest --no-buffer
+    displayName: "Test"

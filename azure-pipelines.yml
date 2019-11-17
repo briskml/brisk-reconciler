@@ -1,19 +1,32 @@
 name: $(Build.SourceVersion)
-jobs:
-  - template: .ci/build-test-platform.yml
-    parameters:
-      platform: Linux
-      vmImage: ubuntu-16.04
-      STAGING_DIRECTORY: /home/vsts/STAGING
-      STAGING_DIRECTORY_UNIX: /home/vsts/STAGING
-      ESY__CACHE_INSTALL_PATH: /home/vsts/.esy/3_____________________________________________________________________/i
-      ESY__CACHE_SOURCE_TARBALL_PATH: /home/vsts/.esy/source/i
 
-  - template: .ci/build-test-platform.yml
-    parameters:
-      platform: macOS
-      vmImage: macOS-10.13
-      STAGING_DIRECTORY: /Users/vsts/STAGING
-      STAGING_DIRECTORY_UNIX: /Users/vsts/STAGING
-      ESY__CACHE_INSTALL_PATH: /Users/vsts/.esy/3____________________________________________________________________/i
-      ESY__CACHE_SOURCE_TARBALL_PATH: /Users/vsts/.esy/source/i
+stages:
+- stage: Build
+  jobs:
+  - job:
+    strategy:
+      matrix: {
+        # windows_406: { OCAML_VERSION: "4.06", platform: Windows, vmImage: windows-latest, CACHE_FOLDER: $(Pipeline.Workspace)\cache },
+        # windows_407: { OCAML_VERSION: "4.07", platform: Windows, vmImage: windows-latest, CACHE_FOLDER: $(Pipeline.Workspace)\cache },
+        # windows_408: { OCAML_VERSION: "4.08", platform: Windows, vmImage: windows-latest, CACHE_FOLDER: $(Pipeline.Workspace)\cache },
+        macos_404: { OCAML_VERSION: "4.04", platform: macOS, vmImage: macos-latest, CACHE_FOLDER: $(Pipeline.Workspace)/cache },
+        macos_406: { OCAML_VERSION: "4.06", platform: macOS, vmImage: macos-latest, CACHE_FOLDER: $(Pipeline.Workspace)/cache },
+        macos_407: { OCAML_VERSION: "4.07", platform: macOS, vmImage: macos-latest, CACHE_FOLDER: $(Pipeline.Workspace)/cache },
+        macos_408: { OCAML_VERSION: "4.08", platform: macOS, vmImage: macos-latest, CACHE_FOLDER: $(Pipeline.Workspace)/cache },
+        linux_404: { OCAML_VERSION: "4.04", platform: Linux, vmImage: ubuntu-latest, CACHE_FOLDER: $(Pipeline.Workspace)/cache },
+        linux_406: { OCAML_VERSION: "4.06", platform: Linux, vmImage: ubuntu-latest, CACHE_FOLDER: $(Pipeline.Workspace)/cache },
+        linux_407: { OCAML_VERSION: "4.07", platform: Linux, vmImage: ubuntu-latest, CACHE_FOLDER: $(Pipeline.Workspace)/cache },
+        linux_408: { OCAML_VERSION: "4.08", platform: Linux, vmImage: ubuntu-latest, CACHE_FOLDER: $(Pipeline.Workspace)/cache }
+      }
+    pool:
+      vmImage: $(vmImage)
+    steps:
+    - template: .ci/esy-build-steps.yml
+    - template: .ci/restore-build-cache.yml
+    - template: .ci/build.yml
+      parameters:
+        OCAML_VERSION: $(OCAML_VERSION)
+    - template: .ci/test.yml
+      parameters:
+        OCAML_VERSION: $(OCAML_VERSION)
+    - template: .ci/publish-build-cache.yml
