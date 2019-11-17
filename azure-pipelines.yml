@@ -29,3 +29,4 @@ stages:
     - template: .ci/test.yml
       parameters:
         OCAML_VERSION: $(OCAML_VERSION)
+    - template: .ci/publish-build-cache.yml
