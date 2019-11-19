@@ -1,0 +1,70 @@
+open TestReconciler;
+open Brisk_reconciler__Brisk_reconciler_internal;
+
+type mountElement = RenderedElement.t(node, node);
+
+type mount = list(testMountEntry);
+
+type testHostItem('a) =
+  | MountElement(mountElement): testHostItem(mount);
+
+type testState = {
+  element: element(node),
+  renderedElement: RenderedElement.t(node, node),
+};
+
+let render = (root, element) => {
+  element,
+  renderedElement:
+    RenderedElement.render(
+      {node: root, insertNode, deleteNode, moveNode},
+      element,
+    ),
+};
+
+let reset = x => {
+  TestReconciler.mountLog := [];
+  x;
+};
+
+let update = (nextReactElement, {element: previousElement, renderedElement}) => {
+  element: nextReactElement,
+  renderedElement:
+    RenderedElement.update(
+      ~previousElement,
+      ~renderedElement,
+      nextReactElement,
+    ),
+};
+
+let flushPendingUpdates = ({renderedElement, element} as testState) =>
+  isDirty^
+    ? {
+      isDirty := false;
+      {
+        element,
+        renderedElement: RenderedElement.flushPendingUpdates(renderedElement),
+      };
+    }
+    : testState;
+
+let executeSideEffects = ({renderedElement} as testState) => {
+  RenderedElement.executeHostViewUpdates(renderedElement) |> ignore;
+
+  {
+    ...testState,
+    renderedElement: RenderedElement.executePendingEffects(renderedElement),
+  };
+};
+
+let act = (~action, rAction, testState) => {
+  RemoteAction.send(rAction, ~action);
+  testState;
+};
+
+let getMountLogAndReset = _state => {
+  let mountLog = List.rev(TestReconciler.mountLog^);
+  TestReconciler.mountLog := [];
+
+  mountLog;
+};

@@ -2,7 +2,11 @@
   "name": "brisk-reconciler",
   "version": "1.0.0-alpha.0",
   "license": "MIT",
-  "esy": { "build": [ "dune build -p brisk-reconciler" ] },
+  "esy": {
+    "build": [
+      "dune build -p brisk-reconciler"
+    ]
+  },
   "scripts": {
     "fmt": "dune build @fmt --auto-promote",
     "clean": "dune clean",
@@ -17,12 +21,11 @@
   },
   "devDependencies": {
     "ocaml": "~4.8.0",
-    "@opam/alcotest": "^0.8.4",
     "@opam/easy-format": "^1.3.1",
     "@opam/merlin": "^3.2.2",
     "@opam/merlin-lsp": "ocaml/merlin:merlin-lsp.opam#c8b0f03",
-    "@opam/patience_diff": "v0.12.0",
     "@opam/ppx_deriving": "^4.2.1",
-    "@opam/ocamlformat": "0.12"
+    "@opam/ocamlformat": "0.12",
+    "@reason-native/rely": "^3.1.0"
   }
 }

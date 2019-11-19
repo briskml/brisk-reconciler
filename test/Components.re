@@ -54,7 +54,7 @@ module Text = {
     prev: string,
   };
   let%nativeComponent make = (~title="ImABox", ()) => {
-    let%hook (prevTitle) = Hooks.ref(title);
+    let%hook prevTitle = Hooks.ref(title);
     let%hook () =
       Hooks.effect(
         Always,
@@ -206,35 +206,41 @@ module EmptyComponent = {
   let%component make = ((), hooks) => (empty, hooks);
 };
 
-module EmptyComponentWithAlwaysEffect = {
-  let%component make = (~onEffect, ~onEffectDispose, ()) => {
-    let%hook () =
-      Hooks.effect(
-        Always,
-        () => {
-          onEffect();
-          Some(onEffectDispose);
-        },
-      );
-    empty;
+/*
+ TODO: Uncomment when we use them in tests again
+  module EmptyComponentWithAlwaysEffect = {
+    let%component make = (~onEffect, ~onEffectDispose, ()) => {
+      let%hook () =
+        Hooks.effect(
+          Always,
+          () => {
+            onEffect();
+            Some(onEffectDispose);
+          },
+        );
+      empty;
+    };
   };
-};
 
-module EmptyComponentWithOnMountEffect = {
-  let%component make = (~onEffect, ~onEffectDispose, ()) => {
-    let%hook () =
-      Hooks.effect(
-        OnMount,
-        () => {
-          onEffect();
-          Some(onEffectDispose);
-        },
-      );
-    empty;
+  module EmptyComponentWithOnMountEffect = {
+    let%component make = (~onEffect, ~onEffectDispose, ()) => {
+      let%hook () =
+        Hooks.effect(
+          OnMount,
+          () => {
+            onEffect();
+            Some(onEffectDispose);
+          },
+        );
+      empty;
+    };
   };
-};
 
-module ShouldAllowComponentProp = {
-  let%component make = (~component, (), hooks) =>
-    (<Div> component </Div>, hooks);
-}
+  module ShouldAllowComponentProp = {
+    let%component make = (~component, (), hooks) => (
+      <Div> component </Div>,
+      hooks,
+    );
+  };
+
+  */
