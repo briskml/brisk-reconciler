@@ -9,6 +9,8 @@
 
 (executable
  (name RunTests)
+ (public_name RunTests.exe)
+ (package brisk-reconciler)
  (libraries brisk-reconciler.test)
  (modules RunTests))
 
