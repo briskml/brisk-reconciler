@@ -179,9 +179,7 @@ module Ref = {
     let (internalRef, hooks) =
       processNext(~default=ref(initialState), ~toWitness=wrapAsHook, hooks);
 
-    let setter = nextValue => internalRef := nextValue;
-
-    ((internalRef^, setter), hooks);
+    (internalRef, hooks);
   };
 };
 
