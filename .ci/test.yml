@@ -3,6 +3,7 @@ parameters:
 
 steps:
   - script: esy "@package-ci-${{parameters.OCAML_VERSION}}" x RunTests.exe
+    continueOnError: true
     displayName: "Test"
 
   - task: PublishTestResults@2
@@ -11,5 +12,5 @@ steps:
       testResultsFiles: './junit.xml' 
       mergeTestResults: true
       failTaskOnFailedTests: true
-      testRunTitle: Unit tests - $(Agent.OS)
+      testRunTitle: Unit tests - $(Agent.OS) - ${{parameters.OCAML_VERSION}}
       buildPlatform: $(Agent.OS)
