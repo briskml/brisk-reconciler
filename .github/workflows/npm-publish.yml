@@ -27,6 +27,7 @@ jobs:
           }
 
           PACKAGE_NAME=$(extract name)
+          PACKAGE_VERSION=$(extract version)
           NPM_VERSION=$(npm view "$PACKAGE_NAME" version)
             
           if [ "$NPM_VERSION" != "$PACKAGE_VERSION" ]
