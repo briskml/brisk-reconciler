@@ -1,9 +1,6 @@
 name: Publish packages to npm
 
-on: 
-  push:
-    branches:
-      - master
+on: push
 
 jobs:
   publish:
@@ -14,6 +11,10 @@ jobs:
           fetch-depth: 1
           ref: ${{ github.ref }}
           submodules: true
+      - uses: actions/setup-node@v1
+        with:
+          node-version: 12
+          registry-url: https://registry.npmjs.org/
       - name: Publish packages
         run: |
           set -e
@@ -32,7 +33,8 @@ jobs:
             
           if [ "$NPM_VERSION" != "$PACKAGE_VERSION" ]
           then
-            npm publish --access public
+            npm ci
+            npm publish --access public --dry-run
           fi
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_AUTH_TOKEN }} 
