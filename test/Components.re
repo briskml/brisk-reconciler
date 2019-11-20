@@ -54,20 +54,20 @@ module Text = {
     prev: string,
   };
   let%nativeComponent make = (~title="ImABox", ()) => {
-    let%hook (prevTitle, setTitle) = Hooks.ref(title);
+    let%hook prevTitle = Hooks.ref(title);
     let%hook () =
       Hooks.effect(
         Always,
         () => {
-          setTitle(title);
+          prevTitle := title;
           None;
         },
       );
     {
       make: () => {name: "Text", element: Text(title)},
       configureInstance: (~isFirstRender, t) => {
-        if (prevTitle != title || isFirstRender) {
-          mountLog := [ChangeText(prevTitle, title), ...mountLog^];
+        if (prevTitle^ != title || isFirstRender) {
+          mountLog := [ChangeText(prevTitle^, title), ...mountLog^];
         };
         t;
       },
@@ -207,7 +207,8 @@ module EmptyComponent = {
 };
 
 module EmptyComponentWithAlwaysEffect = {
-  let%component make = (~onEffect, ~onEffectDispose, ()) => {
+  let%component make =
+                (~onEffect: unit => unit, ~onEffectDispose: unit => unit, ()) => {
     let%hook () =
       Hooks.effect(
         Always,
@@ -221,7 +222,8 @@ module EmptyComponentWithAlwaysEffect = {
 };
 
 module EmptyComponentWithOnMountEffect = {
-  let%component make = (~onEffect, ~onEffectDispose, ()) => {
+  let%component make =
+                (~onEffect: unit => unit, ~onEffectDispose: unit => unit, ()) => {
     let%hook () =
       Hooks.effect(
         OnMount,
@@ -232,4 +234,11 @@ module EmptyComponentWithOnMountEffect = {
       );
     empty;
   };
+};
+
+module ShouldAllowComponentProp = {
+  let%component make = (~component, (), hooks) => (
+    <Div> component </Div>,
+    hooks,
+  );
 };
