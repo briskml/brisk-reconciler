@@ -1,5 +1,6 @@
+open TestFramework;
 open TestReconciler;
-open Assert;
+open TestHelpers;
 open Brisk_reconciler__Brisk_reconciler_internal;
 
 let root = {name: "root", element: View};
@@ -10,43 +11,42 @@ let box = t => {name: "Box", element: Text(t)};
 
 let render = render(root);
 
-let core = [
-  (
-    "Test initial render",
-    `Quick,
-    () =>
+describe("Test initial render", ({test}) => {
+  test("It correctly inserts nodes", ({expect}) => {
+    let mountLog =
       render(<Components.BoxWrapper />)
       |> executeSideEffects
-      |> expect(
-           ~label="It correctly inserts nodes",
-           [MountChild(div, box("ImABox"), 0), MountChild(root, div, 0)],
-         )
-      |> ignore,
-  ),
-  (
-    "Test rendering list children",
-    `Quick,
-    () =>
+      |> getMountLogAndReset;
+
+    expect.list(mountLog).toEqual([
+      MountChild(div, box("ImABox"), 0),
+      MountChild(root, div, 0),
+    ]);
+  })
+});
+
+describe("Test rendering list children", ({test}) => {
+  test("It inserts two boxes in a div", ({expect}) => {
+    let mountLog =
       render(
         Components.(
           <Div> <Box title="ImABox1" /> <Box title="ImABox2" /> </Div>
         ),
       )
       |> executeSideEffects
-      |> expect(
-           ~label="It inserts two boxes in a div",
-           [
-             MountChild(div, box("ImABox1"), 0),
-             MountChild(div, box("ImABox2"), 1),
-             MountChild(root, div, 0),
-           ],
-         )
-      |> ignore,
-  ),
-  (
-    "Test replacing subtree",
-    `Quick,
-    () =>
+      |> getMountLogAndReset;
+
+    expect.list(mountLog).toEqual([
+      MountChild(div, box("ImABox1"), 0),
+      MountChild(div, box("ImABox2"), 1),
+      MountChild(root, div, 0),
+    ]);
+  })
+});
+
+describe("Test replacing subtree", ({test}) => {
+  test("It replaces the subtree", ({expect}) => {
+    let mountLog =
       render(
         Components.(
           <Div> <Box title="ImABox1" /> <Box title="ImABox2" /> </Div>
@@ -56,23 +56,22 @@ let core = [
       |> reset
       |> update(Components.(<Div> <Box title="ImABox3" /> </Div>))
       |> executeSideEffects
-      |> expect(
-           ~label="It replaces the subtree",
-           [
-             UnmountChild(div, box("ImABox1")),
-             UnmountChild(div, box("ImABox2")),
-             MountChild(div, box("ImABox3"), 0),
-           ],
-         )
-      |> ignore,
-  ),
-  (
-    "Test top level reorder",
-    `Quick,
-    () => {
-      let key1 = Key.create();
-      let key2 = Key.create();
+      |> getMountLogAndReset;
 
+    expect.list(mountLog).toEqual([
+      UnmountChild(div, box("ImABox1")),
+      UnmountChild(div, box("ImABox2")),
+      MountChild(div, box("ImABox3"), 0),
+    ]);
+  })
+});
+
+describe("Test top level reorder", ({test}) => {
+  let key1 = Key.create();
+  let key2 = Key.create();
+
+  let state =
+    ref(
       render(
         listToElement(
           Components.[
@@ -80,17 +79,25 @@ let core = [
             <Text key=key2 title="y" />,
           ],
         ),
-      )
-      |> executeSideEffects
-      |> expect(
-           ~label="It correctly constructs initial tree",
-           [
-             ChangeText("x", "x"),
-             MountChild(root, text("x"), 0),
-             ChangeText("y", "y"),
-             MountChild(root, text("y"), 1),
-           ],
-         )
+      ),
+    );
+
+  test("It correctly constructs initial tree", ({expect}) => {
+    state := state^ |> executeSideEffects;
+
+    let mountLog = state^ |> getMountLogAndReset;
+
+    expect.list(mountLog).toEqual([
+      ChangeText("x", "x"),
+      MountChild(root, text("x"), 0),
+      ChangeText("y", "y"),
+      MountChild(root, text("y"), 1),
+    ]);
+  });
+
+  test("It reorders only one element", ({expect}) => {
+    let mountLog =
+      state^
       |> update(
            listToElement(
              Components.[
@@ -100,133 +107,145 @@ let core = [
            ),
          )
       |> executeSideEffects
-      |> expect(
-           ~label="It reorders only one element",
-           [RemountChild(root, text("y"), 1, 0)],
-         )
-      |> ignore;
-    },
-  ),
-  (
-    "Test top level replace elements",
-    `Quick,
-    () => {
-      let key1 = Key.create();
-      let key2 = Key.create();
-      render(<Components.Text key=key1 title="x" />)
-      |> executeSideEffects
-      |> expect(
-           ~label="It constructs initial tree",
-           [ChangeText("x", "x"), MountChild(root, text("x"), 0)],
-         )
+      |> getMountLogAndReset;
+
+    expect.list(mountLog).toEqual([RemountChild(root, text("y"), 1, 0)]);
+  });
+});
+
+describe("Test top level replace elements", ({test}) => {
+  let key1 = Key.create();
+  let key2 = Key.create();
+
+  let state = ref(render(<Components.Text key=key1 title="x" />));
+
+  test("It constructs initial tree", ({expect}) => {
+    state := state^ |> executeSideEffects;
+
+    let mountLog = state^ |> getMountLogAndReset;
+    expect.list(mountLog).toEqual([
+      ChangeText("x", "x"),
+      MountChild(root, text("x"), 0),
+    ]);
+  });
+
+  test("It replaces text(x) with text(y)", ({expect}) => {
+    let mountLog =
+      state^
       |> update(<Components.Text key=key2 title="y" />)
       |> executeSideEffects
-      |> expect(
-           ~label="It replaces text(x) with text(y)",
-           [
-             UnmountChild(root, text("x")),
-             ChangeText("y", "y"),
-             MountChild(root, text("y"), 0),
-           ],
-         )
-      |> ignore;
-    },
-  ),
-  (
-    "Test subtree replace elements (not at top-level)",
-    `Quick,
-    () => {
-      let rAction = RemoteAction.create();
+      |> getMountLogAndReset;
 
-      let well = text("well");
+    expect.list(mountLog).toEqual([
+      UnmountChild(root, text("x")),
+      ChangeText("y", "y"),
+      MountChild(root, text("y"), 0),
+    ]);
+  });
+});
 
-      let testState =
-        render(Components.(<Div> <ToggleClicks rAction /> </Div>))
-        |> executeSideEffects
-        |> expect(
-             ~label="It constructs the initial tree",
-             [
-               ChangeText("well", "well"),
-               MountChild(div, well, 0),
-               MountChild(div, div, 0),
-               MountChild(root, div, 0),
-             ],
-           );
+describe("Test subtree replace elements (not at top-level)", ({test}) => {
+  let rAction = RemoteAction.create();
+  let well = text("well");
 
-      RemoteAction.send(~action=Components.ToggleClicks.Click, rAction);
-      let cell1 = text("cell1");
-      let cell2 = text("cell2");
+  let state =
+    ref(render(Components.(<Div> <ToggleClicks rAction /> </Div>)));
 
-      testState
+  test("It constructs initial tree", ({expect}) => {
+    state := state^ |> executeSideEffects;
+
+    let mountLog = state^ |> getMountLogAndReset;
+
+    expect.list(mountLog).toEqual([
+      ChangeText("well", "well"),
+      MountChild(div, well, 0),
+      MountChild(div, div, 0),
+      MountChild(root, div, 0),
+    ]);
+  });
+
+  test("It replaces text(well) with text(cell1) and text(cell2)", ({expect}) => {
+    RemoteAction.send(~action=Components.ToggleClicks.Click, rAction);
+    let cell1 = text("cell1");
+    let cell2 = text("cell2");
+
+    let mountLog =
+      state^
       |> flushPendingUpdates
       |> executeSideEffects
-      |> expect(
-           ~label="It replaces text(well) with text(cell1) and text(cell2)",
-           [
-             UnmountChild(div, well),
-             ChangeText("cell1", "cell1"),
-             MountChild(div, cell1, 0),
-             ChangeText("cell2", "cell2"),
-             MountChild(div, cell2, 1),
-           ],
-         )
-      |> ignore;
-    },
-  ),
-  (
-    "Test subtree replace elements",
-    `Quick,
-    () => {
-      let rAction = RemoteAction.create();
+      |> getMountLogAndReset;
 
-      let well = text("well");
+    expect.list(mountLog).toEqual([
+      UnmountChild(div, well),
+      ChangeText("cell1", "cell1"),
+      MountChild(div, cell1, 0),
+      ChangeText("cell2", "cell2"),
+      MountChild(div, cell2, 1),
+    ]);
+  });
+});
 
-      let testState =
-        render(Components.(<ToggleClicks rAction />))
-        |> executeSideEffects
-        |> expect(
-             ~label="It constructs the initial tree",
-             [
-               ChangeText("well", "well"),
-               MountChild(div, well, 0),
-               MountChild(root, div, 0),
-             ],
-           );
+describe("Test subtree replace elements", ({test}) => {
+  let rAction = RemoteAction.create();
+  let well = text("well");
 
-      RemoteAction.send(~action=Components.ToggleClicks.Click, rAction);
-      let cell1 = text("cell1");
-      let cell2 = text("cell2");
+  let state = ref(render(<Components.ToggleClicks rAction />));
 
-      testState
+  test("It replaces text(well) with text(cell1) and text(cell2)", ({expect}) => {
+    state := state^ |> executeSideEffects;
+
+    let mountLog = state |> getMountLogAndReset;
+
+    /* "It constructs initial tree" */
+    expect.list(mountLog).toEqual([
+      ChangeText("well", "well"),
+      MountChild(div, well, 0),
+      MountChild(root, div, 0),
+    ]);
+  });
+
+  test("It replaces text(well) with text(cell1) and text(cell2)", ({expect}) => {
+    RemoteAction.send(~action=Components.ToggleClicks.Click, rAction);
+    let cell1 = text("cell1");
+    let cell2 = text("cell2");
+
+    let mountLog =
+      state^
       |> flushPendingUpdates
       |> executeSideEffects
-      |> expect(
-           ~label="It replaces text(well) with text(cell1) and text(cell2)",
-           [
-             UnmountChild(div, well),
-             ChangeText("cell1", "cell1"),
-             MountChild(div, cell1, 0),
-             ChangeText("cell2", "cell2"),
-             MountChild(div, cell2, 1),
-           ],
-         )
-      |> ignore;
-    },
-  ),
-  (
-    "Test top level prepend",
-    `Quick,
-    () => {
-      let key1 = Key.create();
-      let key2 = Key.create();
-      let commonElement = [<Components.Text key=key1 title="x" />];
+      |> getMountLogAndReset;
 
-      render(listToElement(commonElement))
-      |> executeSideEffects
-      |> expect(
-           ~label="It constructs the initial tree",
-           [ChangeText("x", "x"), MountChild(root, text("x"), 0)],
-         )
+    expect.list(mountLog).toEqual([
+      UnmountChild(div, well),
+      ChangeText("cell1", "cell1"),
+      MountChild(div, cell1, 0),
+      ChangeText("cell2", "cell2"),
+      MountChild(div, cell2, 1),
+    ]);
+  });
+});
+
+describe("Test top level prepend", ({test}) => {
+  let key1 = Key.create();
+  let key2 = Key.create();
+  let commonElement = [<Components.Text key=key1 title="x" />];
+
+  let state = ref(render(listToElement(commonElement)));
+
+  test("It constructs initial tree", ({expect}) => {
+    state := state^ |> executeSideEffects;
+
+    let mountLog = state |> getMountLogAndReset;
+
+    expect.list(mountLog).toEqual([
+      ChangeText("x", "x"),
+      MountChild(root, text("x"), 0),
+    ]);
+  });
+
+  test("It correctly mounts prepend topLevelUpdate", ({expect}) => {
+    let mountLog =
+      state^
       |> update(
            listToElement([
              <Components.Text key=key2 title="y" />,
@@ -234,287 +253,395 @@ let core = [
            ]),
          )
       |> executeSideEffects
-      |> expect(
-           ~label="It correctly mounts prepend topLevelUpdate",
-           [ChangeText("y", "y"), MountChild(root, text("y"), 0)],
-         )
-      |> ignore;
-    },
-  ),
-  (
-    "Test simple subtree change",
-    `Quick,
-    () =>
-      render(<Components.BoxWrapper />)
-      |> executeSideEffects
-      |> expect(
-           ~label="It renders one Box inside a Div",
-           [MountChild(div, box("ImABox"), 0), MountChild(root, div, 0)],
-         )
+      |> getMountLogAndReset;
+
+    expect.list(mountLog).toEqual([
+      ChangeText("y", "y"),
+      MountChild(root, text("y"), 0),
+    ]);
+  });
+});
+
+describe("Test simple subtree change", ({test}) => {
+  let state = ref(render(<Components.BoxWrapper />));
+
+  test("It renders one Box inside a Div", ({expect}) => {
+    state := state^ |> executeSideEffects;
+    let mountLog = state^ |> getMountLogAndReset;
+
+    expect.list(mountLog).toEqual([
+      MountChild(div, box("ImABox"), 0),
+      MountChild(root, div, 0),
+    ]);
+  });
+
+  test("It replaces one box with two boxes", ({expect}) => {
+    let mountLog =
+      state^
       |> update(<Components.BoxWrapper twoBoxes=true />)
       |> executeSideEffects
-      |> expect(
-           ~label="It replaces one box with two boxes",
-           [
-             UnmountChild(div, box("ImABox")),
-             MountChild(div, box("ImABox"), 0),
-             MountChild(div, box("ImABox"), 1),
-           ],
-         )
-      |> ignore,
-  ),
-  (
-    "Test changing components",
-    `Quick,
-    () =>
-      render(<Components.EmptyComponent />)
-      |> executeSideEffects
-      |> expect(~label="It renders ChangeCounter component", [])
+      |> getMountLogAndReset;
+
+    expect.list(mountLog).toEqual([
+      UnmountChild(div, box("ImABox")),
+      MountChild(div, box("ImABox"), 0),
+      MountChild(div, box("ImABox"), 1),
+    ]);
+  });
+});
+
+describe("Test changing components", ({test}) => {
+  let state =
+    ref(render(<Components.EmptyComponent />) |> executeSideEffects);
+
+  test("It renders nothing", ({expect}) => {
+    let mountLog = state^ |> getMountLogAndReset;
+
+    expect.list(mountLog).toEqual([]);
+  });
+
+  test(
+    "It changes from EmptyComponent to ButtonWrapperWrapper",
+    ({expect}) => {
+    state :=
+      state^
       |> update(
            <Components.ButtonWrapperWrapper wrappedText="initial text" />,
          )
-      |> executeSideEffects
-      |> expect(
-           ~label=
-             "It changes components from ChangeCounter to ButtonWrapperWrapper",
-           [
-             ChangeText("initial text", "initial text"),
-             MountChild(div, text("initial text"), 0),
-             MountChild(div, div, 1),
-             MountChild(root, div, 0),
-           ],
-         )
+      |> executeSideEffects;
+
+    let mountLog = state^ |> getMountLogAndReset;
+
+    expect.list(mountLog).toEqual([
+      ChangeText("initial text", "initial text"),
+      MountChild(div, text("initial text"), 0),
+      MountChild(div, div, 1),
+      MountChild(root, div, 0),
+    ]);
+  });
+
+  test("It updates text in the ButtonWrapper", ({expect}) => {
+    state :=
+      state^
       |> update(
            <Components.ButtonWrapperWrapper wrappedText="updated text" />,
          )
-      |> executeSideEffects
-      |> expect(
-           ~label="It updates text in the ButtonWrapper",
-           [ChangeText("initial text", "updated text")],
-         )
-      |> ignore,
-  ),
-  (
-    "Test BoxList with dynamic keys",
-    `Quick,
-    () => {
-      let rAction = RemoteAction.create();
+      |> executeSideEffects;
+    let mountLog = state^ |> getMountLogAndReset;
+
+    expect.list(mountLog).toEqual([
+      ChangeText("initial text", "updated text"),
+    ]);
+  });
+});
+
+describe("Test BoxList with dynamic keys", ({test}) => {
+  let rAction = RemoteAction.create();
+  let state =
+    ref(
       render(<Components.BoxList useDynamicKeys=true rAction />)
-      |> executeSideEffects
-      |> expect(~label="It renders initial BoxList", [])
+      |> executeSideEffects,
+    );
+
+  test("It renders an empty list", ({expect}) => {
+    let mountLog = state^ |> getMountLogAndReset;
+
+    expect.list(mountLog).toEqual([]);
+  });
+
+  test("It inserts one item", ({expect}) => {
+    state :=
+      state^
       |> act(~action=Components.BoxList.Create("Hello"), rAction)
       |> flushPendingUpdates
-      |> executeSideEffects
-      |> expect(
-           ~label="It adds a new BoxItem and then flushes",
-           [
-             ChangeText("Hello", "Hello"),
-             MountChild(root, text("Hello"), 0),
-           ],
-         )
+      |> executeSideEffects;
+
+    let mountLog = state^ |> getMountLogAndReset;
+
+    expect.list(mountLog).toEqual([
+      ChangeText("Hello", "Hello"),
+      MountChild(root, text("Hello"), 0),
+    ]);
+  });
+
+  test("It prepends one more BoxItem and then flushes", ({expect}) => {
+    state :=
+      state^
       |> act(~action=Components.BoxList.Create("World"), rAction)
       |> flushPendingUpdates
-      |> executeSideEffects
-      |> expect(
-           ~label="It prepends one more BoxItem and then flushes",
-           [
-             ChangeText("World", "World"),
-             MountChild(root, text("World"), 0),
-           ],
-         )
+      |> executeSideEffects;
+    let mountLog = state^ |> getMountLogAndReset;
+
+    expect.list(mountLog).toEqual([
+      ChangeText("World", "World"),
+      MountChild(root, text("World"), 0),
+    ]);
+  });
+
+  test("It reverses the items list in the BoxList", ({expect}) => {
+    state :=
+      state^
       |> act(~action=Components.BoxList.Reverse, rAction)
       |> flushPendingUpdates
-      |> executeSideEffects
-      |> expect(
-           ~label="It reverses the items list in the BoxList",
-           [RemountChild(root, text("Hello"), 1, 0)],
-         )
-      |> ignore;
-    },
-  ),
-  (
-    "Test BoxList without dynamic keys",
-    `Quick,
-    () => {
-      let rAction = RemoteAction.create();
-      render(<Components.BoxList rAction />)
-      |> executeSideEffects
-      |> expect(~label="It renders BoxList", [])
+      |> executeSideEffects;
+    let mountLog = state^ |> getMountLogAndReset;
+
+    expect.list(mountLog).toEqual([
+      RemountChild(root, text("Hello"), 1, 0),
+    ]);
+  });
+});
+
+describe(
+  "Test BoxList without dynamic keys", ({test}) => {
+  let rAction = RemoteAction.create();
+  let state =
+    ref(render(<Components.BoxList rAction />) |> executeSideEffects);
+
+  test("It renders an empty list", ({expect}) => {
+    let mountLog = state^ |> getMountLogAndReset;
+
+    expect.list(mountLog).toEqual([]);
+  });
+
+  test("It adds a new Box", ({expect}) => {
+    state :=
+      state^
       |> act(~action=Components.BoxList.Create("Hello"), rAction)
       |> flushPendingUpdates
-      |> executeSideEffects
-      |> expect(
-           ~label="It adds a new Box",
-           [MountChild(root, box("Hello"), 0)],
-         )
+      |> executeSideEffects;
+
+    let mountLog = state^ |> getMountLogAndReset;
+
+    expect.list(mountLog).toEqual([MountChild(root, box("Hello"), 0)]);
+  });
+
+  test("It prepends one more Box", ({expect}) => {
+    state :=
+      state^
       |> act(~action=Components.BoxList.Create("World"), rAction)
       |> flushPendingUpdates
-      |> executeSideEffects
-      |> expect(
-           ~label="It prepends one more Box",
-           [MountChild(root, box("World"), 0)],
-         )
+      |> executeSideEffects;
+    let mountLog = state^ |> getMountLogAndReset;
+
+    expect.list(mountLog).toEqual([MountChild(root, box("World"), 0)]);
+  });
+
+  test("It reverses the boxes list in the BoxList", ({expect}) => {
+    state :=
+      state^
       |> act(~action=Components.BoxList.Reverse, rAction)
       |> flushPendingUpdates
-      |> executeSideEffects
-      |> expect(
-           ~label="It reverses the boxes list in the BoxList",
-           [
-             UnmountChild(root, box("World")),
-             MountChild(root, box("Hello"), 0),
-             UnmountChild(root, box("Hello")),
-             MountChild(root, box("World"), 1),
-           ],
+      |> executeSideEffects;
+    let mountLog = state^ |> getMountLogAndReset;
+
+    expect.list(mountLog).toEqual([
+      UnmountChild(root, box("World")),
+      MountChild(root, box("Hello"), 0),
+      UnmountChild(root, box("Hello")),
+      MountChild(root, box("World"), 1),
+    ]);
+  });
+});
+
+describe("Test BoxItemDynamic memoizing during deep move", ({test}) => {
+  let box = <Components.BoxItemDynamic title="box to move" />;
+
+  let state = ref(render(box));
+
+  let beforeUpdate = ref(None);
+  let afterUpdate = ref(None);
+
+  test("It renders the initial BoxItemDynamic", ({expect}) => {
+    state := state^ |> executeSideEffects;
+    let mountLog = state^ |> getMountLogAndReset;
+
+    beforeUpdate := Some(state^.renderedElement.instanceForest);
+
+    expect.list(mountLog).toEqual([
+      ChangeText("box to move", "box to move"),
+      MountChild(root, text("box to move"), 0),
+    ]);
+  });
+
+  test(
+    "It adds new element before BoxItemDynamic (it replaces the whole tree)",
+    ({expect}) => {
+    state :=
+      state^
+      |> update(
+           listToElement([
+             Components.stringToElement("before"),
+             listToElement([box]),
+           ]),
          )
-      |> ignore;
-    },
-  ),
-  (
-    "Test BoxItemDynamic memoizing during deep move",
-    `Quick,
-    () => {
-      let box = <Components.BoxItemDynamic title="box to move" />;
-      let {renderedElement: {instanceForest: beforeUpdate}} as testState =
-        render(box)
-        |> executeSideEffects
-        |> expect(
-             ~label="It renders the initial BoxItemDynamic",
-             [
-               ChangeText("box to move", "box to move"),
-               MountChild(root, text("box to move"), 0),
-             ],
-           );
-      let {renderedElement: {instanceForest: afterUpdate}} =
-        testState
-        |> update(
-             listToElement([
-               Components.stringToElement("before"),
-               listToElement([box]),
-             ]),
-           )
-        |> executeSideEffects
-        |> expect(
-             ~label=
-               "It adds new element before BoxItemDynamic (it replaces the whole tree)",
-             [
-               UnmountChild(root, text("box to move")),
-               ChangeText("before", "before"),
-               MountChild(root, text("before"), 0),
-               MountChild(root, text("box to move"), 1),
-             ],
-           );
-      check(
-        Alcotest.bool,
-        "It memoized the nested BoxItemDynamic",
-        true,
-        switch (beforeUpdate, afterUpdate) {
-        | (IFlat(x), INested([_, INested([IFlat(y)], _)], _)) => x === y
-        | _ => false
-        },
-      );
-    },
-  ),
-  (
-    "Test list updates with static keys",
-    `Quick,
-    () => {
-      let key1 = Key.create();
-      let key2 = Key.create();
+      |> executeSideEffects;
+
+    afterUpdate := Some(state^.renderedElement.instanceForest);
+
+    let mountLog = state^ |> getMountLogAndReset;
+
+    expect.list(mountLog).toEqual([
+      UnmountChild(root, text("box to move")),
+      ChangeText("before", "before"),
+      MountChild(root, text("before"), 0),
+      MountChild(root, text("box to move"), 1),
+    ]);
+  });
+
+  test("It memoized the nested BoxItemDynamic", ({expect}) => {
+    expect.bool(
+      switch (beforeUpdate^, afterUpdate^) {
+      | (Some(IFlat(x)), Some(INested([_, INested([IFlat(y)], _)], _))) =>
+        x === y
+      | _ => false
+      },
+    ).
+      toBeTrue()
+  });
+});
+
+describe("Test list updates with static keys", ({test}) => {
+  let key1 = Key.create();
+  let key2 = Key.create();
+
+  let state =
+    ref(
       render(
         listToElement([
           <Components.Box key=key1 title="Box1unchanged" />,
           <Components.Box key=key2 title="Box2unchanged" />,
         ]),
-      )
-      |> executeSideEffects
-      |> expect(
-           ~label="It renders the initial Boxes list",
-           [
-             MountChild(root, box("Box1unchanged"), 0),
-             MountChild(root, box("Box2unchanged"), 1),
-           ],
-         )
+      ),
+    );
+
+  test("It renders the initial Boxes list", ({expect}) => {
+    state := state^ |> executeSideEffects;
+    let mountLog = state^ |> getMountLogAndReset;
+
+    expect.list(mountLog).toEqual([
+      MountChild(root, box("Box1unchanged"), 0),
+      MountChild(root, box("Box2unchanged"), 1),
+    ]);
+  });
+
+  test("It reorders the list", ({expect}) => {
+    state :=
+      state^
       |> update(
            listToElement([
              <Components.Box key=key2 title="Box2changed" />,
              <Components.Box key=key1 title="Box1changed" />,
            ]),
          )
-      |> executeSideEffects
-      |> expect(
-           ~label="It reorders the list",
-           [
-             UnmountChild(root, box("Box2unchanged")),
-             MountChild(root, box("Box2changed"), 1),
-             RemountChild(root, box("Box2changed"), 1, 0),
-             UnmountChild(root, box("Box1unchanged")),
-             MountChild(root, box("Box1changed"), 1),
-           ],
-         )
-      |> ignore;
-    },
-  ),
-  (
-    "Test conditional updating by leveraging refs",
-    `Quick,
-    () => {
-      let rAction = RemoteAction.create();
-      render(<Components.UpdateAlternateClicks rAction />)
-      |> executeSideEffects
-      |> expect(
-           ~label="It renders UpdateAlternateClicks element",
-           [
-             ChangeText("0", "0"),
-             MountChild(root, text("0"), 0),
-           ],
-         )
+      |> executeSideEffects;
+
+    let mountLog = state^ |> getMountLogAndReset;
+
+    expect.list(mountLog).toEqual([
+      UnmountChild(root, box("Box2unchanged")),
+      MountChild(root, box("Box2changed"), 1),
+      RemountChild(root, box("Box2changed"), 1, 0),
+      UnmountChild(root, box("Box1unchanged")),
+      MountChild(root, box("Box1changed"), 1),
+    ]);
+  });
+});
+
+describe("Test conditional updating by leveraging refs", ({test}) => {
+  let rAction = RemoteAction.create();
+
+  let state = ref(render(<Components.UpdateAlternateClicks rAction />));
+
+  test("It renders UpdateAlternateClicks element", ({expect}) => {
+    state := state^ |> executeSideEffects;
+    let mountLog = state^ |> getMountLogAndReset;
+
+    expect.list(mountLog).toEqual([
+      ChangeText("0", "0"),
+      MountChild(root, text("0"), 0),
+    ]);
+  });
+
+  test("It only changes state on first click", ({expect}) => {
+    state :=
+      state^
       |> act(~action=Components.UpdateAlternateClicks.Click, rAction)
       |> flushPendingUpdates
-      |> executeSideEffects
-      |> expect(~label="It only changes state on first click", [])
+      |> executeSideEffects;
+
+    let mountLog = state^ |> getMountLogAndReset;
+
+    expect.list(mountLog).toEqual([]);
+  });
+
+  test("It changes both state and contents on second click", ({expect}) => {
+    state :=
+      state^
       |> act(~action=Components.UpdateAlternateClicks.Click, rAction)
       |> flushPendingUpdates
-      |> executeSideEffects
-      |> expect(
-           ~label="It changes both state and contents on second click",
-           [ChangeText("0", "2")],
-         )
+      |> executeSideEffects;
+
+    let mountLog = state^ |> getMountLogAndReset;
+
+    expect.list(mountLog).toEqual([ChangeText("0", "2")]);
+  });
+
+  test("It only changes state on third click", ({expect}) => {
+    state :=
+      state^
       |> act(~action=Components.UpdateAlternateClicks.Click, rAction)
       |> flushPendingUpdates
-      |> executeSideEffects
-      |> expect(~label="It only changes state on third click", [])
+      |> executeSideEffects;
+
+    let mountLog = state^ |> getMountLogAndReset;
+
+    expect.list(mountLog).toEqual([]);
+  });
+
+  test("It changes both state and contents on fourth click", ({expect}) => {
+    state :=
+      state^
       |> act(~action=Components.UpdateAlternateClicks.Click, rAction)
       |> flushPendingUpdates
-      |> executeSideEffects
-      |> expect(
-           ~label="It changes both state and contents on fourth click",
-           [ChangeText("2", "4")],
-         )
-      |> ignore;
-    },
-  ),
-  (
-    "Test updating with identical element",
-    `Quick,
-    () => {
-      let key1 = Key.create();
-      let key2 = Key.create();
+      |> executeSideEffects;
+
+    let mountLog = state^ |> getMountLogAndReset;
+
+    expect.list(mountLog).toEqual([ChangeText("2", "4")]);
+  });
+});
+
+describe("Test updating with identical element", ({test}) => {
+  let key1 = Key.create();
+  let key2 = Key.create();
+
+  let state =
+    ref(
       render(
         listToElement([
           <Components.Text key=key1 title="x" />,
           <Components.Text key=key2 title="y" />,
         ]),
-      )
-      |> executeSideEffects
-      |> expect(
-           ~label="It renders list with Text elements",
-           [
-             ChangeText("x", "x"),
-             MountChild(root, text("x"), 0),
-             ChangeText("y", "y"),
-             MountChild(root, text("y"), 1),
-           ],
-         )
+      ),
+    );
+
+  test("It renders list with Text elements", ({expect}) => {
+    state := state^ |> executeSideEffects;
+    let mountLog = state^ |> getMountLogAndReset;
+
+    expect.list(mountLog).toEqual([
+      ChangeText("x", "x"),
+      MountChild(root, text("x"), 0),
+      ChangeText("y", "y"),
+      MountChild(root, text("y"), 1),
+    ]);
+  });
+
+  test(
+    "It updates the state with a new instance of (same) string", ({expect}) => {
+    state :=
+      state^
       |> update(
            listToElement(
              Components.[
@@ -523,11 +650,16 @@ let core = [
              ],
            ),
          )
-      |> executeSideEffects
-      |> expect(
-           ~label="It updates the state with a new instance of (same) string",
-           [],
-         )
+      |> executeSideEffects;
+
+    let mountLog = state^ |> getMountLogAndReset;
+
+    expect.list(mountLog).toEqual([]);
+  });
+
+  test("It reorders the list", ({expect}) => {
+    state :=
+      state^
       |> update(
            listToElement(
              Components.[
@@ -536,286 +668,278 @@ let core = [
              ],
            ),
          )
-      |> executeSideEffects
-      |> expect(
-           ~label="it reorders the list",
-           [RemountChild(root, text("y"), 1, 0)],
-         )
-      |> ignore;
-    },
-  ),
-  (
-    "Test prepending new element",
-    `Quick,
-    () => {
-      let key1 = Key.create();
-      let key2 = Key.create();
-      let commonElement = [<Components.Text key=key1 title="x" />];
-      render(listToElement(commonElement))
-      |> executeSideEffects
-      |> expect(
-           ~label="It renders a new Text element",
-           [
-             ChangeText("x", "x"),
-             MountChild(root, text("x"), 0),
-           ],
-         )
+      |> executeSideEffects;
+
+    let mountLog = state^ |> getMountLogAndReset;
+
+    expect.list(mountLog).toEqual([RemountChild(root, text("y"), 1, 0)]);
+  });
+});
+
+describe("Test prepending new element", ({test}) => {
+  let key1 = Key.create();
+  let key2 = Key.create();
+  let commonElement = [<Components.Text key=key1 title="x" />];
+
+  let state = ref(render(listToElement(commonElement)));
+
+  test("It renders a new Text element", ({expect}) => {
+    state := state^ |> executeSideEffects;
+    let mountLog = state^ |> getMountLogAndReset;
+
+    expect.list(mountLog).toEqual([
+      ChangeText("x", "x"),
+      MountChild(root, text("x"), 0),
+    ]);
+  });
+
+  test("It prepends a new Text element to the list", ({expect}) => {
+    state :=
+      state^
       |> update(
            listToElement([
              <Components.Text key=key2 title="y" />,
              ...commonElement,
            ]),
          )
-      |> executeSideEffects
-      |> expect(
-           ~label="It prepends a new Text element to the list",
-           [
-             ChangeText("y", "y"),
-             MountChild(root, text("y"), 0),
-           ],
-         )
-      |> ignore;
-    },
-  ),
-  (
-    "Test 'Always' effect",
-    `Quick,
-    () => {
-      let effectCallCount = ref(0);
-      let effectDisposeCallCount = ref(0);
+      |> executeSideEffects;
 
-      let onEffect = () => effectCallCount := effectCallCount^ + 1;
-      let onEffectDispose = () =>
-        effectDisposeCallCount := effectDisposeCallCount^ + 1;
+    let mountLog = state^ |> getMountLogAndReset;
 
-      let testState =
-        render(
-          <Components.EmptyComponentWithAlwaysEffect
-            onEffect
-            onEffectDispose
-          />,
-        )
-        |> executeSideEffects;
+    expect.list(mountLog).toEqual([
+      ChangeText("y", "y"),
+      MountChild(root, text("y"), 0),
+    ]);
+  });
+});
 
-      expectInt(~label="The effect should've been run", 1, effectCallCount^);
+describe("Test 'Always' effect", ({test}) => {
+  let effectCallCount = ref(0);
+  let effectDisposeCallCount = ref(0);
 
-      expectInt(
-        ~label="The dispose should not have been run yet",
-        0,
-        effectDisposeCallCount^,
-      );
+  let onEffect = () => effectCallCount := effectCallCount^ + 1;
+  let onEffectDispose = () =>
+    effectDisposeCallCount := effectDisposeCallCount^ + 1;
 
-      testState
+  let state =
+    ref(
+      render(
+        <Components.EmptyComponentWithAlwaysEffect onEffect onEffectDispose />,
+      ),
+    );
+
+  test("The effect should've been run", ({expect}) => {
+    state := state^ |> executeSideEffects;
+
+    expect.int(effectCallCount^).toBe(1);
+  });
+
+  test("The dispose should not have been run yet", ({expect}) => {
+    expect.int(effectDisposeCallCount^).toBe(0)
+  });
+
+  test("It prepends a new Text element to the list", ({expect}) => {
+    state :=
+      state^
       |> update(
            <Components.EmptyComponentWithAlwaysEffect
              onEffect
              onEffectDispose
            />,
          )
-      |> executeSideEffects
-      |> ignore;
+      |> executeSideEffects;
 
-      expectInt(
-        ~label="The effect should've been run again",
-        2,
-        effectCallCount^,
-      );
+    expect.int(effectCallCount^).toBe(2);
+  });
 
-      expectInt(
-        ~label="The effect dispose callback should have been run",
-        1,
-        effectDisposeCallCount^,
-      );
-    },
-  ),
-  (
-    "Test 'Always' effect in a nested component",
-    `Quick,
-    () => {
-      let effectCallCount = ref(0);
-      let effectDisposeCallCount = ref(0);
-      let onEffect = () => effectCallCount := effectCallCount^ + 1;
-      let onEffectDispose = () =>
-        effectDisposeCallCount := effectDisposeCallCount^ + 1;
+  test("The effect dispose callback should have been run", ({expect}) => {
+    expect.int(effectDisposeCallCount^).toBe(1)
+  });
+});
 
+describe("Test 'Always' effect in a nested component", ({test}) => {
+  let effectCallCount = ref(0);
+  let effectDisposeCallCount = ref(0);
+
+  let onEffect = () => effectCallCount := effectCallCount^ + 1;
+  let onEffectDispose = () =>
+    effectDisposeCallCount := effectDisposeCallCount^ + 1;
+
+  let state =
+    ref(
       render(
         Components.(
           <Div>
             <EmptyComponentWithAlwaysEffect onEffect onEffectDispose />
           </Div>
         ),
-      )
-      |> executeSideEffects
-      |> ignore;
+      ),
+    );
 
-      expectInt(~label="The effect should've been run", 1, effectCallCount^);
+  test("The effect should've been run", ({expect}) => {
+    state := state^ |> executeSideEffects;
 
-      expectInt(
-        ~label="The dispose should not have been run yet",
-        0,
-        effectDisposeCallCount^,
-      );
-    },
-  ),
-  (
-    "Test 'OnMount' effect",
-    `Quick,
-    () => {
-      let effectCallCount = ref(0);
-      let effectDisposeCallCount = ref(0);
-      let onEffect = () => effectCallCount := effectCallCount^ + 1;
-      let onEffectDispose = () =>
-        effectDisposeCallCount := effectDisposeCallCount^ + 1;
+    expect.int(effectCallCount^).toBe(1);
+  });
 
-      let testState =
-        render(
-          <Components.EmptyComponentWithOnMountEffect
-            onEffect
-            onEffectDispose
-          />,
-        )
-        |> executeSideEffects;
+  test("The dispose should not have been run yet", ({expect}) => {
+    expect.int(effectDisposeCallCount^).toBe(0)
+  });
+});
 
-      expectInt(~label="The effect should've been run", 1, effectCallCount^);
+describe("Test 'OnMount' effect", ({test}) => {
+  let effectCallCount = ref(0);
+  let effectDisposeCallCount = ref(0);
 
-      expectInt(
-        ~label="The dispose should not have been run yet",
-        0,
-        effectDisposeCallCount^,
-      );
+  let onEffect = () => effectCallCount := effectCallCount^ + 1;
+  let onEffectDispose = () =>
+    effectDisposeCallCount := effectDisposeCallCount^ + 1;
 
-      let testState =
-        testState
-        |> update(
-             <Components.EmptyComponentWithOnMountEffect
-               onEffect
-               onEffectDispose
-             />,
-           )
-        |> executeSideEffects;
+  let state =
+    ref(
+      render(
+        <Components.EmptyComponentWithOnMountEffect
+          onEffect
+          onEffectDispose
+        />,
+      ),
+    );
 
-      expectInt(
-        ~label="The effect should not have been run again",
-        1,
-        effectCallCount^,
-      );
+  test("The effect should've been run", ({expect}) => {
+    state := state^ |> executeSideEffects;
 
-      expectInt(
-        ~label="The effect dispose callback should not have been run yet",
-        0,
-        effectDisposeCallCount^,
-      );
+    expect.int(effectCallCount^).toBe(1);
+  });
 
-      testState
-      |> update(<Components.EmptyComponent />)
-      |> executeSideEffects
-      |> ignore;
+  test("The dispose should not have been run yet", ({expect}) => {
+    expect.int(effectDisposeCallCount^).toBe(0)
+  });
 
-      expectInt(
-        ~label="The effect should not have been run again",
-        1,
-        effectCallCount^,
-      );
+  test("The effect should not have been run again", ({expect}) => {
+    state :=
+      state^
+      |> update(
+           <Components.EmptyComponentWithOnMountEffect
+             onEffect
+             onEffectDispose
+           />,
+         )
+      |> executeSideEffects;
 
-      expectInt(
-        ~label=
-          "The effect dispose callback should have been called since the component was un-mounted.",
-        1,
-        effectDisposeCallCount^,
-      );
-    },
-  ),
-  (
-    "Test 'OnMount' effect in nested component",
-    `Quick,
-    () => {
-      let effectCallCount = ref(0);
-      let effectDisposeCallCount = ref(0);
-      let onEffect = () => effectCallCount := effectCallCount^ + 1;
-      let onEffectDispose = () =>
-        effectDisposeCallCount := effectDisposeCallCount^ + 1;
+    expect.int(effectCallCount^).toBe(1);
+  });
 
-      let testState =
-        render(
-          Components.(
+  test(
+    "The effect dispose callback should not have been run yet", ({expect}) => {
+    expect.int(effectDisposeCallCount^).toBe(0)
+  });
+
+  test("The effect should not have been run again", ({expect}) => {
+    state :=
+      state^ |> update(<Components.EmptyComponent />) |> executeSideEffects;
+
+    expect.int(effectCallCount^).toBe(1);
+  });
+
+  test(
+    "The effect dispose callback should have been called since the component was un-mounted.",
+    ({expect}) => {
+    expect.int(effectDisposeCallCount^).toBe(1)
+  });
+});
+
+describe("Test 'OnMount' effect in nested component", ({test}) => {
+  let effectCallCount = ref(0);
+  let effectDisposeCallCount = ref(0);
+
+  let onEffect = () => effectCallCount := effectCallCount^ + 1;
+  let onEffectDispose = () =>
+    effectDisposeCallCount := effectDisposeCallCount^ + 1;
+
+  let state =
+    ref(
+      render(
+        Components.(
+          <Div>
+            <EmptyComponentWithOnMountEffect onEffect onEffectDispose />
+          </Div>
+        ),
+      ),
+    );
+
+  test("The effect should've been run", ({expect}) => {
+    state := state^ |> executeSideEffects;
+
+    expect.int(effectCallCount^).toBe(1);
+  });
+
+  test("The dispose should not have been run yet", ({expect}) => {
+    expect.int(effectDisposeCallCount^).toBe(0)
+  });
+
+  test("The effect should not have been run again", ({expect}) => {
+    state := state^ |> update(Components.(<Div />)) |> executeSideEffects;
+
+    expect.int(effectCallCount^).toBe(1);
+  });
+
+  test(
+    "The effect dispose callback should have been called since the component was un-mounted.",
+    ({expect}) => {
+    expect.int(effectDisposeCallCount^).toBe(1)
+  });
+});
+
+describe("Test 'OnMount' effect in extra-nested component", ({test}) => {
+  let effectCallCount = ref(0);
+  let effectDisposeCallCount = ref(0);
+
+  let onEffect = () => incr(effectCallCount);
+  let onEffectDispose = () => incr(effectDisposeCallCount);
+
+  let state =
+    ref(
+      render(
+        Components.(
+          <Div>
             <Div>
               <EmptyComponentWithOnMountEffect onEffect onEffectDispose />
             </Div>
-          ),
-        )
-        |> executeSideEffects;
+          </Div>
+        ),
+      ),
+    );
 
-      expectInt(~label="The effect should've been run", 1, effectCallCount^);
+  /*
+   * When a parent-of-a-parent of a component with an OnMountEffect is removed,
+   * the OnMount effect doesn't get disposed on removal
+   */
+  test("The effect should've been run", ({expect}) => {
+    state := state^ |> executeSideEffects;
 
-      expectInt(
-        ~label="The dispose should not have been run yet",
-        0,
-        effectDisposeCallCount^,
-      );
+    expect.int(effectCallCount^).toBe(1);
+  });
 
-      testState
-      |> update(Components.(<Div />))
-      |> executeSideEffects
-      |> ignore;
+  test("The dispose should not have been run yet", ({expect}) => {
+    expect.int(effectDisposeCallCount^).toBe(0)
+  });
 
-      expectInt(
-        ~label=
-          "The effect dispose callback should have been called since the component was un-mounted.",
-        1,
-        effectDisposeCallCount^,
-      );
-    },
-  ),
-  (
-    "Test 'OnMount' effect in extra-nested component",
-    `Quick,
-    () => {
-      let effectCallCount = ref(0);
-      let effectDisposeCallCount = ref(0);
-      let onEffect = () => incr(effectCallCount);
-      let onEffectDispose = () => incr(effectDisposeCallCount);
+  test("The effect should not have been run again", ({expect}) => {
+    state := state^ |> update(Components.(<Div />)) |> executeSideEffects;
 
-      /*
-       * When a parent-of-a-parent of a component with an OnMountEffect is removed,
-       * the OnMount effect doesn't get disposed on removal
-       */
-      let testState =
-        render(
-          Components.(
-            <Div>
-              <Div>
-                <EmptyComponentWithOnMountEffect onEffect onEffectDispose />
-              </Div>
-            </Div>
-          ),
-        )
-        |> executeSideEffects;
+    expect.int(effectCallCount^).toBe(1);
+  });
 
-      expectInt(~label="The effect should've been run", 1, effectCallCount^);
+  test(
+    "The effect dispose callback should have been called since the component was un-mounted.",
+    ({expect}) => {
+    expect.int(effectDisposeCallCount^).toBe(1)
+  });
+});
 
-      expectInt(
-        ~label="The dispose should not have been run yet",
-        0,
-        effectDisposeCallCount^,
-      );
-
-      testState
-      |> update(Components.(<Div />))
-      |> executeSideEffects
-      |> ignore;
-
-      expectInt(
-        ~label=
-          "The effect dispose callback should have been called since the component was un-mounted.",
-        1,
-        effectDisposeCallCount^,
-      );
-    },
-  ),
-  (
-    "Test transition from empty list to non-empty list",
-    `Quick,
-    () => {
+describe("Test transition from empty list to non-empty list", ({test}) => {
+  test("It mounts IAmBox0+1", ({expect}) => {
+    let state =
       render(
         Components.(<Div> {listToElement([])} <Box title="ImABox1" /> </Div>),
       )
@@ -829,17 +953,18 @@ let core = [
              </Div>
            ),
          )
-      |> executeSideEffects
-      |> expect(
-           ~label="It mounts IAmBox0+1",
-           [
-             MountChild(div, box("ImABox0"), 0),
-             UnmountChild(div, box("ImABox1")),
-             MountChild(div, box("ImABox1"), 1),
-           ],
-         )
-      |> ignore;
+      |> executeSideEffects;
+    let mountLog = state |> getMountLogAndReset;
 
+    expect.list(mountLog).toEqual([
+      MountChild(div, box("ImABox0"), 0),
+      UnmountChild(div, box("ImABox1")),
+      MountChild(div, box("ImABox1"), 1),
+    ]);
+  });
+
+  test("It mounts IAmBox0+1", ({expect}) => {
+    let state =
       render(
         Components.(<Div> <Box title="ImABox0" /> {listToElement([])} </Div>),
       )
@@ -853,23 +978,24 @@ let core = [
              </Div>
            ),
          )
-      |> executeSideEffects
-      |> expect(
-           ~label="It mounts IAmBox0+1",
-           [
-             UnmountChild(div, box("ImABox0")),
-             MountChild(div, box("ImABox0"), 0),
-             MountChild(div, box("ImABox1"), 1),
-           ],
-         )
-      |> ignore;
-    },
-  ),
-  (
-    "Test transition from empty list to non-empty list & <Box key> becomes <Div key>",
-    `Quick,
-    () => {
-      let key = Key.create();
+      |> executeSideEffects;
+
+    let mountLog = state |> getMountLogAndReset;
+
+    expect.list(mountLog).toEqual([
+      UnmountChild(div, box("ImABox0")),
+      MountChild(div, box("ImABox0"), 0),
+      MountChild(div, box("ImABox1"), 1),
+    ]);
+  });
+});
+
+describe(
+  "Test transition from empty list to non-empty list & <Box key> becomes <Div key>",
+  ({test}) => {
+  test("IAmBox", ({expect}) => {
+    let key = Key.create();
+    let state =
       render(
         Components.(
           <Div> {listToElement([])} <Box key title="ImABoxA" /> </Div>
@@ -885,48 +1011,38 @@ let core = [
              </Div>
            ),
          )
-      |> executeSideEffects
-      |> expect(
-           ~label="IAmBox",
-           [
-             MountChild(div, box("ImABoxB"), 0),
-             UnmountChild(div, box("ImABoxA")),
-             MountChild(div, div, 1),
-           ],
-         )
-      |> ignore;
-    },
-  ),
-  (
-    "Test a <SingleChildDiv> with single Flat child, with a changing key",
-    `Quick,
-    () => {
+      |> executeSideEffects;
+    let mountLog = state |> getMountLogAndReset;
+
+    expect.list(mountLog).toEqual([
+      MountChild(div, box("ImABoxB"), 0),
+      UnmountChild(div, box("ImABoxA")),
+      MountChild(div, div, 1),
+    ]);
+  })
+});
+
+describe(
+  "Test a <SingleChildDiv> with single Flat child, with a changing key",
+  ({test}) => {
+  test("It re-mounts the node with the new key", ({expect}) => {
+    let key1 = Key.create();
+    let key2 = Key.create();
+    let state =
       render(
-        Components.(
-          <SingleChildDiv> ...<Div key={Key.create()} /> </SingleChildDiv>
-        ),
+        Components.(<SingleChildDiv> ...<Div key=key1 /> </SingleChildDiv>),
       )
       |> executeSideEffects
       |> reset
       |> update(
-           Components.(
-             <SingleChildDiv> ...<Div key={Key.create()} /> </SingleChildDiv>
-           ),
+           Components.(<SingleChildDiv> ...<Div key=key2 /> </SingleChildDiv>),
          )
-      |> executeSideEffects
-      |> expect(
-           ~label="it re-mounts the node with the new key",
-           [
-             UnmountChild(singleChildDiv, div),
-             MountChild(singleChildDiv, div, 0),
-           ],
-         )
-      |> ignore;
-    },
-  ),
-];
+      |> executeSideEffects;
+    let mountLog = state |> getMountLogAndReset;
 
-/** Annoying dune progress */
-print_endline("");
-
-Alcotest.run(~argv=[|"--verbose --color"|], "Brisk", [("Core", core)]);
+    expect.list(mountLog).toEqual([
+      UnmountChild(singleChildDiv, div),
+      MountChild(singleChildDiv, div, 0),
+    ]);
+  })
+});

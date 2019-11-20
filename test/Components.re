@@ -54,7 +54,7 @@ module Text = {
     prev: string,
   };
   let%nativeComponent make = (~title="ImABox", ()) => {
-    let%hook (prevTitle) = Hooks.ref(title);
+    let%hook prevTitle = Hooks.ref(title);
     let%hook () =
       Hooks.effect(
         Always,
@@ -207,7 +207,8 @@ module EmptyComponent = {
 };
 
 module EmptyComponentWithAlwaysEffect = {
-  let%component make = (~onEffect, ~onEffectDispose, ()) => {
+  let%component make =
+                (~onEffect: unit => unit, ~onEffectDispose: unit => unit, ()) => {
     let%hook () =
       Hooks.effect(
         Always,
@@ -221,7 +222,8 @@ module EmptyComponentWithAlwaysEffect = {
 };
 
 module EmptyComponentWithOnMountEffect = {
-  let%component make = (~onEffect, ~onEffectDispose, ()) => {
+  let%component make =
+                (~onEffect: unit => unit, ~onEffectDispose: unit => unit, ()) => {
     let%hook () =
       Hooks.effect(
         OnMount,
@@ -235,6 +237,8 @@ module EmptyComponentWithOnMountEffect = {
 };
 
 module ShouldAllowComponentProp = {
-  let%component make = (~component, (), hooks) =>
-    (<Div> component </Div>, hooks);
-}
+  let%component make = (~component, (), hooks) => (
+    <Div> component </Div>,
+    hooks,
+  );
+};

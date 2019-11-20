@@ -2,5 +2,15 @@ parameters:
   OCAML_VERSION: "4.07"
 
 steps:
-  - script: esy "@package-ci-${{parameters.OCAML_VERSION}}" dune runtest --no-buffer
+  - script: esy "@package-ci-${{parameters.OCAML_VERSION}}" x RunTests.exe
+    continueOnError: true
     displayName: "Test"
+
+  - task: PublishTestResults@2
+    inputs:
+      testResultsFormat: 'JUnit'
+      testResultsFiles: './junit.xml' 
+      mergeTestResults: true
+      failTaskOnFailedTests: true
+      testRunTitle: Unit tests - $(Agent.OS) - ${{parameters.OCAML_VERSION}}
+      buildPlatform: $(Agent.OS)
