@@ -1,13 +1,6 @@
 open TestReconciler;
 open Brisk_reconciler__Brisk_reconciler_internal;
 
-type mountElement = RenderedElement.t(node, node);
-
-type mount = list(testMountEntry);
-
-type testHostItem('a) =
-  | MountElement(mountElement): testHostItem(mount);
-
 type testState = {
   element: element(node),
   renderedElement: RenderedElement.t(node, node),
