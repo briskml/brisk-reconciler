@@ -1,6 +1,9 @@
 name: Publish packages to npm
 
-on: push
+on:
+  push:		
+    branches:		
+      - master
 
 jobs:
   publish:
