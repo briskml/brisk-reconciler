@@ -33,7 +33,7 @@ jobs:
             
           if [ "$NPM_VERSION" != "$PACKAGE_VERSION" ]
           then
-            npm publish --access public --dry-run
+            npm publish --access public
           fi
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_AUTH_TOKEN }} 
