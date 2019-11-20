@@ -206,41 +206,39 @@ module EmptyComponent = {
   let%component make = ((), hooks) => (empty, hooks);
 };
 
-/*
- TODO: Uncomment when we use them in tests again
-  module EmptyComponentWithAlwaysEffect = {
-    let%component make = (~onEffect, ~onEffectDispose, ()) => {
-      let%hook () =
-        Hooks.effect(
-          Always,
-          () => {
-            onEffect();
-            Some(onEffectDispose);
-          },
-        );
-      empty;
-    };
+module EmptyComponentWithAlwaysEffect = {
+  let%component make =
+                (~onEffect: unit => unit, ~onEffectDispose: unit => unit, ()) => {
+    let%hook () =
+      Hooks.effect(
+        Always,
+        () => {
+          onEffect();
+          Some(onEffectDispose);
+        },
+      );
+    empty;
   };
+};
 
-  module EmptyComponentWithOnMountEffect = {
-    let%component make = (~onEffect, ~onEffectDispose, ()) => {
-      let%hook () =
-        Hooks.effect(
-          OnMount,
-          () => {
-            onEffect();
-            Some(onEffectDispose);
-          },
-        );
-      empty;
-    };
+module EmptyComponentWithOnMountEffect = {
+  let%component make =
+                (~onEffect: unit => unit, ~onEffectDispose: unit => unit, ()) => {
+    let%hook () =
+      Hooks.effect(
+        OnMount,
+        () => {
+          onEffect();
+          Some(onEffectDispose);
+        },
+      );
+    empty;
   };
+};
 
-  module ShouldAllowComponentProp = {
-    let%component make = (~component, (), hooks) => (
-      <Div> component </Div>,
-      hooks,
-    );
-  };
-
-  */
+module ShouldAllowComponentProp = {
+  let%component make = (~component, (), hooks) => (
+    <Div> component </Div>,
+    hooks,
+  );
+};
