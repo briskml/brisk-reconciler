@@ -1,5 +1,14 @@
 name: $(Build.SourceVersion)
 
+trigger:
+  branches:
+    include:
+    - master
+pr:
+  branches:
+    include:
+    - '*'
+
 stages:
 - stage: Build
   jobs:
