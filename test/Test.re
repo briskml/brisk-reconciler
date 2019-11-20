@@ -267,34 +267,6 @@ describe("Test simple subtree change", ({test}) => {
 
   test("It renders one Box inside a Div", ({expect}) => {
     state := state^ |> executeSideEffects;
-    let mountLog = state |> getMountLogAndReset;
-
-    expect.list(mountLog).toEqual([
-      MountChild(div, box("ImABox"), 0),
-      MountChild(root, div, 0),
-    ]);
-  });
-
-  test("It replaces one box with two boxes", ({expect}) => {
-    let mountLog =
-      state^
-      |> update(<Components.BoxWrapper twoBoxes=true />)
-      |> executeSideEffects
-      |> getMountLogAndReset;
-
-    expect.list(mountLog).toEqual([
-      UnmountChild(div, box("ImABox")),
-      MountChild(div, box("ImABox"), 0),
-      MountChild(div, box("ImABox"), 1),
-    ]);
-  });
-});
-
-describe("Test simple subtree change", ({test}) => {
-  let state = ref(render(<Components.BoxWrapper />));
-
-  test("It renders one Box inside a Div", ({expect}) => {
-    state := state^ |> executeSideEffects;
     let mountLog = state^ |> getMountLogAndReset;
 
     expect.list(mountLog).toEqual([
