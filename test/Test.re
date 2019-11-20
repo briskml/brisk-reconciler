@@ -294,16 +294,14 @@ describe("Test changing components", ({test}) => {
   let state =
     ref(render(<Components.EmptyComponent />) |> executeSideEffects);
 
-  test(
-    "It renders ChangeCounter component (note: this text seems wrong)",
-    ({expect}) => {
+  test("It renders nothing", ({expect}) => {
     let mountLog = state^ |> getMountLogAndReset;
 
     expect.list(mountLog).toEqual([]);
   });
 
   test(
-    "It changes components from ChangeCounter to ButtonWrapperWrapper",
+    "It changes from EmptyComponent to ButtonWrapperWrapper",
     ({expect}) => {
     state :=
       state^
@@ -345,13 +343,13 @@ describe("Test BoxList with dynamic keys", ({test}) => {
       |> executeSideEffects,
     );
 
-  test("It renders initial BoxList", ({expect}) => {
+  test("It renders an empty list", ({expect}) => {
     let mountLog = state^ |> getMountLogAndReset;
 
     expect.list(mountLog).toEqual([]);
   });
 
-  test("It adds a new BoxItem and then flushes", ({expect}) => {
+  test("It inserts one item", ({expect}) => {
     state :=
       state^
       |> act(~action=Components.BoxList.Create("Hello"), rAction)
@@ -395,12 +393,12 @@ describe("Test BoxList with dynamic keys", ({test}) => {
 });
 
 describe(
-  "Test BoxList with dynamic keys (note: this is probably wrong)", ({test}) => {
+  "Test BoxList without dynamic keys", ({test}) => {
   let rAction = RemoteAction.create();
   let state =
     ref(render(<Components.BoxList rAction />) |> executeSideEffects);
 
-  test("It renders initial BoxList", ({expect}) => {
+  test("It renders an empty list", ({expect}) => {
     let mountLog = state^ |> getMountLogAndReset;
 
     expect.list(mountLog).toEqual([]);
