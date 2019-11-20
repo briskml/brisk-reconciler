@@ -33,7 +33,6 @@ jobs:
             
           if [ "$NPM_VERSION" != "$PACKAGE_VERSION" ]
           then
-            npm ci
             npm publish --access public --dry-run
           fi
         env:
