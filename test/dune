@@ -1,17 +1,15 @@
 (library
    (name BriskReconcilerTest)
-   (public_name brisk-reconciler.test)
    (ocamlopt_flags -linkall -g)
    (libraries rely.lib brisk-reconciler)
-   (preprocess (pps brisk_jsx ppx_deriving.std))
+   (preprocess (pps brisk_ppx ppx_deriving.std))
    (modules (:standard \ RunTests))
 )
 
 (executable
  (name RunTests)
- (public_name RunTests.exe)
- (package brisk-reconciler)
- (libraries brisk-reconciler.test)
+ (libraries BriskReconcilerTest)
+ (preprocess (pps brisk_ppx ppx_deriving.std))
  (modules RunTests))
 
 (alias

@@ -1,5 +1,5 @@
 (library
- (name brisk_jsx)
+ (name brisk_ppx)
  (public_name brisk-reconciler.ppx)
  (kind ppx_rewriter)
  (libraries ppxlib)
