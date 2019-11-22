@@ -2,7 +2,7 @@ parameters:
   OCAML_VERSION: "4.07"
 
 steps:
-  - script: esy "@package-ci-${{parameters.OCAML_VERSION}}" x RunTests.exe
+  - script: esy "@package-ci-${{parameters.OCAML_VERSION}}" test --force
     continueOnError: true
     displayName: "Test"
 
