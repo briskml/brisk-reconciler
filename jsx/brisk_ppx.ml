@@ -17,20 +17,17 @@ let hooks_ident_pattern ~loc =
 
 module JSX_ppx = struct
   let rec props_filter_children ~acc = function
-    | [] ->
-        List.rev acc
+    | [] -> List.rev acc
     | (AT.Labelled "children", P.([%expr []])) :: tail ->
         props_filter_children ~acc tail
-    | (AT.Labelled "children", P.([%expr [%e? h] :: [%e? t]] as exp)) :: tail
-      ->
+    | (AT.Labelled "children", P.([%expr [%e? h] :: [%e? t]] as exp)) :: tail ->
         let loc = exp.P.pexp_loc in
         let prop =
-          ( AT.Labelled "children"
-          , P.([%expr Brisk_reconciler.Expert.jsx_list ([%e h] :: [%e t])]) )
+          ( AT.Labelled "children",
+            P.([%expr Brisk_reconciler.Expert.jsx_list ([%e h] :: [%e t])]) )
         in
         props_filter_children ~acc:(prop :: acc) tail
-    | prop :: tail ->
-        props_filter_children ~acc:(prop :: acc) tail
+    | prop :: tail -> props_filter_children ~acc:(prop :: acc) tail
 
   let props_filter_children props = props_filter_children ~acc:[] props
 
@@ -38,7 +35,7 @@ module JSX_ppx = struct
     let args = props_filter_children props in
     ATH.Exp.apply ~loc ~attrs (component_ident ~loc) args
 
-  let is_jsx ({AT.txt}, _) = String.equal txt "JSX"
+  let is_jsx ({ AT.txt }, _) = String.equal txt "JSX"
 
   let filter_jsx = List.filter is_jsx
 
@@ -47,14 +44,10 @@ module JSX_ppx = struct
   let rec transform_createElement =
     let open Longident in
     function
-    | Ldot (head, "createElement") ->
-        Ldot (head, "make")
-    | Lapply (left, right) ->
-        Lapply (left, transform_createElement right)
-    | Lident _ as ident ->
-        ident
-    | Ldot _ as ldot ->
-        ldot
+    | Ldot (head, "createElement") -> Ldot (head, "make")
+    | Lapply (left, right) -> Lapply (left, transform_createElement right)
+    | Lident _ as ident -> ident
+    | Ldot _ as ldot -> ldot
 
   let expr expr =
     match expr.P.pexp_desc with
@@ -64,18 +57,16 @@ module JSX_ppx = struct
         let loc = expr.P.pexp_loc in
         let fn =
           match fn.P.pexp_desc with
-          | P.Pexp_ident {txt; loc} ->
+          | P.Pexp_ident { txt; loc } ->
               let txt = transform_createElement txt in
-              {fn with pexp_desc= Pexp_ident {txt; loc}}
-          | _ ->
-              fn
+              { fn with pexp_desc = Pexp_ident { txt; loc } }
+          | _ -> fn
         in
         P.(
           [%expr
             let [%p component_ident_pattern ~loc] = [%e fn] in
             [%e rewrite_apply ~attributes ~loc:expr.P.pexp_loc args]])
-    | _ ->
-        expr
+    | _ -> expr
 end
 
 module Declaration_ppx = struct
@@ -85,13 +76,11 @@ module Declaration_ppx = struct
     Ppxlib.Ast_pattern.parse pattern ?on_error loc ast_node with_
 
   let attribute_name = function
-    | `Component ->
-        "component"
-    | `Native ->
-        "nativeComponent"
+    | `Component -> "component"
+    | `Native -> "nativeComponent"
 
   let transform_component_expr ~useDynamicKey ~attribute ~component_name expr =
-    let rec map_component_expression ({P.pexp_loc= loc} as expr) =
+    let rec map_component_expression ({ P.pexp_loc = loc } as expr) =
       match_ func_pattern loc expr
         ~with_:(fun lbl opt_arg pat child_expression ->
           let make_fun_with_expr ~expr =
@@ -105,7 +94,8 @@ module Declaration_ppx = struct
           | Ppxlib.Nolabel, [%pat? ()] ->
               let loc = child_expression.pexp_loc in
               make_fun_with_expr
-                ~expr:[%expr [%e component_ident ~loc] ~key [%e child_expression]]
+                ~expr:
+                  [%expr [%e component_ident ~loc] ~key [%e child_expression]]
           | _ ->
               Location.raise_errorf ~loc
                 "A labelled argument or () was expected")
@@ -114,16 +104,13 @@ module Declaration_ppx = struct
     let loc = expr.P.pexp_loc in
     let create_component_expr =
       match attribute with
-      | `Native ->
-          [%expr Brisk_reconciler.Expert.nativeComponent]
-      | `Component ->
-          [%expr Brisk_reconciler.Expert.component]
+      | `Native -> [%expr Brisk_reconciler.Expert.nativeComponent]
+      | `Component -> [%expr Brisk_reconciler.Expert.component]
     in
     [%expr
       let [%p component_ident_pattern ~loc] =
         [%e create_component_expr]
-          ~useDynamicKey:
-            [%e Ast_builder.(ebool ~loc useDynamicKey)]
+          ~useDynamicKey:[%e Ast_builder.(ebool ~loc useDynamicKey)]
           [%e component_name]
       in
       fun ?(key = Brisk_reconciler.Key.none) ->
@@ -135,12 +122,10 @@ module Declaration_ppx = struct
       Ppxlib.Ast_pattern.(
         alt_option (single_expr_payload (pexp_ident (lident __'))) (pstr nil))
       (function
-        | Some {txt= "useDynamicKey"} ->
-            true
-        | Some {loc} ->
+        | Some { txt = "useDynamicKey" } -> true
+        | Some { loc } ->
             Location.raise_errorf ~loc "A labelled argument or () was expected"
-        | None ->
-            false)
+        | None -> false)
 
   let expr_attribute_component =
     declare_attribute Ppxlib.Attribute.Context.expression `Component
@@ -149,10 +134,8 @@ module Declaration_ppx = struct
     declare_attribute Ppxlib.Attribute.Context.expression `Native
 
   let expr_attribute = function
-    | `Component ->
-        expr_attribute_component
-    | `Native ->
-        expr_attribute_nativeComponent
+    | `Component -> expr_attribute_component
+    | `Native -> expr_attribute_nativeComponent
 
   let expr unmatched_expr =
     let consume_attr attr =
@@ -164,14 +147,11 @@ module Declaration_ppx = struct
         ~component_name:[%expr __LOC__] expr
     in
     match consume_attr `Component with
-    | Some (expr, useDynamicKey) ->
-        transform ~useDynamicKey `Component expr
+    | Some (expr, useDynamicKey) -> transform ~useDynamicKey `Component expr
     | None -> (
-      match consume_attr `Native with
-      | Some (expr, useDynamicKey) ->
-          transform ~useDynamicKey `Native expr
-      | None ->
-          unmatched_expr )
+        match consume_attr `Native with
+        | Some (expr, useDynamicKey) -> transform ~useDynamicKey `Native expr
+        | None -> unmatched_expr )
 
   let value_binding_attribute_component =
     declare_attribute Ppxlib.Attribute.Context.value_binding `Component
@@ -180,10 +160,8 @@ module Declaration_ppx = struct
     declare_attribute Ppxlib.Attribute.Context.value_binding `Native
 
   let value_binding_attribute = function
-    | `Component ->
-        value_binding_attribute_component
-    | `Native ->
-        value_binding_attribute_nativeComponent
+    | `Component -> value_binding_attribute_component
+    | `Native -> value_binding_attribute_nativeComponent
 
   let value_binding unmatched_value_binding =
     let consume_attr attr =
@@ -211,11 +189,10 @@ module Declaration_ppx = struct
     | Some (value_binding, useDynamicKey) ->
         transform ~useDynamicKey `Component value_binding
     | None -> (
-      match consume_attr `Native with
-      | Some (value_binding, useDynamicKey) ->
-          transform ~useDynamicKey `Native value_binding
-      | None ->
-          unmatched_value_binding )
+        match consume_attr `Native with
+        | Some (value_binding, useDynamicKey) ->
+            transform ~useDynamicKey `Native value_binding
+        | None -> unmatched_value_binding )
 
   let register attribute =
     let open Ppxlib in
@@ -235,10 +212,8 @@ module Declaration_ppx = struct
         in
         let pat = ATH.Pat.var ~loc (Ast_builder.Default.Located.mk ~loc pat) in
         match recursive with
-        | Recursive ->
-            [%stri let rec [%p pat] = [%e transformed_expression]]
-        | Nonrecursive ->
-            [%stri let [%p pat] = [%e transformed_expression]])
+        | Recursive -> [%stri let rec [%p pat] = [%e transformed_expression]]
+        | Nonrecursive -> [%stri let [%p pat] = [%e transformed_expression]])
 end
 
 module Hooks_ppx = struct
@@ -252,10 +227,8 @@ module Hooks_ppx = struct
       method! expression expr _ =
         let open Extension.Context in
         match get_extension expression expr with
-        | Some (({txt= "hook"}, _), _) ->
-            true
-        | Some _ |  None ->
-            super#expression expr false
+        | Some (({ txt = "hook" }, _), _) -> true
+        | Some _ | None -> super#expression expr false
     end
 
   let contains_hook_expression expr = lint_hook_usage#expression expr false
@@ -263,7 +236,7 @@ module Hooks_ppx = struct
   let expand ~loc expr =
     let expansion =
       match expr.pexp_desc with
-      | Pexp_let (Nonrecursive, [binding], next_expression) ->
+      | Pexp_let (Nonrecursive, [ binding ], next_expression) ->
           let wrapped_next_expression =
             if contains_hook_expression expr then
               [%expr [%e next_expression] [%e hooks_ident ~loc]]
@@ -277,11 +250,12 @@ module Hooks_ppx = struct
               [%e wrapped_next_expression]]
       | Pexp_let (Recursive, _, _) ->
           Location.raise_errorf ~loc "'let%%hook' may not be recursive"
-      | _ ->
-          Location.raise_errorf ~loc "'hook' can only be used with 'let'"
+      | _ -> Location.raise_errorf ~loc "'hook' can only be used with 'let'"
     in
-    { expansion with
-      pexp_attributes= expr.pexp_attributes @ expansion.pexp_attributes }
+    {
+      expansion with
+      pexp_attributes = expr.pexp_attributes @ expansion.pexp_attributes;
+    }
 
   let extension =
     Extension.declare "hook" Extension.Context.expression
@@ -315,7 +289,9 @@ let () =
   Ppxlib.Driver.register_transformation "component"
     ~impl:declaration_mapper#structure
     ~extensions:
-      [ Declaration_ppx.register `Component
-      ; Declaration_ppx.register `Native
-      ; Hooks_ppx.extension ] ;
+      [
+        Declaration_ppx.register `Component;
+        Declaration_ppx.register `Native;
+        Hooks_ppx.extension;
+      ];
   Ppxlib.Driver.register_transformation "JSX" ~impl:jsx_mapper#structure
