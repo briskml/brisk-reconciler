@@ -300,9 +300,7 @@ describe("Test changing components", ({test}) => {
     expect.list(mountLog).toEqual([]);
   });
 
-  test(
-    "It changes from EmptyComponent to ButtonWrapperWrapper",
-    ({expect}) => {
+  test("It changes from EmptyComponent to ButtonWrapperWrapper", ({expect}) => {
     state :=
       state^
       |> update(
@@ -392,8 +390,7 @@ describe("Test BoxList with dynamic keys", ({test}) => {
   });
 });
 
-describe(
-  "Test BoxList without dynamic keys", ({test}) => {
+describe("Test BoxList without dynamic keys", ({test}) => {
   let rAction = RemoteAction.create();
   let state =
     ref(render(<Components.BoxList rAction />) |> executeSideEffects);

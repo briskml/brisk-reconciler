@@ -77,9 +77,7 @@ let reducer:
   ) =>
   (('value, 'b => unit), t('c, 'd));
 
-let ref:
-  ('value, t(ref('value) => 'c, 'd)) =>
-  (ref('value), t('c, 'd));
+let ref: ('value, t(ref('value) => 'c, 'd)) => (ref('value), t('c, 'd));
 
 let effect:
   (

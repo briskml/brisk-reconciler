@@ -45,11 +45,12 @@ jobs:
         run: esy build-dependencies --release -P package-ci-${{ matrix.ocaml_version }}
       - name: Build
         run: esy build --release -P package-ci-${{ matrix.ocaml_version }}
+      - name: Build test/dev dependencies
+        if: steps.deps-cache-win.outputs.cache-hit != 'true' && steps.deps-cache-non-win.outputs.cache-hit != 'true'
+        run: esy build-dependencies -P package-ci-${{ matrix.ocaml_version }}
       - name: Test
         if: matrix.os != 'windows-latest'
         run: |
-          exit 0
-          esy add -P package-ci-${{ matrix.ocaml_version }} "@opam/patience_diff"
           esy -P package-ci-${{ matrix.ocaml_version }} -- dune runtest --no-buffer --force
       - name: Cleanup global store
         run: |
