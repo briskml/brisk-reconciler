@@ -20,7 +20,7 @@ jobs:
           node-version: 12
       - uses: actions/checkout@v1
       - uses: toolmantim/release-drafter@v5.2.0
-        if: matrix.os != 'ubuntu-latest' && matrix.ocaml_version == '4.04'
+        if: matrix.os == 'ubuntu-latest' && matrix.ocaml_version == '4.04'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Install esy
