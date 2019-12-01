@@ -19,6 +19,9 @@ jobs:
         with:
           node-version: 12
       - uses: actions/checkout@v1
+      - uses: toolmantim/release-drafter@v5.2.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Install esy
         run: npm install -g @esy-nightly/esy
       - name: Install dependencies
