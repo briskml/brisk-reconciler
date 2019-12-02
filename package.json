@@ -24,6 +24,6 @@
     "@opam/merlin-lsp": "ocaml/merlin:merlin-lsp.opam#c8b0f03",
     "@opam/ppx_deriving": "^4.2.1",
     "@opam/ocamlformat": "0.12",
-    "@reason-native/rely": "^3.1.0"
+    "@reason-native/rely": "^3.0.0"
   }
 }
