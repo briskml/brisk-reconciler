@@ -28,7 +28,7 @@ jobs:
       - name: Install dependencies
         run: esy install -P package-ci-${{ matrix.ocaml_version }}
       - name: Check that lock directory are up-to-date. If this fails, run `esy install -P pacage-ci-${{ matrix.ocaml_version }}` and commit changes and push again.
-        run: git diff --exit-code
+        run: git diff --exit-code || (git add package-ci-${{ matrix.ocaml_version }}.esy.lock "*.lock"; git push origin $GITHUB_REF)
       - name: Print esy cache
         id: print_esy_cache
         run: node .github/workflows/print_esy_cache.js
