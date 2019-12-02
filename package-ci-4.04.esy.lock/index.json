@@ -1,5 +1,5 @@
 {
-  "checksum": "5ed84350f9cfc39d6d6c8a5a95c739cd",
+  "checksum": "82b8e9a72207bfca44eff10540f691fb",
   "root": "brisk-reconciler@link-dev:./package.json",
   "node": {
     "refmterr@3.2.2@d41d8cd9": {
