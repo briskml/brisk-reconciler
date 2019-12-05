@@ -21,8 +21,20 @@ jobs:
           esy install -P package-ci-4.06
           esy install -P package-ci-4.07
           esy install -P package-ci-4.08
-          esy build-dependencies -P package-ci-4.08
-          esy build -P package-ci-4.08 dune build @check
+      - name: Print esy cache
+        id: print_esy_cache
+        run: node .github/workflows/print_esy_cache.js
+      - name: Try to restore dependencies cache
+        id: deps-cache-macos
+        uses: actions/cache@v1
+        with:
+          path: ${{ steps.print_esy_cache.outputs.esy_cache }}
+          key: macOS-latest-4.08-${{ hashFiles('**/index.json') }}
+      - name: Build dependencies
+        if: steps.deps-cache-macos.outputs.cache-hit != 'true'
+        run: esy build-dependencies --release -P package-ci-4.08
+      - name: Generate opam files
+        run: esy build -P package-ci-4.08 dune build @check
       - name: Check that lock directory are up-to-date.
         run: git diff --exit-code
       - name: Push if it is not
