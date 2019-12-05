@@ -2,7 +2,7 @@
   "source": "./package.json",
   "override": {
     "devDependencies": {
-      "@opam/patience_diff": null,
+      "@opam/merlin-lsp": null,
       "@opam/merlin": null
     }
   }
