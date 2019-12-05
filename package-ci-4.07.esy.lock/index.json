@@ -1,5 +1,5 @@
 {
-  "checksum": "3a1ece688a209d5a12e94fee0fbec0ce",
+  "checksum": "f0be524de10af351d53ebd363378cd9d",
   "root": "brisk-reconciler@link-dev:./package.json",
   "node": {
     "refmterr@3.2.2@d41d8cd9": {
@@ -53,8 +53,7 @@
       "devDependencies": [
         "ocaml@4.8.1000@d41d8cd9", "@reason-native/rely@3.1.0@d41d8cd9",
         "@opam/ppx_deriving@opam:4.4@21d6c7a5",
-        "@opam/ocamlformat@opam:0.12@4af14b8f",
-        "@opam/merlin-lsp@github:ocaml/merlin:merlin-lsp.opam#c8b0f03@d41d8cd9"
+        "@opam/ocamlformat@opam:0.12@4af14b8f"
       ]
     },
     "@reason-native/rely@3.1.0@d41d8cd9": {
@@ -558,38 +557,6 @@
       ],
       "devDependencies": [ "ocaml@4.8.1000@d41d8cd9" ]
     },
-    "@opam/ppx_deriving_yojson@opam:3.5.1@06a1c37f": {
-      "id": "@opam/ppx_deriving_yojson@opam:3.5.1@06a1c37f",
-      "name": "@opam/ppx_deriving_yojson",
-      "version": "opam:3.5.1",
-      "source": {
-        "type": "install",
-        "source": [
-          "archive:https://opam.ocaml.org/cache/sha256/ae/aefe9c673f2f0ee2beb9edcca5a4e332a9fe9266c81bc554b8df5cd375568994#sha256:aefe9c673f2f0ee2beb9edcca5a4e332a9fe9266c81bc554b8df5cd375568994",
-          "archive:https://github.com/ocaml-ppx/ppx_deriving_yojson/archive/v3.5.1.tar.gz#sha256:aefe9c673f2f0ee2beb9edcca5a4e332a9fe9266c81bc554b8df5cd375568994"
-        ],
-        "opam": {
-          "name": "ppx_deriving_yojson",
-          "version": "3.5.1",
-          "path": "package-ci-4.07.esy.lock/opam/ppx_deriving_yojson.3.5.1"
-        }
-      },
-      "overrides": [],
-      "dependencies": [
-        "ocaml@4.8.1000@d41d8cd9", "@opam/yojson@opam:1.7.0@7056d985",
-        "@opam/result@opam:1.4@dc720aef", "@opam/ppxfind@opam:1.3@262387fc",
-        "@opam/ppx_tools@opam:5.3+4.08.0@0ce29228",
-        "@opam/ppx_deriving@opam:4.4@21d6c7a5",
-        "@opam/dune@opam:1.11.4@a7ccb7ae", "@opam/cppo@opam:1.6.6@f4f83858",
-        "@esy-ocaml/substs@0.0.1@d41d8cd9"
-      ],
-      "devDependencies": [
-        "ocaml@4.8.1000@d41d8cd9", "@opam/yojson@opam:1.7.0@7056d985",
-        "@opam/result@opam:1.4@dc720aef",
-        "@opam/ppx_deriving@opam:4.4@21d6c7a5",
-        "@opam/dune@opam:1.11.4@a7ccb7ae"
-      ]
-    },
     "@opam/ppx_deriving@opam:4.4@21d6c7a5": {
       "id": "@opam/ppx_deriving@opam:4.4@21d6c7a5",
       "name": "@opam/ppx_deriving",
@@ -827,28 +794,6 @@
       ],
       "devDependencies": [
         "ocaml@4.8.1000@d41d8cd9", "@opam/dune@opam:1.11.4@a7ccb7ae"
-      ]
-    },
-    "@opam/merlin-lsp@github:ocaml/merlin:merlin-lsp.opam#c8b0f03@d41d8cd9": {
-      "id":
-        "@opam/merlin-lsp@github:ocaml/merlin:merlin-lsp.opam#c8b0f03@d41d8cd9",
-      "name": "@opam/merlin-lsp",
-      "version": "github:ocaml/merlin:merlin-lsp.opam#c8b0f03",
-      "source": {
-        "type": "install",
-        "source": [ "github:ocaml/merlin:merlin-lsp.opam#c8b0f03" ]
-      },
-      "overrides": [],
-      "dependencies": [
-        "ocaml@4.8.1000@d41d8cd9", "@opam/yojson@opam:1.7.0@7056d985",
-        "@opam/ppx_deriving_yojson@opam:3.5.1@06a1c37f",
-        "@opam/ocamlfind@opam:1.8.1@ff07b0f9",
-        "@opam/dune@opam:1.11.4@a7ccb7ae", "@esy-ocaml/substs@0.0.1@d41d8cd9"
-      ],
-      "devDependencies": [
-        "ocaml@4.8.1000@d41d8cd9", "@opam/yojson@opam:1.7.0@7056d985",
-        "@opam/ppx_deriving_yojson@opam:3.5.1@06a1c37f",
-        "@opam/ocamlfind@opam:1.8.1@ff07b0f9"
       ]
     },
     "@opam/merlin-extend@opam:0.5@a5dd7d4b": {
