@@ -12,7 +12,7 @@ jobs:
           node-version: 12
       - uses: actions/checkout@v1
       - name: Install esy
-        run: npm install -g @esy/esy
+        run: npm install -g esy
       - name: Update lockdir
         run: |
           rm -rf esy.lock package-ci-4.04.esy.lock package-ci-4.06.esy.lock package-ci-4.07.esy.lock package-ci-4.08.esy.lock
@@ -76,7 +76,7 @@ jobs:
           node-version: 12
       - uses: actions/checkout@v1
       - name: Install esy
-        run: npm install -g @esy/esy
+        run: npm install -g esy
       - name: Install dependencies
         run: esy install -P package-ci-${{ matrix.ocaml_version }}
       - name: Print esy cache
