@@ -39,7 +39,7 @@ jobs:
           esy build -P package-ci-4.08 dune build @check
           git add *opam
       - name: Check that lock directory are up-to-date.
-        run: git diff --exit-code
+        run: git diff --exit-code --cached
       - name: Push if it is not
         if: failure()
         run: |
