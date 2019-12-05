@@ -16,6 +16,7 @@ jobs:
       - name: Update lockdir
         run: |
           rm -rf esy.lock package-ci-4.04.esy.lock package-ci-4.06.esy.lock package-ci-4.07.esy.lock package-ci-4.08.esy.lock
+          esy install
           esy install -P package-ci-4.04
           esy install -P package-ci-4.06
           esy install -P package-ci-4.07
