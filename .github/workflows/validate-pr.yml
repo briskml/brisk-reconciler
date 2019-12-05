@@ -12,7 +12,7 @@ jobs:
           node-version: 12
       - uses: actions/checkout@v1
       - name: Install esy
-        run: npm install -g @esy-nightly/esy
+        run: npm install -g @esy/esy
       - name: Update lockdir
         run: |
           rm -rf esy.lock package-ci-4.04.esy.lock package-ci-4.06.esy.lock package-ci-4.07.esy.lock package-ci-4.08.esy.lock
@@ -76,7 +76,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Install esy
-        run: npm install -g @esy-nightly/esy
+        run: npm install -g @esy/esy
       - name: Install dependencies
         run: esy install -P package-ci-${{ matrix.ocaml_version }}
       - name: Print esy cache
@@ -106,9 +106,3 @@ jobs:
         run: esy build-dependencies -P package-ci-${{ matrix.ocaml_version }}
       - name: Test
         run: esy build -P package-ci-${{ matrix.ocaml_version }} -- dune runtest --no-buffer --force
-      - name: Cleanup global store
-        run: |
-          exit 0
-          esy install
-          esy cleanup --dry-run .
-          esy cleanup .
