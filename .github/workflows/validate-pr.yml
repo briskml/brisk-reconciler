@@ -45,9 +45,13 @@ jobs:
           git config user.email "runner@runner.github.com"
           git add *lock *opam
           git commit -am "Update lockdir"
-          git status; git push origin HEAD:$GITHUB_REF)
+          git status
+          git push origin HEAD:$GITHUB_REF)
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Display status should be clean
+        run: git status
+        if: success()
           
   build:
     # Job name is Greeting
