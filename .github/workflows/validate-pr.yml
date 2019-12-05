@@ -38,6 +38,10 @@ jobs:
         run: |
           esy build -P package-ci-4.08 dune build @check
           git add *opam
+      - name: format sources files
+        run: |
+          esy build -P package-ci-4.08 fmt
+          git add "*.re" "*.rei"
       - name: Check that lock directory are up-to-date.
         run: git diff --exit-code --cached
       - name: Push if it is not
