@@ -21,6 +21,7 @@ jobs:
           esy install -P package-ci-4.06
           esy install -P package-ci-4.07
           esy install -P package-ci-4.08
+          git add *lock
       - name: Print esy cache
         id: print_esy_cache
         run: node .github/workflows/print_esy_cache.js
@@ -34,7 +35,9 @@ jobs:
         if: steps.deps-cache-macos.outputs.cache-hit != 'true'
         run: esy build-dependencies --release -P package-ci-4.08
       - name: Generate opam files
-        run: esy build -P package-ci-4.08 dune build @check
+        run: |
+          esy build -P package-ci-4.08 dune build @check
+          git add *opam
       - name: Check that lock directory are up-to-date.
         run: git diff --exit-code
       - name: Push if it is not
@@ -43,7 +46,6 @@ jobs:
           git remote set-url --push origin https://$GITHUB_ACTOR:$GITHUB_TOKEN@github.com/$GITHUB_REPOSITORY
           git config user.name "Github Runner"
           git config user.email "runner@runner.github.com"
-          git add *lock *opam
           git commit -am "Update lockdir"
           git status
           git push origin HEAD:$GITHUB_REF)
