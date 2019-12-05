@@ -24,7 +24,16 @@ jobs:
           esy build-dependencies -P package-ci-4.08
           esy build -P package-ci-4.08 dune build @check
       - name: Check that lock directory are up-to-date.
-        run: git diff --exit-code || (git remote set-url --push origin https://$GITHUB_ACTOR:$GITHUB_TOKEN@github.com/$GITHUB_REPOSITORY; git config user.name "Github Runner"; git config user.email "runner@runner.github.com"; git add *lock *opam; git commit -am "Update lockdir"; git status; git push origin HEAD:$GITHUB_REF)
+        run: git diff --exit-code
+      - name: Push if it is not
+        if: error()
+        run: |
+          git remote set-url --push origin https://$GITHUB_ACTOR:$GITHUB_TOKEN@github.com/$GITHUB_REPOSITORY
+          git config user.name "Github Runner"
+          git config user.email "runner@runner.github.com"
+          git add *lock *opam
+          git commit -am "Update lockdir"
+          git status; git push origin HEAD:$GITHUB_REF)
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           
