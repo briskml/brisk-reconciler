@@ -3,6 +3,27 @@ name: Validate Pull Request
 on: [push, pull_request]
 
 jobs:
+  lint:
+    name: lint lockdir
+    runs-on: [macOS-latest]
+    steps:
+      - uses: actions/setup-node@v1
+        with:
+          node-version: 12
+      - uses: actions/checkout@v1
+      - name: Install esy
+        run: npm install -g @esy-nightly/esy
+      - name: Update lockdir
+        run: |
+          esy install -P package-ci-4.04
+          esy install -P package-ci-4.06
+          esy install -P package-ci-4.07
+          esy install -P package-ci-4.08
+      - name: Check that lock directory are up-to-date.
+        run: git diff --exit-code || (git remote set-url --push origin https://$GITHUB_ACTOR:$GITHUB_TOKEN@github.com/$GITHUB_REPOSITORY; git config user.name "Github Runner"; git config user.email "runner@runner.github.com"; git commit -am "Update lockdir"; git push origin HEAD:$GITHUB_REF)
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          
   build:
     # Job name is Greeting
     name: Build
@@ -27,10 +48,6 @@ jobs:
         run: npm install -g @esy-nightly/esy
       - name: Install dependencies
         run: esy install -P package-ci-${{ matrix.ocaml_version }}
-      - name: Check that lock directory are up-to-date. If this fails, run `esy install -P pacage-ci-${{ matrix.ocaml_version }}` and commit changes and push again.
-        run: git diff --exit-code || (git remote set-url --push origin https://$GITHUB_ACTOR:$GITHUB_TOKEN@github.com/$GITHUB_REPOSITORY; git config user.name "Github Runner"; git config user.email "runner@runner.github.com"; git commit -am "Update lockdir"; git push origin HEAD:$GITHUB_REF)
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Print esy cache
         id: print_esy_cache
         run: node .github/workflows/print_esy_cache.js
