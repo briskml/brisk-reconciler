@@ -62,7 +62,7 @@ jobs:
         with:
           github-token: ${{secrets.GITHUB_TOKEN}}
           script: |
-            github.pulls.createComment({...context.pulls, body: `I have updated your lock dirs and formatted the code. Please @${context} pull the last commit before pushing any more changes.`})
+            github.issue.createComment({...context.issue, body: `I have updated your lock dirs and formatted the code. Please @${context} pull the last commit before pushing any more changes.`})
   build:
     # Job name is Greeting
     name: Build
