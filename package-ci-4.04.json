@@ -1,9 +1,0 @@
-{
-  "source": "./package-ci.json",
-  "override": {
-    "devDependencies": {
-      "@opam/ocamlformat" : "0.7",
-      "ocaml": "~4.4.0000"
-    }
-  }
-}
