@@ -1,8 +1,8 @@
 {
   "source": "./package-ci.json",
   "override": {
-    "dependencies": {
-    "ocaml": "~4.6.0000"
+    "devDependencies": {
+      "ocaml": "~4.6.0000"
     }
   }
 }
