@@ -5,7 +5,7 @@
 (version 1.0.0-alpha.0)
 
 (generate_opam_files true)
-(using fmt 1.0)
+(using fmt 1.2)
 
 (package
     (name brisk-reconciler)
