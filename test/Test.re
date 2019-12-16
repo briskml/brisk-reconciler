@@ -456,7 +456,7 @@ describe("Test BoxItemDynamic memoizing during deep move", ({test}) => {
     state := state^ |> executeSideEffects;
     let mountLog = state^ |> getMountLogAndReset;
 
-    beforeUpdate := Some(state^.renderedElement.instanceForest);
+    beforeUpdate := Some(state^.renderedElement.payload);
 
     expect.list(mountLog).toEqual([
       ChangeText("box to move", "box to move"),
@@ -477,7 +477,7 @@ describe("Test BoxItemDynamic memoizing during deep move", ({test}) => {
          )
       |> executeSideEffects;
 
-    afterUpdate := Some(state^.renderedElement.instanceForest);
+    afterUpdate := Some(state^.renderedElement.payload);
 
     let mountLog = state^ |> getMountLogAndReset;
 

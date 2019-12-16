@@ -80,7 +80,6 @@ module RenderedElement: {
   /** Update a rendered element when a new react element is received. */
   let update:
     (
-      ~previousElement: element('node),
       ~renderedElement: t('parentNode, 'node),
       element('node)
     ) =>
