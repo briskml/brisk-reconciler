@@ -35,13 +35,29 @@ type hostNode('a) =
 
 type lazyHostNode('a) = Lazy.t(hostNode('a));
 
-type lazyHostNodeList('a) = list(lazyHostNode('a));
+type lazyHostNodeSeq('a) = Seq.t(lazyHostNode('a));
 
 type componentId('a) = ..;
 
+type subtreeSize = int;
+
+type diffItem('left, 'right) =
+  | Added('right)
+  | Removed('left)
+  | Updated('left, 'right);
+
+type dynamicElement('node, 'typ) = {
+  diff: 'a. dynamicElement('node, 'a) => Seq.t(diffItem('typ, 'a)),
+  map: 'a. (~f: 'typ => 'a) => dynamicElement('node, 'a),
+  toSeq: unit => Seq.t('typ),
+  insert: 'typ => dynamicElement('node, 'typ),
+  empty: 'any. unit => dynamicElement('node, 'any),
+};
+
 type element('node) =
-  | Flat(opaqueComponent('node))
-  | Nested(list(element('node)))
+  | Leaf(opaqueComponent('node))
+  | StaticList(list(element('node)))
+  | DiffableSequence(dynamicElement('node, element('node)))
 and component('a) = {
   debugName: string,
   key: int,
@@ -72,7 +88,11 @@ and opaqueComponent('node) =
     : opaqueComponent('node)
 and instanceForest('node) =
   | IFlat(opaqueInstance('node))
-  | INested(list(instanceForest('node)), int /*subtree size*/)
+  | INested(list(instanceForest('node)), subtreeSize)
+  | IDiffableSequence(
+      dynamicElement('node, instanceForest('node)),
+      subtreeSize,
+    )
 and opaqueInstance('node) =
   | Instance(instance((_, ('node, _, _, _)))): opaqueInstance('node)
 and hostNodeElement('node, 'childNode) = {
@@ -95,14 +115,14 @@ and childrenType('viewSpec) =
           )
   | React
       : childrenType(
-          ('node, element('node), 'node, lazyHostNodeList('node)),
+          ('node, element('node), 'node, lazyHostNodeSeq('node)),
         );
 
 type opaqueInstanceHash('node) =
   Lazy.t(Hashtbl.t(int, (opaqueInstance('node), int)));
 
 module Update = {
-  type hostTreeUpdate('node, 'childNode) = {
+  type hostTreeState('node, 'childNode) = {
     nearestHostNode: lazyHostNode('node),
     nodeElement: hostNodeElement('node, 'childNode),
     /* This is a unique index of an element within a subtree,
@@ -111,18 +131,28 @@ module Update = {
     absoluteSubtreeIndex: int,
   };
   type t('node, 'childNode, 'payload) = {
-    hostTreeUpdate: hostTreeUpdate('node, 'childNode),
+    hostTreeUpdate: hostTreeState('node, 'childNode),
     enqueuedEffects: EffectSequence.t,
     payload: 'payload,
+    childNodes: lazyHostNodeSeq('childNode),
   };
   type context('node, 'childNode) = {
     shouldExecutePendingUpdates: bool,
     useKeyTable: option(opaqueInstanceHash('childNode)),
-    hostTreeUpdate: hostTreeUpdate('node, 'childNode),
+    hostTreeState: hostTreeState('node, 'childNode),
   };
   let map = (f, update) => {
-    let {payload, hostTreeUpdate, enqueuedEffects} = update;
-    {hostTreeUpdate, enqueuedEffects, payload: f(payload)};
+    let {payload, hostTreeUpdate, enqueuedEffects, childNodes} = update;
+    {hostTreeUpdate, enqueuedEffects, payload: f(payload), childNodes};
+  };
+  let mapEffects = (f, update) => {
+    let {payload, hostTreeUpdate, enqueuedEffects, childNodes} = update;
+    {
+      hostTreeUpdate,
+      enqueuedEffects: f(enqueuedEffects),
+      payload,
+      childNodes,
+    };
   };
 };
 
@@ -133,43 +163,6 @@ type opaqueInstanceUpdate('node, 'childNode) =
   Update.t('node, 'childNode, opaqueInstance('childNode));
 
 module InstanceForest = {
-  let getSubtreeSize: type node. instanceForest(node) => int =
-    fun
-    | INested(_, x) => x
-    | IFlat(Instance({wrappedHostNode, component: {childrenType}})) =>
-      switch (childrenType) {
-      | React => List.length(wrappedHostNode)
-      | Host => 1
-      };
-
-  let rec flatten =
-    fun
-    | IFlat(l) => [l]
-    | INested(l, _) => ListTR.concat(ListTR.map(flatten, l));
-
-  let outputTreeNodes:
-    type node. instanceForest(node) => lazyHostNodeList(node) =
-    subtree =>
-      flatten(subtree)
-      |> List.fold_left(
-           (
-             acc: lazyHostNodeList(node),
-             Instance(
-               (
-                 {component: {childrenType}, wrappedHostNode}:
-                   instance((_, (node, _, _, _)))
-               ),
-             ):
-               opaqueInstance(node),
-           ) =>
-             switch (childrenType) {
-             | React => List.append(wrappedHostNode, acc)
-             | Host => [wrappedHostNode, ...acc]
-             },
-           [],
-         )
-      |> List.rev;
-
   let pendingEffects = (~lifecycle, acc, instanceForest) => {
     let f = (acc, Instance({hooks})) =>
       EffectSequence.chain(
@@ -188,6 +181,12 @@ module InstanceForest = {
             acc,
             l,
           )
+        | IDiffableSequence(l, _) =>
+          Seq.fold_left(
+            (acc, instanceForest) => fold(acc, instanceForest),
+            acc,
+            l.toSeq(),
+          )
         };
       };
     fold(acc, instanceForest);
@@ -195,99 +194,58 @@ module InstanceForest = {
 };
 
 module Element = {
-  let rec map = (f, syntheticElement) =>
-    switch (syntheticElement) {
-    | Flat(l) =>
-      let (opaqueInstance, enqueuedMountEffects) = f(l);
-      (IFlat(opaqueInstance), enqueuedMountEffects);
-    | Nested(l) =>
-      let instanceSubForestAndEffects = ListTR.map(map(f), l);
-      let subForest = ListTR.map(fst, instanceSubForestAndEffects);
-      let effects = ListTR.map(snd, instanceSubForestAndEffects);
-      (
-        INested(
-          subForest,
-          subForest
-          |> List.map(InstanceForest.getSubtreeSize)
-          |> List.fold_left((+), 0),
-        ),
-        List.fold_left(EffectSequence.chain, EffectSequence.noop, effects),
-      );
-    };
-
-  let rec fold = (~f, ~init, renderedElement) =>
-    switch (renderedElement) {
-    | Flat(e) =>
-      f(~hostTreeUpdate=init, ~element=e)
-      |> Update.map(instance => IFlat(instance))
-    | Nested(l) =>
-      List.fold_left(
-        (update: Update.t(_, _, _), element) => {
-          let {Update.hostTreeUpdate, payload, enqueuedEffects: nextEffects} =
-            fold(~f, ~init=update.Update.hostTreeUpdate, element);
+  let rec fold = (~f, ~init, renderedElement) => {
+    let foldSequence = (seq, container, add, wrapResult) => {
+      let update =
+        Seq.fold_left(
+          (update: Update.t(_, _, _), element) => {
+            // Append child nodes here
+            fold(~f, ~init=update.Update.hostTreeUpdate, element)
+            |> Update.map(payload => add(update.Update.payload, payload))
+            |> Update.mapEffects(nextEffects =>
+                 EffectSequence.chain(
+                   update.Update.enqueuedEffects,
+                   nextEffects,
+                 )
+               )
+          },
           {
-            Update.payload: [payload, ...update.Update.payload],
-            enqueuedEffects:
-              EffectSequence.chain(
-                update.Update.enqueuedEffects,
-                nextEffects,
-              ),
-            hostTreeUpdate,
-          };
-        },
-        {
-          Update.payload: [],
-          enqueuedEffects: EffectSequence.noop,
-          hostTreeUpdate: init,
-        },
-        List.rev(l),
-      )
-      |> Update.map(payload =>
-           INested(
-             payload,
-             List.map(InstanceForest.getSubtreeSize, payload)
-             |> List.fold_left((+), 0),
-           )
-         )
-    };
-};
-
-module HostNode = {
-  let make =
-      (
-        type node,
-        type children,
-        type wrappedNode,
-        type childNode,
-        childrenType: childrenType((node, children, childNode, wrappedNode)),
-        children: children,
-        childInstances: instanceForest(childNode),
-      )
-      : wrappedNode =>
-    switch (childrenType) {
-    | Host =>
-      lazy({
-        let instance =
-          children.make() |> children.configureInstance(~isFirstRender=true);
-        Node(
-          List.fold_left(
-            ((position, parent), child) =>
-              (
-                position + 1,
-                {
-                  let Node(child) | UpdatedNode(_, child) =
-                    Lazy.force(child);
-                  children.insertNode(~parent, ~child, ~position);
-                },
-              ),
-            (0, instance),
-            InstanceForest.outputTreeNodes(childInstances),
-          )
-          |> snd,
+            Update.payload: container,
+            enqueuedEffects: EffectSequence.noop,
+            hostTreeUpdate: init,
+            childNodes: Seq.empty,
+          },
+          seq,
         );
-      })
-    | React => InstanceForest.outputTreeNodes(childInstances)
+      update
+      |> Update.map(payload =>
+           wrapResult(
+             payload,
+             update.hostTreeUpdate.absoluteSubtreeIndex
+             - init.absoluteSubtreeIndex,
+           )
+         );
     };
+    switch (renderedElement) {
+    | Leaf(c) =>
+      f(~hostTreeState=init, ~component=c)
+      |> Update.map(instance => IFlat(instance))
+    | DiffableSequence(seq) =>
+      foldSequence(
+        seq.toSeq(),
+        seq.empty(),
+        (instances, instance) => instances.insert(instance),
+        (seq, length) => IDiffableSequence(seq, length),
+      )
+    | StaticList(l) =>
+      foldSequence(
+        List.rev(l) |> List.to_seq,
+        [],
+        (rest, h) => [h, ...rest],
+        (list, length) => INested(list, length),
+      )
+    };
+  };
 };
 
 module SubtreeChange = {
@@ -300,7 +258,7 @@ module SubtreeChange = {
       ) => {
     let Node(oldParent) | UpdatedNode(_, oldParent) = parentWrapper;
     let newParent =
-      List.fold_left(
+      Seq.fold_left(
         ((position, parent), child) =>
           (
             position + 1,
@@ -325,7 +283,7 @@ module SubtreeChange = {
       ) => {
     let Node(oldParent) | UpdatedNode(_, oldParent) = parentWrapper;
     let newParent =
-      List.fold_left(
+      Seq.fold_left(
         ((position, parent), child) =>
           (
             position + 1,
@@ -432,7 +390,7 @@ module SubtreeChange = {
         let parentWrapper = Lazy.force(parent);
         let Node(oldParent) | UpdatedNode(_, oldParent) = parentWrapper;
         let newParent =
-          List.fold_left(
+          Seq.fold_left(
             ((index, parent), child) =>
               (
                 index + 1,
@@ -453,14 +411,13 @@ module SubtreeChange = {
           ? parentWrapper : UpdatedNode(oldParent, newParent);
       })
     };
-
   let updateNodes =
-      (~nodeElement, ~parent, ~instanceForest, ~position as initialPosition) =>
+      (~nodeElement, ~parent, ~children, ~position as initialPosition) =>
     lazy({
       let parentWrapper = Lazy.force(parent);
       let Node(oldParent) | UpdatedNode(_, oldParent) = parentWrapper;
       let newParent =
-        List.fold_left(
+        Seq.fold_left(
           ((position, instance), x) =>
             (
               position + 1,
@@ -480,7 +437,7 @@ module SubtreeChange = {
               },
             ),
           (initialPosition, oldParent),
-          InstanceForest.outputTreeNodes(instanceForest),
+          children,
         )
         |> snd;
       newParent === oldParent
@@ -499,7 +456,9 @@ module OpaqueInstanceHash = {
     let rec aux = index =>
       fun
       | IFlat(l) => addOpaqueInstance(idTable, index, l)
-      | INested(l, _) => List.iteri((i, x) => aux(i, x), l);
+      | INested(l, _) => List.iteri((i, x) => aux(i, x), l)
+      // Skip diffable sequence!
+      | IDiffableSequence(_, _) => ();
     aux(index, renderedElement);
   };
   let createKeyTable = renderedElement =>
@@ -519,59 +478,121 @@ module OpaqueInstanceHash = {
 module Instance = {
 
   let rec ofComponent:
-    type hooks node children childNode wrappedHostNode.
+    type parentNode hooks node children childNode wrappedHostNode.
       (
+        ~hostTreeState: Update.hostTreeState(parentNode, node),
         opaqueComponent(node),
         component((hooks, (node, children, childNode, wrappedHostNode)))
       ) =>
-      (opaqueInstance(node), EffectSequence.t) =
-    (opaqueComponent, component) => (
-      {
-        let (children_, hooks) =
-          component.render(
-            Hooks.ofState(None, ~onStateDidChange=callStaleHanlders),
-          );
-        let hooks = Hooks.toState(hooks);
-        let childElements =
-          switch (component.childrenType) {
-          | React => (children_: element(childNode))
-          | Host => children_.children
-          };
-        let (childInstances, mountEffects) = ofList(childElements);
-        (
-          Instance({
-            hooks,
-            opaqueComponent,
-            component,
-            children_,
-            childInstances,
-            wrappedHostNode:
-              HostNode.make(
-                component.childrenType,
-                children_,
-                childInstances,
-              ),
-          }),
-          EffectSequence.chain(
-            Hooks.pendingEffects(~lifecycle=Hooks.Effect.Mount, Some(hooks)),
-            mountEffects,
-          ),
+      opaqueInstanceUpdate(parentNode, node) =
+    (~hostTreeState, opaqueComponent, component) => {
+      let (children_, hooks) =
+        component.render(
+          Hooks.ofState(None, ~onStateDidChange=callStaleHanlders),
         );
-      }: (
-        opaqueInstance(node),
-        EffectSequence.t,
-      )
-    )
+      let hooks = Hooks.toState(hooks);
+      let addMountEffects = u =>
+        u
+        |> Update.mapEffects(e =>
+             EffectSequence.chain(
+               Hooks.pendingEffects(
+                 ~lifecycle=Hooks.Effect.Mount,
+                 Some(hooks),
+               ),
+               e,
+             )
+           );
+      switch (component.childrenType) {
+      | React =>
+        let update = ofList(~hostTreeState, children_: element(childNode));
+        update
+        |> addMountEffects
+        |> Update.map(childInstances =>
+             Instance({
+               hooks,
+               opaqueComponent,
+               component,
+               children_,
+               childInstances,
+               wrappedHostNode: update.childNodes,
+             })
+           );
+      | Host =>
+        let node =
+          lazy(
+            Node(
+              children_.make()
+              |> children_.configureInstance(~isFirstRender=true),
+            )
+          );
+        let update =
+          ofList(
+            ~hostTreeState={
+              nearestHostNode: node,
+              nodeElement: children_,
+              absoluteSubtreeIndex: 0,
+            },
+            children_.children,
+          )
+          |> addMountEffects
+          |> Update.map(childInstances =>
+               Instance({
+                 hooks,
+                 opaqueComponent,
+                 component,
+                 children_,
+                 childInstances,
+                 wrappedHostNode: node,
+               })
+             );
+        let hostTreeUpdate = {
+          ...hostTreeState,
+          nearestHostNode:
+            lazy(
+              SubtreeChange.insertNodes(
+                ~nodeElement=hostTreeState.nodeElement,
+                ~parent=Lazy.force(hostTreeState.nearestHostNode),
+                ~children=[node] |> List.to_seq,
+                ~position=hostTreeState.absoluteSubtreeIndex,
+              )
+            ),
+          absoluteSubtreeIndex: hostTreeState.absoluteSubtreeIndex + 1,
+        };
+        {
+          hostTreeUpdate,
+          enqueuedEffects: update.enqueuedEffects,
+          payload: update.payload,
+          childNodes: Seq.((() => Cons(node, () => Nil))),
+        };
+      };
+    }
 
   and ofOpaqueComponent:
-    type node.
-      opaqueComponent(node) => (opaqueInstance(node), EffectSequence.t) =
-    (OpaqueComponent(component) as opaqueComponent) =>
-      ofComponent(opaqueComponent, component)
+    type parentNode node.
+      (
+        ~hostTreeState: Update.hostTreeState(parentNode, node),
+        ~component: opaqueComponent(node)
+      ) =>
+      opaqueInstanceUpdate(parentNode, node) =
+    (
+      ~hostTreeState,
+      ~component as OpaqueComponent(component) as opaqueComponent,
+    ) =>
+      ofComponent(~hostTreeState, opaqueComponent, component)
 
   and ofList:
-    type node. element(node) => (instanceForest(node), EffectSequence.t) =
-    syntheticElement => Element.map(ofOpaqueComponent, syntheticElement);
+    type parentNode node.
+      (
+        ~hostTreeState: Update.hostTreeState(parentNode, node),
+        element(node)
+      ) =>
+      renderedElement(parentNode, node) =
+    (~hostTreeState, syntheticElement) =>
+      Element.fold(
+        ~f=ofOpaqueComponent,
+        ~init=hostTreeState,
+        syntheticElement,
+      );
 
   let pendingEffects =
       (~lifecycle, ~nextEffects, ~instance as {childInstances, hooks}) => {
@@ -584,6 +605,15 @@ module Instance = {
       childInstances,
     );
   };
+
+  let outputTreeNodes:
+    type node. opaqueInstance(node) => lazyHostNodeSeq(node) =
+    (Instance(instance)) => {
+      switch (instance.component.childrenType) {
+      | React => instance.wrappedHostNode
+      | Host => Seq.((() => Cons(instance.wrappedHostNode, () => Nil)))
+      };
+    };
 };
 
 module Render = {
@@ -596,12 +626,16 @@ module Render = {
   type subtreeUpdate('node) =
     | MatchingSubtree(list(subtreeUpdate('node)))
     | Update(opaqueInstance('node), opaqueComponent('node))
-    | ReRender(element('node));
+    | ReRender(element('node))
+    | UpdateSequence(
+        dynamicElement('node, instanceForest('node)),
+        dynamicElement('node, element('node)),
+      );
 
   let rec prepareUpdate = (~oldInstanceForest, ~nextElement) => {
     switch (oldInstanceForest, nextElement) {
-    | (IFlat(instance), Flat(component)) => Update(instance, component)
-    | (INested(instances, _), Nested(elements))
+    | (IFlat(instance), Leaf(component)) => Update(instance, component)
+    | (INested(instances, _), StaticList(elements))
         when List.length(instances) == List.length(elements) =>
       MatchingSubtree(
         List.map2(
@@ -611,6 +645,8 @@ module Render = {
           elements,
         ),
       )
+    | (IDiffableSequence(instances, _), DiffableSequence(elements)) =>
+      UpdateSequence(instances, elements)
     | _ => ReRender(nextElement)
     };
   };
@@ -637,14 +673,10 @@ module Render = {
       | Some((opaqueInstance, _)) =>
         updateOpaqueInstance(~updateContext, opaqueInstance, opaqueComponent)
       | None =>
-        let (opaqueInstance, enqueuedEffects) =
-          Instance.ofOpaqueComponent(opaqueComponent);
-        // This is a bug; the nearestHostNode and nodeElement are not updated.
-        {
-          hostTreeUpdate: updateContext.hostTreeUpdate,
-          enqueuedEffects,
-          payload: opaqueInstance,
-        };
+        Instance.ofOpaqueComponent(
+          ~hostTreeState=updateContext.hostTreeState,
+          ~component=opaqueComponent,
+        )
       }
 
   and renderReactElement:
@@ -654,13 +686,13 @@ module Render = {
     (~updateContext, element) =>
       Element.fold(
         ~f=
-          (~hostTreeUpdate, ~element) => {
+          (~hostTreeState, ~component) => {
             renderElement(
-              ~updateContext={...updateContext, hostTreeUpdate},
-              element,
+              ~updateContext={...updateContext, hostTreeState},
+              component,
             )
           },
-        ~init=updateContext.hostTreeUpdate,
+        ~init=updateContext.hostTreeState,
         element,
       )
 
@@ -687,9 +719,10 @@ module Render = {
 
       if (bailOut && !updateContext.shouldExecutePendingUpdates) {
         {
-          hostTreeUpdate: updateContext.hostTreeUpdate,
+          hostTreeUpdate: updateContext.hostTreeState,
           payload: originalOpaqueInstance,
           enqueuedEffects: EffectSequence.noop,
+          childNodes: Instance.outputTreeNodes(originalOpaqueInstance),
         };
       } else {
         let {component} = instance;
@@ -726,13 +759,14 @@ module Render = {
                   SubtreeChange.updateNodes(
                     ~nodeElement=hostTreeUpdate.nodeElement,
                     ~parent=hostTreeUpdate.nearestHostNode,
-                    ~instanceForest=IFlat(newOpaqueInstance),
+                    ~children=Instance.outputTreeNodes(newOpaqueInstance),
                     ~position=hostTreeUpdate.absoluteSubtreeIndex,
                   ),
                 absoluteSubtreeIndex: hostTreeUpdate.absoluteSubtreeIndex,
               },
               payload: newOpaqueInstance,
               enqueuedEffects,
+              childNodes: [] |> List.to_seq,
             };
         /*
          * Case B: The next element is *not* of the same component class. We know
@@ -743,35 +777,38 @@ module Render = {
           /**
             * ** Switching component type **
             */
-          let (opaqueInstance, mountEffects) =
-            Instance.ofOpaqueComponent(nextOpaqueComponent);
-          let enqueuedEffects =
-            Instance.pendingEffects(
-              ~lifecycle=Hooks.Effect.Unmount,
-              ~nextEffects=mountEffects,
-              ~instance,
-            );
-          let hostTreeUpdate = updateContext.hostTreeUpdate;
+          let update =
+            Instance.ofOpaqueComponent(
+              ~hostTreeState=updateContext.hostTreeState,
+              ~component=nextOpaqueComponent,
+            )
+            |> Update.mapEffects(mountEffects =>
+                 Instance.pendingEffects(
+                   ~lifecycle=Hooks.Effect.Unmount,
+                   ~nextEffects=mountEffects,
+                   ~instance,
+                 )
+               );
+          let childNodes = Instance.outputTreeNodes(update.payload);
+          let {Update.hostTreeState} = updateContext;
           {
             hostTreeUpdate: {
-              nodeElement: hostTreeUpdate.nodeElement,
+              nodeElement: hostTreeState.nodeElement,
               nearestHostNode:
                 SubtreeChange.replaceSubtree(
-                  ~nodeElement=hostTreeUpdate.nodeElement,
-                  ~parent=hostTreeUpdate.nearestHostNode,
+                  ~nodeElement=hostTreeState.nodeElement,
+                  ~parent=hostTreeState.nearestHostNode,
                   ~prevChildren=
-                    InstanceForest.outputTreeNodes(
-                      IFlat(originalOpaqueInstance),
-                    ),
-                  ~nextChildren=
-                    InstanceForest.outputTreeNodes(IFlat(opaqueInstance)),
+                    Instance.outputTreeNodes(originalOpaqueInstance),
+                  ~nextChildren=childNodes,
                   ~absoluteSubtreeIndex=
-                    updateContext.hostTreeUpdate.absoluteSubtreeIndex,
+                    updateContext.hostTreeState.absoluteSubtreeIndex,
                 ),
               absoluteSubtreeIndex: 0,
             },
-            payload: opaqueInstance,
-            enqueuedEffects,
+            payload: update.payload,
+            enqueuedEffects: update.enqueuedEffects,
+            childNodes,
           };
         };
       };
@@ -838,10 +875,7 @@ module Render = {
       ) =
         switch (nextComponent.childrenType) {
         | React =>
-          let {
-            Update.payload: nextInstanceSubForest,
-            enqueuedEffects,
-          } =
+          let {Update.payload: nextInstanceSubForest, enqueuedEffects} =
             updateInstanceSubtree(
               ~updateContext,
               ~oldInstanceForest=childInstances,
@@ -850,7 +884,7 @@ module Render = {
             );
           nextInstanceSubForest !== childInstances
             ? (
-              updateContext.hostTreeUpdate.nearestHostNode,
+              updateContext.hostTreeState.nearestHostNode,
               {
                 ...updatedInstanceWithNewState,
                 children_: nextSubElements,
@@ -860,13 +894,13 @@ module Render = {
                   (hooks, (node, children, childNode, wrappedHostNode)),
                 ),
               enqueuedEffects,
-              updateContext.hostTreeUpdate.nodeElement,
+              updateContext.hostTreeState.nodeElement,
             )
             : (
-              updateContext.hostTreeUpdate.nearestHostNode,
+              updateContext.hostTreeState.nearestHostNode,
               updatedInstanceWithNewState,
               enqueuedEffects,
-              updateContext.hostTreeUpdate.nodeElement,
+              updateContext.hostTreeState.nodeElement,
             );
         | Host =>
           let instanceWithNewHostView:
@@ -900,7 +934,7 @@ module Render = {
                 Update.shouldExecutePendingUpdates:
                   updateContext.shouldExecutePendingUpdates,
                 useKeyTable: None,
-                hostTreeUpdate: {
+                hostTreeState: {
                   absoluteSubtreeIndex: 0,
                   nearestHostNode: (
                     instanceWithNewHostView.wrappedHostNode:
@@ -919,7 +953,7 @@ module Render = {
           };
           if (nextInstanceSubForest !== instanceWithNewHostView.childInstances) {
             (
-              updateContext.hostTreeUpdate.nearestHostNode,
+              updateContext.hostTreeState.nearestHostNode,
               {
                 ...instanceWithNewHostView,
                 childInstances: nextInstanceSubForest,
@@ -930,14 +964,14 @@ module Render = {
                   (hooks, (node, children, childNode, wrappedHostNode)),
                 ),
               enqueuedEffects,
-              updateContext.hostTreeUpdate.nodeElement,
+              updateContext.hostTreeState.nodeElement,
             );
           } else {
             (
-              updateContext.hostTreeUpdate.nearestHostNode,
+              updateContext.hostTreeState.nearestHostNode,
               instanceWithNewHostView,
               enqueuedEffects,
-              updateContext.hostTreeUpdate.nodeElement,
+              updateContext.hostTreeState.nodeElement,
             );
           };
         };
@@ -951,6 +985,7 @@ module Render = {
           },
           payload: originalOpaqueInstance,
           enqueuedEffects,
+          childNodes: Seq.empty,
         };
       } else {
         {
@@ -968,6 +1003,7 @@ module Render = {
               ),
               enqueuedEffects,
             ),
+          childNodes: Seq.empty,
         };
       };
     }
@@ -988,14 +1024,14 @@ module Render = {
               let update =
                 applyUpdate(
                   ~updateContext={
-                    Update.hostTreeUpdate: updateAcc.Update.hostTreeUpdate,
+                    Update.hostTreeState: updateAcc.Update.hostTreeUpdate,
                     shouldExecutePendingUpdates:
                       updateContext.shouldExecutePendingUpdates,
                     useKeyTable: updateContext.useKeyTable,
                   },
                   subtreeUpdate,
                 );
-              // Don't forget about effects...
+              // TODO: Don't forget about effects...
               update
               |> Update.map(updatedInstanceForest =>
                    [updatedInstanceForest, ...updateAcc.payload]
@@ -1003,8 +1039,9 @@ module Render = {
             },
             {
               Update.payload: [],
-              hostTreeUpdate: updateContext.hostTreeUpdate,
+              hostTreeUpdate: updateContext.hostTreeState,
               enqueuedEffects: EffectSequence.noop,
+              childNodes: Seq.empty,
             },
             List.rev(updates),
           );
@@ -1013,12 +1050,45 @@ module Render = {
              INested(
                instances,
                update.Update.hostTreeUpdate.absoluteSubtreeIndex
-               - updateContext.hostTreeUpdate.absoluteSubtreeIndex,
+               - updateContext.hostTreeState.absoluteSubtreeIndex,
              )
            );
       | Update(instance, newComponent) =>
         updateOpaqueInstance(~updateContext, instance, newComponent)
         |> Update.map(instance => IFlat(instance))
+      | UpdateSequence(instances, elements) =>
+        instances.diff(elements)
+        |> Seq.fold_left(
+             (acc, change) =>
+               switch (change) {
+               | Updated(oldInstanceForest, nextElement) =>
+                 applyUpdate(
+                   ~updateContext={
+                     Update.hostTreeState: acc.Update.hostTreeUpdate,
+                     shouldExecutePendingUpdates:
+                       updateContext.shouldExecutePendingUpdates,
+                     useKeyTable: updateContext.useKeyTable,
+                   },
+                   prepareUpdate(~oldInstanceForest, ~nextElement),
+                 )
+                 |> Update.map(instanceForest =>
+                      acc.payload.insert(instanceForest)
+                    )
+               | Added(element) =>
+                 renderReactElement(~updateContext, element)
+                 |> Update.map(instanceForest =>
+                      acc.payload.insert(instanceForest)
+                    )
+               | Removed(_instance) => acc
+               },
+             {
+               Update.payload: instances,
+               hostTreeUpdate: updateContext.hostTreeState,
+               enqueuedEffects: EffectSequence.noop,
+               childNodes: Seq.empty,
+             },
+           )
+        |> Update.map(instances => IDiffableSequence(instances, 0))
       | ReRender(element) => renderReactElement(~updateContext, element)
       };
     }
@@ -1050,7 +1120,7 @@ module Render = {
         Update.{
           useKeyTable: None,
           shouldExecutePendingUpdates: true,
-          hostTreeUpdate: {
+          hostTreeState: {
             nearestHostNode,
             nodeElement,
             absoluteSubtreeIndex: 0,
@@ -1075,60 +1145,27 @@ module RenderedElement = {
       (~parent: 'node, ~child: 'childNode, ~from: int, ~to_: int) => 'node,
   };
 
-  let listToRenderedElement = renderedElements =>
-    INested(
-      renderedElements,
-      renderedElements
-      |> List.fold_left(
-           (acc, e) => acc + InstanceForest.getSubtreeSize(e),
-           0,
-         ),
-    );
   let render = (root, children) => {
-    let (instanceForest, mountEffects) = Instance.ofList(children);
-    {
-      Update.hostTreeUpdate: {
-        nodeElement: {
-          make: () => root.node,
-          configureInstance: (~isFirstRender as _, i) => i,
-          children,
-          insertNode: root.insertNode,
-          deleteNode: root.deleteNode,
-          moveNode: root.moveNode,
-        },
-        nearestHostNode:
-          lazy(
-            Node(
-              InstanceForest.outputTreeNodes(instanceForest)
-              |> List.fold_left(
-                   ((position, parent), child) =>
-                     (
-                       position + 1,
-                       {
-                         let Node(child) | UpdatedNode(_, child) =
-                           Lazy.force(child);
-                         let parent =
-                           root.insertNode(~parent, ~child, ~position);
-                         parent;
-                       },
-                     ),
-                   (0, root.node),
-                 )
-              |> snd,
-            )
-          ),
-        absoluteSubtreeIndex: 0,
+    let hostTreeState = {
+      Update.nodeElement: {
+        make: () => root.node,
+        configureInstance: (~isFirstRender as _, i) => i,
+        children,
+        insertNode: root.insertNode,
+        deleteNode: root.deleteNode,
+        moveNode: root.moveNode,
       },
-      payload: instanceForest,
-      enqueuedEffects: mountEffects,
+      nearestHostNode: lazy(Node(root.node)),
+      absoluteSubtreeIndex: 0,
     };
+    Instance.ofList(~hostTreeState, children);
   };
   let update =
       (~renderedElement as {Update.payload, hostTreeUpdate}, nextElement) =>
     Render.updateInstanceSubtree(
       ~updateContext=
         Update.{
-          hostTreeUpdate,
+          hostTreeState: hostTreeUpdate,
           useKeyTable: None,
           shouldExecutePendingUpdates: false,
         },
@@ -1148,6 +1185,7 @@ module RenderedElement = {
         Update.hostTreeUpdate,
         payload: unchanged ? renderedElement : IFlat(opaqueInstance),
         enqueuedEffects,
+        childNodes: Seq.empty,
       };
     | INested(l, _) =>
       let update =
@@ -1172,6 +1210,7 @@ module RenderedElement = {
               absoluteSubtreeIndex: 0,
             },
             enqueuedEffects: EffectSequence.noop,
+            childNodes: Seq.empty,
           },
           List.rev(l),
         );
@@ -1181,15 +1220,24 @@ module RenderedElement = {
       |> Update.map(nextL =>
            unchanged
              ? renderedElement
-             : INested(
-                 nextL,
-                 List.fold_left(
-                   (acc, elem) => InstanceForest.getSubtreeSize(elem) + acc,
-                   0,
-                   nextL,
-                 ),
-               )
+             : INested(nextL, update.hostTreeUpdate.absoluteSubtreeIndex)
          );
+    | IDiffableSequence(instances, _l) =>
+      instances.toSeq()
+      |> Seq.fold_left(
+           (acc, _instance) => {acc},
+           {
+             Update.payload: instances,
+             hostTreeUpdate: {
+               nearestHostNode,
+               nodeElement,
+               absoluteSubtreeIndex: 0,
+             },
+             enqueuedEffects: EffectSequence.noop,
+             childNodes: Seq.empty,
+           },
+         )
+      |> Update.map(instances => IDiffableSequence(instances, 0))
     };
 
   /**
@@ -1235,17 +1283,17 @@ let element = (~key as argumentKey=Key.none, component) => {
       };
   let componentWithKey =
     key != component.key ? {...component, key} : component;
-  Flat(OpaqueComponent(componentWithKey));
+  Leaf(OpaqueComponent(componentWithKey));
 };
 
-let listToElement = l => Nested(l);
-let empty = Nested([]);
+let listToElement = l => StaticList(l);
+let empty = StaticList([]);
 
 module Hooks = Hooks;
 module RemoteAction = RemoteAction;
 
 module Expert = {
-  let jsx_list = listToElement;
+  let jsx_list = l => StaticList(l);
   let component:
     type a node.
       (
@@ -1262,7 +1310,7 @@ module Expert = {
                   instance(
                     (
                       a,
-                      (node, element(node), node, lazyHostNodeList(node)),
+                      (node, element(node), node, lazyHostNodeSeq(node)),
                     ),
                   ),
                 );
@@ -1274,13 +1322,13 @@ module Expert = {
               componentId(c),
               componentId(
                 instance(
-                  (a, (node, element(node), node, lazyHostNodeList(node))),
+                  (a, (node, element(node), node, lazyHostNodeSeq(node))),
                 ),
               )
             ) =>
             option(
               instance(
-                (a, (node, element(node), node, lazyHostNodeList(node))),
+                (a, (node, element(node), node, lazyHostNodeSeq(node))),
               ),
             ) =
           (instance, id1, id2) => {
