@@ -93,7 +93,7 @@ module BoxWrapper = {
  * Box with dynamic keys.
  */
 module BoxItemDynamic = {
-  [@component useDynamicKey]
+  [@component]
   let make = (~title="ImABox", (), h) => (stringToElement(title), h);
 };
 

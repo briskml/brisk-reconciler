@@ -1,7 +1,8 @@
 open TestFramework;
 open TestReconciler;
 open TestHelpers;
-open Brisk_reconciler__Brisk_reconciler_internal;
+module Brisk_reconciler = Brisk_reconciler__Brisk_reconciler_internal;
+open Brisk_reconciler;
 
 let root = {name: "root", element: View};
 let div = {name: "Div", element: View};
@@ -66,21 +67,18 @@ describe("Test replacing subtree", ({test}) => {
   })
 });
 
-describe("Test top level reorder", ({test}) => {
-  let key1 = Key.create();
-  let key2 = Key.create();
+let%component topLevelReorder = (~flipped=false, ()) => {
+  open Components;
+  let%hook text1 =
+    <movableStateContainer> <Text title="x" /> </movableStateContainer>;
+  let%hook text2 =
+    <movableStateContainer> <Text title="y" /> </movableStateContainer>;
+  (flipped ? [<text1 />, <text2 />] : [<text1 />, <text2 />])
+  |> Brisk_reconciler.Expert.jsx_list;
+};
 
-  let state =
-    ref(
-      render(
-        listToElement(
-          Components.[
-            <Text key=key1 title="x" />,
-            <Text key=key2 title="y" />,
-          ],
-        ),
-      ),
-    );
+describe("Test top level reorder", ({test}) => {
+  let state = ref(render(<topLevelReorder />));
 
   test("It correctly constructs initial tree", ({expect}) => {
     state := state^ |> executeSideEffects;
@@ -98,14 +96,7 @@ describe("Test top level reorder", ({test}) => {
   test("It reorders only one element", ({expect}) => {
     let mountLog =
       state^
-      |> update(
-           listToElement(
-             Components.[
-               <Text key=key2 title="y" />,
-               <Text key=key1 title="x" />,
-             ],
-           ),
-         )
+      |> update(<topLevelReorder flipped=true />)
       |> executeSideEffects
       |> getMountLogAndReset;
 
@@ -113,11 +104,17 @@ describe("Test top level reorder", ({test}) => {
   });
 });
 
-describe("Test top level replace elements", ({test}) => {
-  let key1 = Key.create();
-  let key2 = Key.create();
+let%component topLevelReplace = (~switched=false, ()) => {
+  open Components;
+  let%hook text1 =
+    <movableStateContainer> <Text title="x" /> </movableStateContainer>;
+  let%hook text2 =
+    <movableStateContainer> <Text title="y" /> </movableStateContainer>;
+  switched ? <text1 /> : <text2 />;
+};
 
-  let state = ref(render(<Components.Text key=key1 title="x" />));
+describe("Test top level replace elements", ({test}) => {
+  let state = ref(render(<topLevelReplace />));
 
   test("It constructs initial tree", ({expect}) => {
     state := state^ |> executeSideEffects;
@@ -132,7 +129,7 @@ describe("Test top level replace elements", ({test}) => {
   test("It replaces text(x) with text(y)", ({expect}) => {
     let mountLog =
       state^
-      |> update(<Components.Text key=key2 title="y" />)
+      |> update(<topLevelReplace switched=true />)
       |> executeSideEffects
       |> getMountLogAndReset;
 
@@ -225,43 +222,6 @@ describe("Test subtree replace elements", ({test}) => {
   });
 });
 
-describe("Test top level prepend", ({test}) => {
-  let key1 = Key.create();
-  let key2 = Key.create();
-  let commonElement = [<Components.Text key=key1 title="x" />];
-
-  let state = ref(render(listToElement(commonElement)));
-
-  test("It constructs initial tree", ({expect}) => {
-    state := state^ |> executeSideEffects;
-
-    let mountLog = state |> getMountLogAndReset;
-
-    expect.list(mountLog).toEqual([
-      ChangeText("x", "x"),
-      MountChild(root, text("x"), 0),
-    ]);
-  });
-
-  test("It correctly mounts prepend topLevelUpdate", ({expect}) => {
-    let mountLog =
-      state^
-      |> update(
-           listToElement([
-             <Components.Text key=key2 title="y" />,
-             ...commonElement,
-           ]),
-         )
-      |> executeSideEffects
-      |> getMountLogAndReset;
-
-    expect.list(mountLog).toEqual([
-      ChangeText("y", "y"),
-      MountChild(root, text("y"), 0),
-    ]);
-  });
-});
-
 describe("Test simple subtree change", ({test}) => {
   let state = ref(render(<Components.BoxWrapper />));
 
@@ -300,9 +260,7 @@ describe("Test changing components", ({test}) => {
     expect.list(mountLog).toEqual([]);
   });
 
-  test(
-    "It changes from EmptyComponent to ButtonWrapperWrapper",
-    ({expect}) => {
+  test("It changes from EmptyComponent to ButtonWrapperWrapper", ({expect}) => {
     state :=
       state^
       |> update(
@@ -392,8 +350,7 @@ describe("Test BoxList with dynamic keys", ({test}) => {
   });
 });
 
-describe(
-  "Test BoxList without dynamic keys", ({test}) => {
+describe("Test BoxList without dynamic keys", ({test}) => {
   let rAction = RemoteAction.create();
   let state =
     ref(render(<Components.BoxList rAction />) |> executeSideEffects);
@@ -469,12 +426,7 @@ describe("Test BoxItemDynamic memoizing during deep move", ({test}) => {
     ({expect}) => {
     state :=
       state^
-      |> update(
-           listToElement([
-             Components.stringToElement("before"),
-             listToElement([box]),
-           ]),
-         )
+      |> update(<> {Components.stringToElement("before")} <> box </> </>)
       |> executeSideEffects;
 
     afterUpdate := Some(state^.renderedElement.payload);
@@ -498,53 +450,6 @@ describe("Test BoxItemDynamic memoizing during deep move", ({test}) => {
       },
     ).
       toBeTrue()
-  });
-});
-
-describe("Test list updates with static keys", ({test}) => {
-  let key1 = Key.create();
-  let key2 = Key.create();
-
-  let state =
-    ref(
-      render(
-        listToElement([
-          <Components.Box key=key1 title="Box1unchanged" />,
-          <Components.Box key=key2 title="Box2unchanged" />,
-        ]),
-      ),
-    );
-
-  test("It renders the initial Boxes list", ({expect}) => {
-    state := state^ |> executeSideEffects;
-    let mountLog = state^ |> getMountLogAndReset;
-
-    expect.list(mountLog).toEqual([
-      MountChild(root, box("Box1unchanged"), 0),
-      MountChild(root, box("Box2unchanged"), 1),
-    ]);
-  });
-
-  test("It reorders the list", ({expect}) => {
-    state :=
-      state^
-      |> update(
-           listToElement([
-             <Components.Box key=key2 title="Box2changed" />,
-             <Components.Box key=key1 title="Box1changed" />,
-           ]),
-         )
-      |> executeSideEffects;
-
-    let mountLog = state^ |> getMountLogAndReset;
-
-    expect.list(mountLog).toEqual([
-      UnmountChild(root, box("Box2unchanged")),
-      MountChild(root, box("Box2changed"), 1),
-      RemountChild(root, box("Box2changed"), 1, 0),
-      UnmountChild(root, box("Box1unchanged")),
-      MountChild(root, box("Box1changed"), 1),
-    ]);
   });
 });
 
@@ -613,16 +518,10 @@ describe("Test conditional updating by leveraging refs", ({test}) => {
 });
 
 describe("Test updating with identical element", ({test}) => {
-  let key1 = Key.create();
-  let key2 = Key.create();
-
   let state =
     ref(
       render(
-        listToElement([
-          <Components.Text key=key1 title="x" />,
-          <Components.Text key=key2 title="y" />,
-        ]),
+        <> <Components.Text title="x" /> <Components.Text title="y" /> </>,
       ),
     );
 
@@ -640,16 +539,10 @@ describe("Test updating with identical element", ({test}) => {
 
   test(
     "It updates the state with a new instance of (same) string", ({expect}) => {
+    open Components;
     state :=
       state^
-      |> update(
-           listToElement(
-             Components.[
-               <Text key=key1 title="x" />,
-               <Text key=key2 title="y" />,
-             ],
-           ),
-         )
+      |> update(<> <Text title="x" /> <Text title="y" /> </>)
       |> executeSideEffects;
 
     let mountLog = state^ |> getMountLogAndReset;
@@ -658,58 +551,15 @@ describe("Test updating with identical element", ({test}) => {
   });
 
   test("It reorders the list", ({expect}) => {
+    open Components;
     state :=
       state^
-      |> update(
-           listToElement(
-             Components.[
-               <Text key=key2 title="y" />,
-               <Text key=key1 title="x" />,
-             ],
-           ),
-         )
+      |> update(<> <Text title="y" /> <Text title="x" /> </>)
       |> executeSideEffects;
 
     let mountLog = state^ |> getMountLogAndReset;
 
     expect.list(mountLog).toEqual([RemountChild(root, text("y"), 1, 0)]);
-  });
-});
-
-describe("Test prepending new element", ({test}) => {
-  let key1 = Key.create();
-  let key2 = Key.create();
-  let commonElement = [<Components.Text key=key1 title="x" />];
-
-  let state = ref(render(listToElement(commonElement)));
-
-  test("It renders a new Text element", ({expect}) => {
-    state := state^ |> executeSideEffects;
-    let mountLog = state^ |> getMountLogAndReset;
-
-    expect.list(mountLog).toEqual([
-      ChangeText("x", "x"),
-      MountChild(root, text("x"), 0),
-    ]);
-  });
-
-  test("It prepends a new Text element to the list", ({expect}) => {
-    state :=
-      state^
-      |> update(
-           listToElement([
-             <Components.Text key=key2 title="y" />,
-             ...commonElement,
-           ]),
-         )
-      |> executeSideEffects;
-
-    let mountLog = state^ |> getMountLogAndReset;
-
-    expect.list(mountLog).toEqual([
-      ChangeText("y", "y"),
-      MountChild(root, text("y"), 0),
-    ]);
   });
 });
 
@@ -940,15 +790,13 @@ describe("Test 'OnMount' effect in extra-nested component", ({test}) => {
 describe("Test transition from empty list to non-empty list", ({test}) => {
   test("It mounts IAmBox0+1", ({expect}) => {
     let state =
-      render(
-        Components.(<Div> {listToElement([])} <Box title="ImABox1" /> </Div>),
-      )
+      render(Components.(<Div> empty <Box title="ImABox1" /> </Div>))
       |> executeSideEffects
       |> reset
       |> update(
            Components.(
              <Div>
-               {listToElement([<Box title="ImABox0" />])}
+               <> <Box title="ImABox0" /> </>
                <Box title="ImABox1" />
              </Div>
            ),
@@ -965,16 +813,14 @@ describe("Test transition from empty list to non-empty list", ({test}) => {
 
   test("It mounts IAmBox0+1", ({expect}) => {
     let state =
-      render(
-        Components.(<Div> <Box title="ImABox0" /> {listToElement([])} </Div>),
-      )
+      render(Components.(<Div> <Box title="ImABox0" /> empty </Div>))
       |> executeSideEffects
       |> reset
       |> update(
            Components.(
              <Div>
                <Box title="ImABox0" />
-               {listToElement([<Box title="ImABox1" />])}
+               <> <Box title="ImABox1" /> </>
              </Div>
            ),
          )
@@ -990,26 +836,29 @@ describe("Test transition from empty list to non-empty list", ({test}) => {
   });
 });
 
+let%component listAndSwitch = (~list, ~switched=false, ()) => {
+  open Components;
+  let%hook component =
+    <movableStateContainer>
+      {switched ? <Div /> : <Box title="ImABoxA" />}
+    </movableStateContainer>;
+
+  <Div> list <component /> </Div>;
+};
+
 describe(
   "Test transition from empty list to non-empty list & <Box key> becomes <Div key>",
   ({test}) => {
   test("IAmBox", ({expect}) => {
-    let key = Key.create();
     let state =
-      render(
-        Components.(
-          <Div> {listToElement([])} <Box key title="ImABoxA" /> </Div>
-        ),
-      )
+      render(<listAndSwitch list=empty />)
       |> executeSideEffects
       |> reset
       |> update(
-           Components.(
-             <Div>
-               {listToElement([<Box title="ImABoxB" />])}
-               <Div key />
-             </Div>
-           ),
+           <listAndSwitch
+             list=Components.(<> <Box title="ImABoxB" /> </>)
+             switched=true
+           />,
          )
       |> executeSideEffects;
     let mountLog = state |> getMountLogAndReset;
@@ -1018,31 +867,6 @@ describe(
       MountChild(div, box("ImABoxB"), 0),
       UnmountChild(div, box("ImABoxA")),
       MountChild(div, div, 1),
-    ]);
-  })
-});
-
-describe(
-  "Test a <SingleChildDiv> with single Flat child, with a changing key",
-  ({test}) => {
-  test("It re-mounts the node with the new key", ({expect}) => {
-    let key1 = Key.create();
-    let key2 = Key.create();
-    let state =
-      render(
-        Components.(<SingleChildDiv> ...<Div key=key1 /> </SingleChildDiv>),
-      )
-      |> executeSideEffects
-      |> reset
-      |> update(
-           Components.(<SingleChildDiv> ...<Div key=key2 /> </SingleChildDiv>),
-         )
-      |> executeSideEffects;
-    let mountLog = state |> getMountLogAndReset;
-
-    expect.list(mountLog).toEqual([
-      UnmountChild(singleChildDiv, div),
-      MountChild(singleChildDiv, div, 0),
     ]);
   })
 });

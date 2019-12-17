@@ -1,10 +1,3 @@
-module GlobalState = {
-  let componentKeyCounter = ref(0);
-  let reset = () => {
-    componentKeyCounter := 0;
-  };
-};
-
 type handler = unit => unit;
 type unregisterF = handler;
 
@@ -16,18 +9,6 @@ let addStaleTreeHandler = (handler: handler) => {
   };
 };
 let callStaleHanlders = () => List.iter(f => f(), staleHandlers^);
-
-module Key = {
-  type t = int;
-
-  let equal = (==);
-  let none = (-1);
-  let dynamicKeyMagicNumber = 0;
-  let create = () => {
-    incr(GlobalState.componentKeyCounter);
-    GlobalState.componentKeyCounter^;
-  };
-};
 
 type hostNode('a) =
   | Node('a)
@@ -58,9 +39,9 @@ type element('node) =
   | Leaf(opaqueComponent('node))
   | StaticList(list(element('node)))
   | DiffableSequence(dynamicElement('node, element('node)))
+  | Movable(element('node), ref(option(instanceForest('node))))
 and component('a) = {
   debugName: string,
-  key: int,
   id: componentId(instance('a)),
   childrenType: childrenType('viewSpec),
   eq:
@@ -244,6 +225,8 @@ module Element = {
         (rest, h) => [h, ...rest],
         (list, length) => INested(list, length),
       )
+
+    | Movable(l, _) => fold(~f, ~init, l)
     };
   };
 };
@@ -445,36 +428,6 @@ module SubtreeChange = {
     });
 };
 
-module OpaqueInstanceHash = {
-  type t('node) = opaqueInstanceHash('node);
-  let addOpaqueInstance = (idTable, index, opaqueInstance) => {
-    let Instance({component: {key}}) = opaqueInstance;
-    key == Key.none
-      ? () : Hashtbl.add(idTable, key, (opaqueInstance, index));
-  };
-  let addRenderedElement = (idTable, renderedElement, index) => {
-    let rec aux = index =>
-      fun
-      | IFlat(l) => addOpaqueInstance(idTable, index, l)
-      | INested(l, _) => List.iteri((i, x) => aux(i, x), l)
-      // Skip diffable sequence!
-      | IDiffableSequence(_, _) => ();
-    aux(index, renderedElement);
-  };
-  let createKeyTable = renderedElement =>
-    lazy({
-      let keyTable = Hashtbl.create(1);
-      addRenderedElement(keyTable, renderedElement, 0);
-      keyTable;
-    });
-  let lookupKey = (table, key) => {
-    let keyTable = Lazy.force(table);
-    try(Some(Hashtbl.find(keyTable, key))) {
-    | Not_found => None
-    };
-  };
-};
-
 module Instance = {
 
   let rec ofComponent:
@@ -617,10 +570,10 @@ module Instance = {
 };
 
 module Render = {
-  let getOpaqueInstance = (~useKeyTable, OpaqueComponent({key})) =>
+  let getOpaqueInstance = (~useKeyTable, OpaqueComponent(_)) =>
     switch (useKeyTable) {
     | None => None
-    | Some(keyTable) => OpaqueInstanceHash.lookupKey(keyTable, key)
+    | Some(_keyTable) => None
     };
 
   type subtreeUpdate('node) =
@@ -1273,17 +1226,8 @@ module RenderedElement = {
   };
 };
 
-let element = (~key as argumentKey=Key.none, component) => {
-  let key =
-    argumentKey != Key.none
-      ? argumentKey
-      : {
-        let isDynamicKey = component.key == Key.dynamicKeyMagicNumber;
-        isDynamicKey ? Key.create() : Key.none;
-      };
-  let componentWithKey =
-    key != component.key ? {...component, key} : component;
-  Leaf(OpaqueComponent(componentWithKey));
+let element = component => {
+  Leaf(OpaqueComponent(component));
 };
 
 let listToElement = l => StaticList(l);
@@ -1296,14 +1240,9 @@ module Expert = {
   let jsx_list = l => StaticList(l);
   let component:
     type a node.
-      (
-        ~useDynamicKey: bool=?,
-        string,
-        ~key: Key.t=?,
-        Hooks.t(a, a) => (element(node), Hooks.t(Hooks.nil, a))
-      ) =>
+      (string, Hooks.t(a, a) => (element(node), Hooks.t(Hooks.nil, a))) =>
       element(node) =
-    (~useDynamicKey=false, debugName) => {
+    debugName => {
       module Component = {
         type componentId('a) +=
           | Id: componentId(
@@ -1338,31 +1277,25 @@ module Expert = {
             };
           };
       };
-      (~key=?, render) =>
-        element(
-          ~key?,
-          {
-            debugName,
-            childrenType: React,
-            key: useDynamicKey ? Key.dynamicKeyMagicNumber : Key.none,
-            id: Component.Id,
-            eq: Component.eq,
-            render,
-          },
-        );
+      render =>
+        element({
+          debugName,
+          childrenType: React,
+          id: Component.Id,
+          eq: Component.eq,
+          render,
+        });
     };
 
   let nativeComponent:
     type a node childNode.
       (
-        ~useDynamicKey: bool=?,
         string,
-        ~key: Key.t=?,
         Hooks.t(a, a) =>
         (hostNodeElement(node, childNode), Hooks.t(Hooks.nil, a))
       ) =>
       element(node) =
-    (~useDynamicKey=false, debugName) => {
+    debugName => {
       module Component = {
         type componentId('a) +=
           | Id: componentId(
@@ -1418,41 +1351,20 @@ module Expert = {
             };
           };
       };
-      (~key=?, render) =>
-        element(
-          ~key?,
-          {
-            debugName,
-            childrenType: Host,
-            key: useDynamicKey ? Key.dynamicKeyMagicNumber : Key.none,
-            id: Component.Id,
-            eq: Component.eq,
-            render,
-          },
-        );
+      render =>
+        element({
+          debugName,
+          childrenType: Host,
+          id: Component.Id,
+          eq: Component.eq,
+          render,
+        });
     };
 };
-let component = (~useDynamicKey=?, debugName) => {
-  let c = Expert.component(~useDynamicKey?, debugName);
-  (~key=?, render) => {
-    c(
-      ~key?,
-      hooks => {
-        let (hooks, e) = render(hooks);
-        (e, hooks);
-      },
-    );
-  };
-};
-let nativeComponent = (~useDynamicKey=?, debugName) => {
-  let c = Expert.nativeComponent(~useDynamicKey?, debugName);
-  (~key=?, render) => {
-    c(
-      ~key?,
-      hooks => {
-        let (hooks, e) = render(hooks);
-        (e, hooks);
-      },
-    );
-  };
+
+type movableStateContainerState('node) = ref(option(instanceForest('node)));
+
+let movableStateContainer = (~children, (), hooks) => {
+  let (instanceRef, hooks) = Hooks.ref(None, hooks);
+  (() => Movable(children, instanceRef), hooks);
 };
