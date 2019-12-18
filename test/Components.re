@@ -89,26 +89,15 @@ module BoxWrapper = {
   );
 };
 
-/**
- * Box with dynamic keys.
- */
-module BoxItemDynamic = {
-  [@component]
-  let make = (~title="ImABox", (), h) => (stringToElement(title), h);
-};
-
 module BoxList = {
   type action =
     | Create(string)
     | Reverse;
-  let%component make = (~rAction, ~useDynamicKeys=false, ()) => {
+  let%component make = (~rAction, ()) => {
     let%hook (state, dispatch) =
       Hooks.reducer(~initialState=[], (action, state) =>
         switch (action) {
-        | Create(title) => [
-            useDynamicKeys ? <BoxItemDynamic title /> : <Box title />,
-            ...state,
-          ]
+        | Create(title) => [<Box title />, ...state]
         | Reverse => List.rev(state)
         }
       );

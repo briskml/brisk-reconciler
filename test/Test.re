@@ -292,64 +292,7 @@ describe("Test changing components", ({test}) => {
   });
 });
 
-describe("Test BoxList with dynamic keys", ({test}) => {
-  let rAction = RemoteAction.create();
-  let state =
-    ref(
-      render(<Components.BoxList useDynamicKeys=true rAction />)
-      |> executeSideEffects,
-    );
-
-  test("It renders an empty list", ({expect}) => {
-    let mountLog = state^ |> getMountLogAndReset;
-
-    expect.list(mountLog).toEqual([]);
-  });
-
-  test("It inserts one item", ({expect}) => {
-    state :=
-      state^
-      |> act(~action=Components.BoxList.Create("Hello"), rAction)
-      |> flushPendingUpdates
-      |> executeSideEffects;
-
-    let mountLog = state^ |> getMountLogAndReset;
-
-    expect.list(mountLog).toEqual([
-      ChangeText("Hello", "Hello"),
-      MountChild(root, text("Hello"), 0),
-    ]);
-  });
-
-  test("It prepends one more BoxItem and then flushes", ({expect}) => {
-    state :=
-      state^
-      |> act(~action=Components.BoxList.Create("World"), rAction)
-      |> flushPendingUpdates
-      |> executeSideEffects;
-    let mountLog = state^ |> getMountLogAndReset;
-
-    expect.list(mountLog).toEqual([
-      ChangeText("World", "World"),
-      MountChild(root, text("World"), 0),
-    ]);
-  });
-
-  test("It reverses the items list in the BoxList", ({expect}) => {
-    state :=
-      state^
-      |> act(~action=Components.BoxList.Reverse, rAction)
-      |> flushPendingUpdates
-      |> executeSideEffects;
-    let mountLog = state^ |> getMountLogAndReset;
-
-    expect.list(mountLog).toEqual([
-      RemountChild(root, text("Hello"), 1, 0),
-    ]);
-  });
-});
-
-describe("Test BoxList without dynamic keys", ({test}) => {
+describe("Test BoxList", ({test}) => {
   let rAction = RemoteAction.create();
   let state =
     ref(render(<Components.BoxList rAction />) |> executeSideEffects);
@@ -397,58 +340,6 @@ describe("Test BoxList without dynamic keys", ({test}) => {
       UnmountChild(root, box("Hello")),
       MountChild(root, box("World"), 1),
     ]);
-  });
-});
-
-describe("Test BoxItemDynamic memoizing during deep move", ({test}) => {
-  let box = <Components.BoxItemDynamic title="box to move" />;
-
-  let state = ref(render(box));
-
-  let beforeUpdate = ref(None);
-  let afterUpdate = ref(None);
-
-  test("It renders the initial BoxItemDynamic", ({expect}) => {
-    state := state^ |> executeSideEffects;
-    let mountLog = state^ |> getMountLogAndReset;
-
-    beforeUpdate := Some(state^.renderedElement.payload);
-
-    expect.list(mountLog).toEqual([
-      ChangeText("box to move", "box to move"),
-      MountChild(root, text("box to move"), 0),
-    ]);
-  });
-
-  test(
-    "It adds new element before BoxItemDynamic (it replaces the whole tree)",
-    ({expect}) => {
-    state :=
-      state^
-      |> update(<> {Components.stringToElement("before")} <> box </> </>)
-      |> executeSideEffects;
-
-    afterUpdate := Some(state^.renderedElement.payload);
-
-    let mountLog = state^ |> getMountLogAndReset;
-
-    expect.list(mountLog).toEqual([
-      UnmountChild(root, text("box to move")),
-      ChangeText("before", "before"),
-      MountChild(root, text("before"), 0),
-      MountChild(root, text("box to move"), 1),
-    ]);
-  });
-
-  test("It memoized the nested BoxItemDynamic", ({expect}) => {
-    expect.bool(
-      switch (beforeUpdate^, afterUpdate^) {
-      | (Some(IFlat(x)), Some(INested([_, INested([IFlat(y)], _)], _))) =>
-        x === y
-      | _ => false
-      },
-    ).
-      toBeTrue()
   });
 });
 
@@ -547,18 +438,6 @@ describe("Test updating with identical element", ({test}) => {
     let mountLog = state^ |> getMountLogAndReset;
 
     expect.list(mountLog).toEqual([]);
-  });
-
-  test("It reorders the list", ({expect}) => {
-    open Components;
-    state :=
-      state^
-      |> update(<> <Text title="y" /> <Text title="x" /> </>)
-      |> executeSideEffects;
-
-    let mountLog = state^ |> getMountLogAndReset;
-
-    expect.list(mountLog).toEqual([RemountChild(root, text("y"), 1, 0)]);
   });
 });
 
