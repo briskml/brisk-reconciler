@@ -287,12 +287,12 @@
       "overrides": [],
       "dependencies": [
         "ocaml@4.6.1000@d41d8cd9", "@opam/uutf@opam:1.0.2@4440868f",
-        "@opam/seq@opam:0.2@35c16df8", "@opam/re@opam:1.9.0@d4d5e13d",
+        "@opam/seq@opam:0.2.1@b10e6594", "@opam/re@opam:1.9.0@d4d5e13d",
         "@opam/dune@opam:1.11.4@a7ccb7ae", "@esy-ocaml/substs@0.0.1@d41d8cd9"
       ],
       "devDependencies": [
         "ocaml@4.6.1000@d41d8cd9", "@opam/uutf@opam:1.0.2@4440868f",
-        "@opam/seq@opam:0.2@35c16df8", "@opam/re@opam:1.9.0@d4d5e13d",
+        "@opam/seq@opam:0.2.1@b10e6594", "@opam/re@opam:1.9.0@d4d5e13d",
         "@opam/dune@opam:1.11.4@a7ccb7ae"
       ]
     },
@@ -374,20 +374,20 @@
         "ocaml@4.6.1000@d41d8cd9", "@opam/dune@opam:1.11.4@a7ccb7ae"
       ]
     },
-    "@opam/seq@opam:0.2@35c16df8": {
-      "id": "@opam/seq@opam:0.2@35c16df8",
+    "@opam/seq@opam:0.2.1@b10e6594": {
+      "id": "@opam/seq@opam:0.2.1@b10e6594",
       "name": "@opam/seq",
-      "version": "opam:0.2",
+      "version": "opam:0.2.1",
       "source": {
         "type": "install",
         "source": [
-          "archive:https://opam.ocaml.org/cache/md5/1d/1d5a9d0aba27b22433f518cdc495d0fd#md5:1d5a9d0aba27b22433f518cdc495d0fd",
-          "archive:https://github.com/c-cube/seq/archive/0.2.tar.gz#md5:1d5a9d0aba27b22433f518cdc495d0fd"
+          "archive:https://opam.ocaml.org/cache/md5/9b/9b2c81be728b3edb3abe729d64fd5f65#md5:9b2c81be728b3edb3abe729d64fd5f65",
+          "archive:https://github.com/c-cube/seq/archive/0.2.1.tar.gz#md5:9b2c81be728b3edb3abe729d64fd5f65"
         ],
         "opam": {
           "name": "seq",
-          "version": "0.2",
-          "path": "package-ci-4.06.esy.lock/opam/seq.0.2"
+          "version": "0.2.1",
+          "path": "package-ci-4.06.esy.lock/opam/seq.0.2.1"
         }
       },
       "overrides": [],
@@ -442,11 +442,11 @@
       },
       "overrides": [],
       "dependencies": [
-        "ocaml@4.6.1000@d41d8cd9", "@opam/seq@opam:0.2@35c16df8",
+        "ocaml@4.6.1000@d41d8cd9", "@opam/seq@opam:0.2.1@b10e6594",
         "@opam/dune@opam:1.11.4@a7ccb7ae", "@esy-ocaml/substs@0.0.1@d41d8cd9"
       ],
       "devDependencies": [
-        "ocaml@4.6.1000@d41d8cd9", "@opam/seq@opam:0.2@35c16df8",
+        "ocaml@4.6.1000@d41d8cd9", "@opam/seq@opam:0.2.1@b10e6594",
         "@opam/dune@opam:1.11.4@a7ccb7ae"
       ]
     },
