@@ -1,35 +1,6 @@
-/**
-  * Global state, mainly useful for internal testing
-  */
-module GlobalState: {
-  /**
-    * Resets global state including keys.
-    */
-  let reset: unit => unit;
-};
-
 type handler = unit => unit;
 type unregisterF = handler;
 let addStaleTreeHandler: handler => unregisterF;
-
-/**
-  * Component keys
-  */
-module Key: {
-  /**
-    * Abstract type of the component key. It prevents duplicate key issues
-    */
-  type t;
-  /**
-    * Create unique a component key.
-    */
-  let create: unit => t;
-
-  /**
-    * Default key
-    */
-  let none: t;
-};
 
 /** Type of element returned from render */
 type element('node);
@@ -79,11 +50,7 @@ module RenderedElement: {
 
   /** Update a rendered element when a new react element is received. */
   let update:
-    (
-      ~previousElement: element('node),
-      ~renderedElement: t('parentNode, 'node),
-      element('node)
-    ) =>
+    (~renderedElement: t('parentNode, 'node), element('node)) =>
     t('parentNode, 'node);
 
   /** Flush pending state updates (and possibly add new ones). */
@@ -103,57 +70,33 @@ module RenderedElement: {
   let executePendingEffects: t('a, 'b) => t('a, 'b);
 };
 
-/**
-  * Creates a component. Components are a functions which
-  * retain state over time via Hooks. The function you pass to
-  * component should be pure and all side effects should be
-  * handled using Hooks.effect
-  */
-[@ocaml.deprecated "Use let%component instead."]
-let component:
-  (
-    ~useDynamicKey: bool=?,
-    string,
-    ~key: Key.t=?,
-    Hooks.t('a, 'a) => (Hooks.t(Hooks.nil, 'a), element('node))
-  ) =>
-  element('node);
-
-/**
-  * Creates a component which renders an OutputTree node.
-  */
-[@ocaml.deprecated "Use let%nativeComponent instead."]
-let nativeComponent:
-  (
-    ~useDynamicKey: bool=?,
-    string,
-    ~key: Key.t=?,
-    Hooks.t('a, 'a) =>
-    (Hooks.t(Hooks.nil, 'a), hostNodeElement('node, 'childNode))
-  ) =>
-  element('node);
-
 module Expert: {
   /* Create a constant list of element */
   let jsx_list: list(element('node)) => element('node);
   let component:
     (
-      ~useDynamicKey: bool=?,
       string,
-      ~key: Key.t=?,
       Hooks.t('a, 'a) => (element('node), Hooks.t(Hooks.nil, 'a))
     ) =>
     element('node);
   let nativeComponent:
     (
-      ~useDynamicKey: bool=?,
       string,
-      ~key: Key.t=?,
       Hooks.t('a, 'a) =>
       (hostNodeElement('node, _), Hooks.t(Hooks.nil, 'a))
     ) =>
     element('node);
 };
+
+type movableStateContainerState('node);
+
+let movableStateContainer:
+  (
+    ~children: element('node),
+    unit,
+    Hooks.t(movableStateContainerState('node) => 'c, 'd),
+  ) =>
+  (unit => element('node), Hooks.t('c, 'd));
 
 module Hooks = Hooks;
 module RemoteAction = RemoteAction;

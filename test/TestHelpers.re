@@ -20,11 +20,10 @@ let reset = x => {
   x;
 };
 
-let update = (nextReactElement, {element: previousElement, renderedElement}) => {
+let update = (nextReactElement, {renderedElement}) => {
   element: nextReactElement,
   renderedElement:
     RenderedElement.update(
-      ~previousElement,
       ~renderedElement,
       nextReactElement,
     ),
