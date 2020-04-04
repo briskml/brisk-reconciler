@@ -15,7 +15,7 @@
   "dependencies": {
     "@esy-ocaml/reason": ">=3.4.0",
     "@opam/dune": "^1.7.3",
-    "@opam/ppxlib": "0.8.1",
+    "@opam/ppxlib": ">=0.11.0",
     "ocaml": ">=4.6.0"
   },
   "devDependencies": {

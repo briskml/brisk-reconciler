@@ -35,7 +35,7 @@ module JSX_ppx = struct
     let args = props_filter_children props in
     ATH.Exp.apply ~loc ~attrs (component_ident ~loc) args
 
-  let is_jsx ({ AT.txt }, _) = String.equal txt "JSX"
+  let is_jsx { P.attr_name = { txt } } = String.equal txt "JSX"
 
   let filter_jsx = List.filter is_jsx
 
