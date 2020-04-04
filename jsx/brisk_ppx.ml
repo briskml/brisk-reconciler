@@ -1,5 +1,4 @@
-module P = Ppxlib.Parsetree
-module AT = Ppxlib.Asttypes
+module P = Ppxlib.Ast
 module ATH = Ppxlib.Ast_helper
 module Ast_builder = Ppxlib.Ast_builder.Default
 
@@ -18,12 +17,12 @@ let hooks_ident_pattern ~loc =
 module JSX_ppx = struct
   let rec props_filter_children ~acc = function
     | [] -> List.rev acc
-    | (AT.Labelled "children", P.([%expr []])) :: tail ->
+    | (P.Labelled "children", P.([%expr []])) :: tail ->
         props_filter_children ~acc tail
-    | (AT.Labelled "children", P.([%expr [%e? h] :: [%e? t]] as exp)) :: tail ->
+    | (P.Labelled "children", P.([%expr [%e? h] :: [%e? t]] as exp)) :: tail ->
         let loc = exp.P.pexp_loc in
         let prop =
-          ( AT.Labelled "children",
+          ( P.Labelled "children",
             P.([%expr Brisk_reconciler.Expert.jsx_list ([%e h] :: [%e t])]) )
         in
         props_filter_children ~acc:(prop :: acc) tail
@@ -35,7 +34,14 @@ module JSX_ppx = struct
     let args = props_filter_children props in
     ATH.Exp.apply ~loc ~attrs (component_ident ~loc) args
 
-  let is_jsx { P.attr_name = { txt } } = String.equal txt "JSX"
+  let is_jsx =
+    let open Ppxlib.Ast_pattern in
+    let jsx_attr = attribute ~name:(string "JSX") ~payload:__ in
+    fun attr ->
+      parse jsx_attr Ppxlib.Location.none
+        ~on_error:(fun _ -> false)
+        attr
+        (fun _ -> true)
 
   let filter_jsx = List.filter is_jsx
 
