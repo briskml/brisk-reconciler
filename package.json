@@ -20,7 +20,7 @@
   },
   "devDependencies": {
     "ocaml": "~4.8.0",
-    "@opam/ocaml-lsp-server": "ocaml/ocaml-lsp:ocaml-lsp-server.opam#b1168b8",
+    "@opam/ocaml-lsp-server": "ocaml/ocaml-lsp:ocaml-lsp-server.opam",
     "@opam/ppx_deriving": "^4.2.1",
     "@opam/ocamlformat": "0.12",
     "@reason-native/rely": "^3.1.0"
