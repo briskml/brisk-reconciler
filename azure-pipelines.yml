@@ -15,16 +15,16 @@ stages:
   - job:
     strategy:
       matrix: {
-        windows_406: { OCAML_VERSION: "4.06", platform: Windows, vmImage: windows-latest, CACHE_FOLDER: $(Pipeline.Workspace)\cache },
-        windows_407: { OCAML_VERSION: "4.07", platform: Windows, vmImage: windows-latest, CACHE_FOLDER: $(Pipeline.Workspace)\cache },
+        # windows_406: { OCAML_VERSION: "4.06", platform: Windows, vmImage: windows-latest, CACHE_FOLDER: $(Pipeline.Workspace)\cache },
+        # windows_407: { OCAML_VERSION: "4.07", platform: Windows, vmImage: windows-latest, CACHE_FOLDER: $(Pipeline.Workspace)\cache },
         windows_408: { OCAML_VERSION: "4.08", platform: Windows, vmImage: windows-latest, CACHE_FOLDER: $(Pipeline.Workspace)\cache },
 #        macos_404: { OCAML_VERSION: "4.04", platform: macOS, vmImage: macos-latest, CACHE_FOLDER: $(Pipeline.Workspace)/cache },
-        macos_406: { OCAML_VERSION: "4.06", platform: macOS, vmImage: macos-latest, CACHE_FOLDER: $(Pipeline.Workspace)/cache },
-        macos_407: { OCAML_VERSION: "4.07", platform: macOS, vmImage: macos-latest, CACHE_FOLDER: $(Pipeline.Workspace)/cache },
+# macos_406: { OCAML_VERSION: "4.06", platform: macOS, vmImage: macos-latest, CACHE_FOLDER: $(Pipeline.Workspace)/cache },
+# macos_407: { OCAML_VERSION: "4.07", platform: macOS, vmImage: macos-latest, CACHE_FOLDER: $(Pipeline.Workspace)/cache },
         macos_408: { OCAML_VERSION: "4.08", platform: macOS, vmImage: macos-latest, CACHE_FOLDER: $(Pipeline.Workspace)/cache },
 #        linux_404: { OCAML_VERSION: "4.04", platform: Linux, vmImage: ubuntu-latest, CACHE_FOLDER: $(Pipeline.Workspace)/cache },
-        linux_406: { OCAML_VERSION: "4.06", platform: Linux, vmImage: ubuntu-latest, CACHE_FOLDER: $(Pipeline.Workspace)/cache },
-        linux_407: { OCAML_VERSION: "4.07", platform: Linux, vmImage: ubuntu-latest, CACHE_FOLDER: $(Pipeline.Workspace)/cache },
+# linux_406: { OCAML_VERSION: "4.06", platform: Linux, vmImage: ubuntu-latest, CACHE_FOLDER: $(Pipeline.Workspace)/cache },
+# linux_407: { OCAML_VERSION: "4.07", platform: Linux, vmImage: ubuntu-latest, CACHE_FOLDER: $(Pipeline.Workspace)/cache },
         linux_408: { OCAML_VERSION: "4.08", platform: Linux, vmImage: ubuntu-latest, CACHE_FOLDER: $(Pipeline.Workspace)/cache }
       }
     pool:
