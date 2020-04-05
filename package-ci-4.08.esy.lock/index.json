@@ -1,5 +1,5 @@
 {
-  "checksum": "1261d39a9ad9b7e8ac6bd6064ce16937",
+  "checksum": "289ca8cb731d3f5350feb78cfcae88e1",
   "root": "brisk-reconciler@link-dev:./package.json",
   "node": {
     "ocaml@4.8.1000@d41d8cd9": {
@@ -33,8 +33,7 @@
       "devDependencies": [
         "ocaml@4.8.1000@d41d8cd9", "@reason-native/rely@3.2.1@d41d8cd9",
         "@opam/ppx_deriving@opam:4.4.1@208c6c8f",
-        "@opam/ocamlformat@opam:0.12@4af14b8f",
-        "@opam/ocaml-lsp-server@github:ocaml/ocaml-lsp:ocaml-lsp-server.opam#b1168b8@d41d8cd9"
+        "@opam/ocamlformat@opam:0.12@4af14b8f"
       ]
     },
     "@reason-native/rely@3.2.1@d41d8cd9": {
@@ -109,34 +108,6 @@
         "@esy-ocaml/reason@3.6.0@d41d8cd9"
       ],
       "devDependencies": []
-    },
-    "@opam/yojson@opam:1.7.0@7056d985": {
-      "id": "@opam/yojson@opam:1.7.0@7056d985",
-      "name": "@opam/yojson",
-      "version": "opam:1.7.0",
-      "source": {
-        "type": "install",
-        "source": [
-          "archive:https://opam.ocaml.org/cache/md5/b8/b89d39ca3f8c532abe5f547ad3b8f84d#md5:b89d39ca3f8c532abe5f547ad3b8f84d",
-          "archive:https://github.com/ocaml-community/yojson/releases/download/1.7.0/yojson-1.7.0.tbz#md5:b89d39ca3f8c532abe5f547ad3b8f84d"
-        ],
-        "opam": {
-          "name": "yojson",
-          "version": "1.7.0",
-          "path": "package-ci-4.08.esy.lock/opam/yojson.1.7.0"
-        }
-      },
-      "overrides": [],
-      "dependencies": [
-        "ocaml@4.8.1000@d41d8cd9", "@opam/easy-format@opam:1.3.2@0484b3c4",
-        "@opam/dune@opam:2.4.0@639d28a3", "@opam/cppo@opam:1.6.6@f4f83858",
-        "@opam/biniou@opam:1.2.1@d7570399",
-        "@esy-ocaml/substs@0.0.1@d41d8cd9"
-      ],
-      "devDependencies": [
-        "ocaml@4.8.1000@d41d8cd9", "@opam/easy-format@opam:1.3.2@0484b3c4",
-        "@opam/dune@opam:2.4.0@639d28a3", "@opam/biniou@opam:1.2.1@d7570399"
-      ]
     },
     "@opam/uutf@opam:1.0.2@4440868f": {
       "id": "@opam/uutf@opam:1.0.2@4440868f",
@@ -298,31 +269,6 @@
       ],
       "devDependencies": [
         "ocaml@4.8.1000@d41d8cd9", "@opam/ocamlbuild@opam:0.14.0@6ac75d03"
-      ]
-    },
-    "@opam/stdlib-shims@opam:0.1.0@d957c903": {
-      "id": "@opam/stdlib-shims@opam:0.1.0@d957c903",
-      "name": "@opam/stdlib-shims",
-      "version": "opam:0.1.0",
-      "source": {
-        "type": "install",
-        "source": [
-          "archive:https://opam.ocaml.org/cache/md5/12/12b5704eed70c6bff5ac39a16db1425d#md5:12b5704eed70c6bff5ac39a16db1425d",
-          "archive:https://github.com/ocaml/stdlib-shims/releases/download/0.1.0/stdlib-shims-0.1.0.tbz#md5:12b5704eed70c6bff5ac39a16db1425d"
-        ],
-        "opam": {
-          "name": "stdlib-shims",
-          "version": "0.1.0",
-          "path": "package-ci-4.08.esy.lock/opam/stdlib-shims.0.1.0"
-        }
-      },
-      "overrides": [],
-      "dependencies": [
-        "ocaml@4.8.1000@d41d8cd9", "@opam/dune@opam:2.4.0@639d28a3",
-        "@esy-ocaml/substs@0.0.1@d41d8cd9"
-      ],
-      "devDependencies": [
-        "ocaml@4.8.1000@d41d8cd9", "@opam/dune@opam:2.4.0@639d28a3"
       ]
     },
     "@opam/stdio@opam:v0.13.0@eb59d879": {
@@ -533,32 +479,6 @@
       "devDependencies": [
         "ocaml@4.8.1000@d41d8cd9", "@opam/ocamlfind@opam:1.8.1@ff07b0f9",
         "@opam/ocaml-migrate-parsetree@opam:1.6.0@da2643e7",
-        "@opam/dune@opam:2.4.0@639d28a3"
-      ]
-    },
-    "@opam/ppx_yojson_conv_lib@opam:v0.13.0@97a4cb97": {
-      "id": "@opam/ppx_yojson_conv_lib@opam:v0.13.0@97a4cb97",
-      "name": "@opam/ppx_yojson_conv_lib",
-      "version": "opam:v0.13.0",
-      "source": {
-        "type": "install",
-        "source": [
-          "archive:https://opam.ocaml.org/cache/md5/79/790fade9ecff5767dd48cd49c9bba2f3#md5:790fade9ecff5767dd48cd49c9bba2f3",
-          "archive:https://ocaml.janestreet.com/ocaml-core/v0.13/files/ppx_yojson_conv_lib-v0.13.0.tar.gz#md5:790fade9ecff5767dd48cd49c9bba2f3"
-        ],
-        "opam": {
-          "name": "ppx_yojson_conv_lib",
-          "version": "v0.13.0",
-          "path": "package-ci-4.08.esy.lock/opam/ppx_yojson_conv_lib.v0.13.0"
-        }
-      },
-      "overrides": [],
-      "dependencies": [
-        "ocaml@4.8.1000@d41d8cd9", "@opam/yojson@opam:1.7.0@7056d985",
-        "@opam/dune@opam:2.4.0@639d28a3", "@esy-ocaml/substs@0.0.1@d41d8cd9"
-      ],
-      "devDependencies": [
-        "ocaml@4.8.1000@d41d8cd9", "@opam/yojson@opam:1.7.0@7056d985",
         "@opam/dune@opam:2.4.0@639d28a3"
       ]
     },
@@ -805,33 +725,6 @@
         "@opam/dune@opam:2.4.0@639d28a3"
       ]
     },
-    "@opam/ocaml-lsp-server@github:ocaml/ocaml-lsp:ocaml-lsp-server.opam#b1168b8@d41d8cd9": {
-      "id":
-        "@opam/ocaml-lsp-server@github:ocaml/ocaml-lsp:ocaml-lsp-server.opam#b1168b8@d41d8cd9",
-      "name": "@opam/ocaml-lsp-server",
-      "version": "github:ocaml/ocaml-lsp:ocaml-lsp-server.opam#b1168b8",
-      "source": {
-        "type": "install",
-        "source": [ "github:ocaml/ocaml-lsp:ocaml-lsp-server.opam#b1168b8" ]
-      },
-      "overrides": [],
-      "dependencies": [
-        "ocaml@4.8.1000@d41d8cd9", "@opam/yojson@opam:1.7.0@7056d985",
-        "@opam/stdlib-shims@opam:0.1.0@d957c903",
-        "@opam/ppx_yojson_conv_lib@opam:v0.13.0@97a4cb97",
-        "@opam/ocamlfind@opam:1.8.1@ff07b0f9",
-        "@opam/menhir@opam:20200211@26571604",
-        "@opam/dune@opam:2.4.0@639d28a3", "@esy-ocaml/substs@0.0.1@d41d8cd9"
-      ],
-      "devDependencies": [
-        "ocaml@4.8.1000@d41d8cd9", "@opam/yojson@opam:1.7.0@7056d985",
-        "@opam/stdlib-shims@opam:0.1.0@d957c903",
-        "@opam/ppx_yojson_conv_lib@opam:v0.13.0@97a4cb97",
-        "@opam/ocamlfind@opam:1.8.1@ff07b0f9",
-        "@opam/menhir@opam:20200211@26571604",
-        "@opam/dune@opam:2.4.0@639d28a3"
-      ]
-    },
     "@opam/ocaml-compiler-libs@opam:v0.12.1@5c34eb0d": {
       "id": "@opam/ocaml-compiler-libs@opam:v0.12.1@5c34eb0d",
       "name": "@opam/ocaml-compiler-libs",
@@ -1047,31 +940,6 @@
         "ocaml@4.8.1000@d41d8cd9", "@opam/dune@opam:2.4.0@639d28a3"
       ]
     },
-    "@opam/easy-format@opam:1.3.2@0484b3c4": {
-      "id": "@opam/easy-format@opam:1.3.2@0484b3c4",
-      "name": "@opam/easy-format",
-      "version": "opam:1.3.2",
-      "source": {
-        "type": "install",
-        "source": [
-          "archive:https://opam.ocaml.org/cache/sha256/34/3440c2b882d537ae5e9011eb06abb53f5667e651ea4bb3b460ea8230fa8c1926#sha256:3440c2b882d537ae5e9011eb06abb53f5667e651ea4bb3b460ea8230fa8c1926",
-          "archive:https://github.com/mjambon/easy-format/releases/download/1.3.2/easy-format-1.3.2.tbz#sha256:3440c2b882d537ae5e9011eb06abb53f5667e651ea4bb3b460ea8230fa8c1926"
-        ],
-        "opam": {
-          "name": "easy-format",
-          "version": "1.3.2",
-          "path": "package-ci-4.08.esy.lock/opam/easy-format.1.3.2"
-        }
-      },
-      "overrides": [],
-      "dependencies": [
-        "ocaml@4.8.1000@d41d8cd9", "@opam/dune@opam:2.4.0@639d28a3",
-        "@esy-ocaml/substs@0.0.1@d41d8cd9"
-      ],
-      "devDependencies": [
-        "ocaml@4.8.1000@d41d8cd9", "@opam/dune@opam:2.4.0@639d28a3"
-      ]
-    },
     "@opam/dune-private-libs@opam:2.4.0@490a4742": {
       "id": "@opam/dune-private-libs@opam:2.4.0@490a4742",
       "name": "@opam/dune-private-libs",
@@ -1215,32 +1083,6 @@
         "ocaml@4.8.1000@d41d8cd9", "@esy-ocaml/substs@0.0.1@d41d8cd9"
       ],
       "devDependencies": [ "ocaml@4.8.1000@d41d8cd9" ]
-    },
-    "@opam/biniou@opam:1.2.1@d7570399": {
-      "id": "@opam/biniou@opam:1.2.1@d7570399",
-      "name": "@opam/biniou",
-      "version": "opam:1.2.1",
-      "source": {
-        "type": "install",
-        "source": [
-          "archive:https://opam.ocaml.org/cache/sha256/35/35546c68b1929a8e6d27a3b39ecd17b38303a0d47e65eb9d1480c2061ea84335#sha256:35546c68b1929a8e6d27a3b39ecd17b38303a0d47e65eb9d1480c2061ea84335",
-          "archive:https://github.com/mjambon/biniou/releases/download/1.2.1/biniou-1.2.1.tbz#sha256:35546c68b1929a8e6d27a3b39ecd17b38303a0d47e65eb9d1480c2061ea84335"
-        ],
-        "opam": {
-          "name": "biniou",
-          "version": "1.2.1",
-          "path": "package-ci-4.08.esy.lock/opam/biniou.1.2.1"
-        }
-      },
-      "overrides": [],
-      "dependencies": [
-        "ocaml@4.8.1000@d41d8cd9", "@opam/easy-format@opam:1.3.2@0484b3c4",
-        "@opam/dune@opam:2.4.0@639d28a3", "@esy-ocaml/substs@0.0.1@d41d8cd9"
-      ],
-      "devDependencies": [
-        "ocaml@4.8.1000@d41d8cd9", "@opam/easy-format@opam:1.3.2@0484b3c4",
-        "@opam/dune@opam:2.4.0@639d28a3"
-      ]
     },
     "@opam/base-unix@opam:base@87d0b2eb": {
       "id": "@opam/base-unix@opam:base@87d0b2eb",
