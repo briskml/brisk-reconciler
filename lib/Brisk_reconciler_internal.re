@@ -15,7 +15,7 @@ let addStaleTreeHandler = (handler: handler) => {
     staleHandlers := List.filter(f => f === handler, staleHandlers^);
   };
 };
-let callStaleHanlders = () => List.iter(f => f(), staleHandlers^);
+let callStaleHandlers = () => List.iter(f => f(), staleHandlers^);
 
 module Key = {
   type t = int;
@@ -518,7 +518,7 @@ module Instance = {
       {
         let (children_, hooks) =
           component.render(
-            Hooks.ofState(None, ~onStateDidChange=callStaleHanlders),
+            Hooks.ofState(None, ~onStateDidChange=callStaleHandlers),
           );
         let hooks = Hooks.toState(hooks);
         let childElements =
@@ -831,7 +831,7 @@ module Render = {
             nextComponent.render(
               Hooks.ofState(
                 Some(updatedInstanceWithNewElement.hooks),
-                ~onStateDidChange=callStaleHanlders,
+                ~onStateDidChange=callStaleHandlers,
               ),
             );
           (nextElement, Hooks.toState(initialHooks));
