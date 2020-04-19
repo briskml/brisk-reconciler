@@ -227,9 +227,9 @@ module Effect = {
           | OnMountAndIf(_, currentConditionValue) => currentConditionValue
           /* The following cases are unreachable because it's
            * Impossible to create a value of type condition(always)
-           * Or condition(onMount) using the If constructor
+           * Or condition(onMount) using the If or OnMountAndIf constructor
            */
-          | Always
+          | Always => previousConditionValue
           | OnMount => previousConditionValue
           };
         if (comparator(previousConditionValue, currentConditionValue)) {
