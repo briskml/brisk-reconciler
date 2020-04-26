@@ -24,11 +24,11 @@ type dynamicElement('node, 'typ) = {
 };
 
 type element('node) =
-  | Leaf(opaqueComponent('node))
+  | Leaf(opaqueLeafElement('node))
   | StaticList(list(element('node)))
   | DiffableSequence(dynamicElement('node, element('node)))
   | Movable(element('node), ref(option(instanceForest('node))))
-and component('a) = {
+and leafElement('a) = {
   debugName: string,
   id: componentId(instance('a)),
   childrenType: childrenType('viewSpec),
@@ -44,17 +44,17 @@ constraint 'viewSpec = ('node, 'children, 'childNode, 'wrappedNode)
 constraint 'a = ('hooks, 'viewSpec)
 and instance('a) = {
   hooks: Hooks.state('hooks),
-  opaqueComponent: opaqueComponent('node),
-  component: component('a),
+  opaqueLeafElement: opaqueLeafElement('node),
+  leafElement: leafElement('a),
   children_: 'children,
   childInstances: instanceForest('childNode),
   wrappedHostNode: 'wrappedNode,
 }
 constraint 'viewSpec = ('node, 'children, 'childNode, 'wrappedNode)
 constraint 'a = ('hooks, 'viewSpec)
-and opaqueComponent('node) =
-  | OpaqueComponent(component((_, ('node, _, _, _))))
-    : opaqueComponent('node)
+and opaqueLeafElement('node) =
+  | OpaqueLeafElement(leafElement((_, ('node, _, _, _))))
+    : opaqueLeafElement('node)
 and instanceForest('node) =
   | IFlat(opaqueInstance('node))
   | INested(list(instanceForest('node)), subtreeSize)

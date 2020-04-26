@@ -1,5 +1,4 @@
 open TestReconciler;
-module Brisk_reconciler = Brisk_reconciler__Brisk_reconciler_internal;
 open Brisk_reconciler;
 
 /**

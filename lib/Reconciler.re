@@ -2,8 +2,11 @@ open CoreTypes;
 
 type subtreeUpdate('node) =
   | MatchingSubtree(list(subtreeUpdate('node)))
-  | Update(opaqueInstance('node), opaqueComponent('node))
-  | ReRender(element('node))
+  | Update(opaqueInstance('node), opaqueLeafElement('node))
+  | ReRender({
+      prevForest: instanceForest('node),
+      nextElement: element('node),
+    })
   | UpdateSequence(
       dynamicElement('node, instanceForest('node)),
       dynamicElement('node, element('node)),
@@ -24,29 +27,28 @@ let rec prepareUpdate = (~oldInstanceForest, ~nextElement) => {
     )
   | (IDiffableSequence(instances, _), DiffableSequence(elements)) =>
     UpdateSequence(instances, elements)
-  | _ => ReRender(nextElement)
+  | (prevForest, nextElement) => ReRender({prevForest, nextElement})
   };
 };
-
 
 /**
       * Initial render of an Element. Recurses to produce the entire tree of
       * instances.
       */
-let rec renderElement:
+let renderElement:
   type parentNode node.
     (
       ~updateContext: Update.context(parentNode, node),
-      opaqueComponent(node)
+      opaqueLeafElement(node)
     ) =>
     Instance.opaqueInstanceUpdate(parentNode, node) =
-  (~updateContext, opaqueComponent) =>
-    Instance.ofOpaqueComponent(
+  (~updateContext, opaqueLeafElement) =>
+    Instance.ofOpaqueLeafElement(
       ~hostTreeState=updateContext.hostTreeState,
-      ~component=opaqueComponent,
-    )
+      ~component=opaqueLeafElement,
+    );
 
-and renderReactElement:
+let renderReactElement:
   type parentNode node.
     (~updateContext: Update.context(parentNode, node), element(node)) =>
     Instance.renderedElement(parentNode, node) =
@@ -61,20 +63,54 @@ and renderReactElement:
         },
       ~init=updateContext.hostTreeState,
       element,
-    )
+    );
 
-and updateOpaqueInstance:
+let replaceInstanceForest = (~updateContext, ~oldInstanceForest, ~nextElement) => {
+  let {Update.nodeElement, nearestHostNode, absoluteSubtreeIndex} =
+    updateContext.Update.hostTreeState;
+  renderReactElement(
+    ~updateContext={
+      ...updateContext,
+      hostTreeState: {
+        nodeElement,
+        nearestHostNode:
+          lazy(
+            SubtreeChange.deleteNodes(
+              ~nodeElement,
+              ~parent=Lazy.force(nearestHostNode),
+              ~children=Instance.Forest.childNodes(oldInstanceForest),
+              ~position=absoluteSubtreeIndex,
+            )
+          ),
+        absoluteSubtreeIndex: 0,
+      },
+    },
+    nextElement,
+  )
+  |> Update.mapEffects(mountEffects =>
+       EffectSequence.chain(
+         Instance.Forest.pendingEffects(
+           ~lifecycle=Hooks.Effect.Unmount,
+           oldInstanceForest,
+         ),
+         mountEffects,
+       )
+     );
+};
+
+
+let rec updateOpaqueInstance:
   type node parentNode.
     (
       ~updateContext: Update.context(parentNode, node),
       opaqueInstance(node),
-      opaqueComponent(node)
+      opaqueLeafElement(node)
     ) =>
     Instance.opaqueInstanceUpdate(parentNode, node) =
   (
     ~updateContext,
     Instance(instance) as originalOpaqueInstance,
-    OpaqueComponent(nextComponent) as nextOpaqueComponent,
+    OpaqueLeafElement(nextLeafElement) as nextOpaqueLeafElement,
   ) => {
     let nextState =
       updateContext.shouldExecutePendingUpdates
@@ -82,7 +118,7 @@ and updateOpaqueInstance:
     let stateChanged = nextState !== instance.hooks;
 
     let bailOut =
-      !stateChanged && instance.opaqueComponent === nextOpaqueComponent;
+      !stateChanged && instance.opaqueLeafElement === nextOpaqueLeafElement;
 
     if (bailOut && !updateContext.shouldExecutePendingUpdates) {
       {
@@ -92,12 +128,12 @@ and updateOpaqueInstance:
         childNodes: Instance.outputTreeNodes(originalOpaqueInstance),
       };
     } else {
-      let {component} = instance;
+      let {leafElement} = instance;
       switch (
-        nextComponent.eq(
+        nextLeafElement.eq(
           {...instance, hooks: nextState},
-          component.id,
-          nextComponent.id,
+          leafElement.id,
+          nextLeafElement.id,
         )
       ) {
       /*
@@ -112,8 +148,8 @@ and updateOpaqueInstance:
           updateInstance(
             ~originalOpaqueInstance,
             ~updateContext,
-            ~nextComponent,
-            ~nextOpaqueComponent,
+            ~nextLeafElement,
+            ~nextOpaqueLeafElement,
             ~stateChanged,
             handedInstance,
           );
@@ -145,9 +181,9 @@ and updateOpaqueInstance:
             * ** Switching component type **
             */
         let update =
-          Instance.ofOpaqueComponent(
+          Instance.ofOpaqueLeafElement(
             ~hostTreeState=updateContext.hostTreeState,
-            ~component=nextOpaqueComponent,
+            ~component=nextOpaqueLeafElement,
           )
           |> Update.mapEffects(mountEffects =>
                Instance.pendingEffects(
@@ -186,13 +222,13 @@ and updateInstance:
     (
       ~originalOpaqueInstance: opaqueInstance(node),
       ~updateContext: Update.context(parentNode, node),
-      ~nextComponent: component(
-                        (
-                          hooks,
-                          (node, children, childNode, wrappedHostNode),
+      ~nextLeafElement: leafElement(
+                          (
+                            hooks,
+                            (node, children, childNode, wrappedHostNode),
+                          ),
                         ),
-                      ),
-      ~nextOpaqueComponent: opaqueComponent(node),
+      ~nextOpaqueLeafElement: opaqueLeafElement(node),
       ~stateChanged: bool,
       instance((hooks, (node, children, childNode, wrappedHostNode)))
     ) =>
@@ -200,24 +236,24 @@ and updateInstance:
   (
     ~originalOpaqueInstance,
     ~updateContext,
-    ~nextComponent,
-    ~nextOpaqueComponent,
+    ~nextLeafElement,
+    ~nextOpaqueLeafElement,
     ~stateChanged,
     instance,
   ) => {
     let updatedInstanceWithNewElement = {
       ...instance,
-      component: nextComponent,
-      opaqueComponent: nextOpaqueComponent,
+      leafElement: nextLeafElement,
+      opaqueLeafElement: nextOpaqueLeafElement,
     };
 
     let shouldRerender =
-      stateChanged || nextOpaqueComponent !== instance.opaqueComponent;
+      stateChanged || nextOpaqueLeafElement !== instance.opaqueLeafElement;
 
     let (nextSubElements, initialHooks) =
       if (shouldRerender) {
         let (nextElement, initialHooks) =
-          nextComponent.render(
+          nextLeafElement.render(
             Hooks.ofState(
               Some(updatedInstanceWithNewElement.hooks),
               ~onStateDidChange=GlobalState.callStaleHandlers,
@@ -240,7 +276,7 @@ and updateInstance:
       enqueuedEffects,
       nodeElement: hostNodeElement(parentNode, node),
     ) =
-      switch (nextComponent.childrenType) {
+      switch (nextLeafElement.childrenType) {
       | React =>
         let {Update.payload: nextInstanceSubForest, enqueuedEffects} =
           updateInstanceSubtree(
@@ -452,7 +488,12 @@ and applyUpdate:
            },
          )
       |> Update.map(instances => IDiffableSequence(instances, 0))
-    | ReRender(element) => renderReactElement(~updateContext, element)
+    | ReRender({prevForest, nextElement}) =>
+      replaceInstanceForest(
+        ~updateContext,
+        ~oldInstanceForest=prevForest,
+        ~nextElement,
+      )
     };
   }
 
@@ -477,7 +518,7 @@ and updateInstanceSubtree:
       * If no state change is performed, the argument is returned unchanged.
       */
 let flushPendingUpdates = (opaqueInstance, nearestHostNode, nodeElement) => {
-  let Instance({opaqueComponent}) = opaqueInstance;
+  let Instance({opaqueLeafElement}) = opaqueInstance;
   updateOpaqueInstance(
     ~updateContext=
       Update.{
@@ -489,6 +530,6 @@ let flushPendingUpdates = (opaqueInstance, nearestHostNode, nodeElement) => {
         },
       },
     opaqueInstance,
-    opaqueComponent,
+    opaqueLeafElement,
   );
 };

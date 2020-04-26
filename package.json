@@ -14,17 +14,16 @@
     "build:ppx": "dune build -p brisk_ppx"
   },
   "dependencies": {
-    "@esy-ocaml/reason": ">=3.5.2",
-    "@opam/dune": "^1.7.3",
-    "@opam/ppxlib": "0.8.1",
+    "@esy-ocaml/reason": "*",
+    "@opam/dune": "*",
+    "@opam/ppxlib": "*",
     "ocaml": ">=4.4.0"
   },
   "devDependencies": {
     "ocaml": "~4.8.0",
-    "@opam/merlin": "^3.2.2",
-    "@opam/merlin-lsp": "ocaml/merlin:merlin-lsp.opam#c8b0f03",
-    "@opam/ppx_deriving": "^4.2.1",
-    "@opam/ocamlformat": "0.12",
-    "@reason-native/rely": "^3.1.0"
+    "@opam/ocaml-lsp-server": "ocaml/ocaml-lsp:ocaml-lsp-server.opam",
+    "@opam/ppx_deriving": "*",
+    "@opam/ocamlformat": "*",
+    "@reason-native/rely": "*"
   }
 }

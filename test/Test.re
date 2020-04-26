@@ -1,7 +1,6 @@
 open TestFramework;
 open TestReconciler;
 open TestHelpers;
-module Brisk_reconciler = Brisk_reconciler__Brisk_reconciler_internal;
 open Brisk_reconciler;
 
 let root = {name: "root", element: View};

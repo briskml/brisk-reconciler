@@ -1,5 +1,5 @@
 open TestReconciler;
-open Brisk_reconciler__Brisk_reconciler_internal;
+open Brisk_reconciler;
 
 type testState = {
   element: element(node),

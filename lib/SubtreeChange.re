@@ -101,7 +101,7 @@ let reorder =
       ~nodeElement,
       ~parent: lazyHostNode(node),
       ~instance as
-        Instance({wrappedHostNode, component: {childrenType}}):
+        Instance({wrappedHostNode, leafElement: {childrenType}}):
           opaqueInstance(childNode),
       ~indexShift,
       ~from,

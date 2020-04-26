@@ -7,6 +7,15 @@ let insertNodes:
   ) =>
   CoreTypes.hostNode('node);
 
+let deleteNodes:
+  (
+    ~nodeElement: CoreTypes.hostNodeElement('node, 'children),
+    ~parent: CoreTypes.hostNode('node),
+    ~children: CoreTypes.lazyHostNodeSeq('children),
+    ~position: int
+  ) =>
+  CoreTypes.hostNode('node);
+
 let updateNodes:
   (
     ~nodeElement: CoreTypes.hostNodeElement('node, 'children),

@@ -46,7 +46,7 @@ let rec fold = (~f, ~init, renderedElement) => {
     )
   | StaticList(l) =>
     foldSequence(
-      List.rev(l) |> List.to_seq,
+      l |> List.to_seq,
       [],
       (rest, h) => [h, ...rest],
       (list, length) => INested(list, length),
