@@ -27,9 +27,10 @@ let render = (root, children) => {
   };
   Instance.ofList(~hostTreeState, children);
 };
+
 let update =
     (~renderedElement as {Update.payload, hostTreeUpdate}, nextElement) =>
-  Reconciler.updateInstanceSubtree(
+  Reconciler.reconcile(
     ~updateContext=
       Update.{
         hostTreeState: hostTreeUpdate,
@@ -112,7 +113,12 @@ let flushPendingUpdates =
     ({Update.payload: instanceForest, hostTreeUpdate, enqueuedEffects}) => {
   let update =
     map(
-      Reconciler.flushPendingUpdates,
+      (rootInstance, parentHostNode, parentHostNodeElement) =>
+        Reconciler.flushPendingUpdates(
+          ~parentHostNode,
+          ~parentHostNodeElement,
+          ~rootInstance,
+        ),
       instanceForest,
       hostTreeUpdate.nearestHostNode,
       hostTreeUpdate.nodeElement,

@@ -72,7 +72,7 @@ let%component topLevelReorder = (~flipped=false, ()) => {
     <movableStateContainer> <Text title="x" /> </movableStateContainer>;
   let%hook text2 =
     <movableStateContainer> <Text title="y" /> </movableStateContainer>;
-  flipped ? <> <text1 /> <text2 /> </> : <> <text1 /> <text2 /> </>;
+  flipped ? <> <text1 /> <text2 /> </> : <> <text2 /> <text1 /> </>;
 };
 
 describe("Test top level reorder", ({test}) => {

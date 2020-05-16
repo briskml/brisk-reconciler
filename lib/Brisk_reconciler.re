@@ -154,7 +154,7 @@ module Expert = {
 };
 
 type movableStateContainerState('node) =
-  ref(option(instanceForest('node)));
+  ref(option(movableElementState('node)));
 
 let movableStateContainer = (~children, (), hooks) => {
   let (instanceRef, hooks) = Hooks.ref(None, hooks);

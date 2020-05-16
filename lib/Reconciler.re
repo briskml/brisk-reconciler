@@ -1,16 +1,32 @@
 open CoreTypes;
 
+module MockImplementationValues = {
+  let zero = 0;
+  let calculateIndex = (~oldIndex) => oldIndex;
+  let noChildren = Seq.empty;
+};
+
 type subtreeUpdate('node) =
   | MatchingSubtree(list(subtreeUpdate('node)))
   | Update(opaqueInstance('node), opaqueLeafElement('node))
-  | ReRender({
+  | ReplaceOrMove({
       prevForest: instanceForest('node),
       nextElement: element('node),
     })
   | UpdateSequence(
       dynamicElement('node, instanceForest('node)),
       dynamicElement('node, element('node)),
+    )
+  | UpdateMovable(
+      subtreeUpdate('node),
+      ref(option(movableElementState('node))),
     );
+
+type context('node, 'childNode) = {
+  shouldExecutePendingUpdates: bool,
+  hostTreeState: Update.hostTreeState('node, 'childNode),
+  calculateIndex: (~oldIndex: int) => int,
+};
 
 let rec prepareUpdate = (~oldInstanceForest, ~nextElement) => {
   switch (oldInstanceForest, nextElement) {
@@ -27,7 +43,19 @@ let rec prepareUpdate = (~oldInstanceForest, ~nextElement) => {
     )
   | (IDiffableSequence(instances, _), DiffableSequence(elements)) =>
     UpdateSequence(instances, elements)
-  | (prevForest, nextElement) => ReRender({prevForest, nextElement})
+  | (
+      prevForest,
+      Movable(element, {contents: Some({instanceForest})} as ref),
+    ) =>
+    if (instanceForest === prevForest) {
+      UpdateMovable(
+        prepareUpdate(~oldInstanceForest, ~nextElement=element),
+        ref,
+      );
+    } else {
+      ReplaceOrMove({prevForest, nextElement});
+    }
+  | (prevForest, nextElement) => ReplaceOrMove({prevForest, nextElement})
   };
 };
 
@@ -37,10 +65,7 @@ let rec prepareUpdate = (~oldInstanceForest, ~nextElement) => {
       */
 let renderElement:
   type parentNode node.
-    (
-      ~updateContext: Update.context(parentNode, node),
-      opaqueLeafElement(node)
-    ) =>
+    (~updateContext: context(parentNode, node), opaqueLeafElement(node)) =>
     Instance.opaqueInstanceUpdate(parentNode, node) =
   (~updateContext, opaqueLeafElement) =>
     Instance.ofOpaqueLeafElement(
@@ -50,7 +75,7 @@ let renderElement:
 
 let renderReactElement:
   type parentNode node.
-    (~updateContext: Update.context(parentNode, node), element(node)) =>
+    (~updateContext: context(parentNode, node), element(node)) =>
     Instance.renderedElement(parentNode, node) =
   (~updateContext, element) =>
     Element.fold(
@@ -67,25 +92,20 @@ let renderReactElement:
 
 let replaceInstanceForest = (~updateContext, ~oldInstanceForest, ~nextElement) => {
   let {Update.nodeElement, nearestHostNode, absoluteSubtreeIndex} =
-    updateContext.Update.hostTreeState;
-  renderReactElement(
-    ~updateContext={
-      ...updateContext,
-      hostTreeState: {
-        nodeElement,
-        nearestHostNode:
-          lazy(
-            SubtreeChange.deleteNodes(
-              ~nodeElement,
-              ~parent=Lazy.force(nearestHostNode),
-              ~children=Instance.Forest.childNodes(oldInstanceForest),
-              ~position=absoluteSubtreeIndex,
-            )
-          ),
-        absoluteSubtreeIndex: 0,
+    updateContext.hostTreeState;
+  memoizeTheIndexShiftForOldInstanceForestSomewhereSoThatWeCanGoBackToItIfItWasAMovableAndMoveIt(
+    renderReactElement(
+      ~updateContext={
+        ...updateContext,
+        hostTreeState: {
+          nodeElement,
+          nearestHostNode /* lazy(   SubtreeChange.deleteNodes(     ~nodeElement,     ~parent=Lazy.force(nearestHostNode),     ~children=Instance.Forest.childNodes(oldInstanceForest),     ~position=absoluteSubtreeIndex,   ) ) */,
+
+          absoluteSubtreeIndex: MockImplementationValues.zero,
+        },
       },
-    },
-    nextElement,
+      nextElement,
+    ),
   )
   |> Update.mapEffects(mountEffects =>
        EffectSequence.chain(
@@ -102,7 +122,7 @@ let replaceInstanceForest = (~updateContext, ~oldInstanceForest, ~nextElement) =
 let rec updateOpaqueInstance:
   type node parentNode.
     (
-      ~updateContext: Update.context(parentNode, node),
+      ~updateContext: context(parentNode, node),
       opaqueInstance(node),
       opaqueLeafElement(node)
     ) =>
@@ -193,7 +213,7 @@ let rec updateOpaqueInstance:
                )
              );
         let childNodes = Instance.outputTreeNodes(update.payload);
-        let {Update.hostTreeState} = updateContext;
+        let {hostTreeState} = updateContext;
         {
           hostTreeUpdate: {
             nodeElement: hostTreeState.nodeElement,
@@ -207,7 +227,7 @@ let rec updateOpaqueInstance:
                 ~absoluteSubtreeIndex=
                   updateContext.hostTreeState.absoluteSubtreeIndex,
               ),
-            absoluteSubtreeIndex: 0,
+            absoluteSubtreeIndex: MockImplementationValues.zero,
           },
           payload: update.payload,
           enqueuedEffects: update.enqueuedEffects,
@@ -221,7 +241,7 @@ and updateInstance:
   type hooks node children childNode wrappedHostNode parentNode.
     (
       ~originalOpaqueInstance: opaqueInstance(node),
-      ~updateContext: Update.context(parentNode, node),
+      ~updateContext: context(parentNode, node),
       ~nextLeafElement: leafElement(
                           (
                             hooks,
@@ -279,7 +299,7 @@ and updateInstance:
       switch (nextLeafElement.childrenType) {
       | React =>
         let {Update.payload: nextInstanceSubForest, enqueuedEffects} =
-          updateInstanceSubtree(
+          reconcile(
             ~updateContext,
             ~oldInstanceForest=childInstances,
             ~nextElement=nextSubElements,
@@ -332,9 +352,10 @@ and updateInstance:
           payload: nextInstanceSubForest,
           enqueuedEffects,
         } = {
-          updateInstanceSubtree(
+          reconcile(
             ~updateContext={
-              Update.shouldExecutePendingUpdates:
+              calculateIndex: MockImplementationValues.calculateIndex,
+              shouldExecutePendingUpdates:
                 updateContext.shouldExecutePendingUpdates,
               hostTreeState: {
                 absoluteSubtreeIndex: 0,
@@ -376,25 +397,22 @@ and updateInstance:
           );
         };
       };
+    let hostTreeUpdate = {
+      Update.nodeElement,
+      nearestHostNode,
+      absoluteSubtreeIndex: 0,
+    };
     if (updatedInstanceWithNewSubtree === updatedInstanceWithNewElement
         && !stateChanged) {
       {
-        hostTreeUpdate: {
-          nodeElement,
-          nearestHostNode,
-          absoluteSubtreeIndex: 0,
-        },
+        hostTreeUpdate,
         payload: originalOpaqueInstance,
         enqueuedEffects,
-        childNodes: Seq.empty,
+        childNodes: MockImplementationValues.noChildren,
       };
     } else {
       {
-        hostTreeUpdate: {
-          nodeElement,
-          nearestHostNode,
-          absoluteSubtreeIndex: 0,
-        },
+        hostTreeUpdate,
         payload: Instance(updatedInstanceWithNewSubtree),
         enqueuedEffects:
           EffectSequence.chain(
@@ -404,17 +422,14 @@ and updateInstance:
             ),
             enqueuedEffects,
           ),
-        childNodes: Seq.empty,
+        childNodes: MockImplementationValues.noChildren,
       };
     };
   }
 
 and applyUpdate:
   type node childNode.
-    (
-      ~updateContext: Update.context(node, childNode),
-      subtreeUpdate(childNode)
-    ) =>
+    (~updateContext: context(node, childNode), subtreeUpdate(childNode)) =>
     Update.t(node, childNode, instanceForest(childNode)) =
   (~updateContext, update) => {
     switch (update) {
@@ -425,7 +440,8 @@ and applyUpdate:
             let update =
               applyUpdate(
                 ~updateContext={
-                  Update.hostTreeState: updateAcc.Update.hostTreeUpdate,
+                  calculateIndex: MockImplementationValues.calculateIndex,
+                  hostTreeState: updateAcc.Update.hostTreeUpdate,
                   shouldExecutePendingUpdates:
                     updateContext.shouldExecutePendingUpdates,
                 },
@@ -464,7 +480,8 @@ and applyUpdate:
              | Updated(oldInstanceForest, nextElement) =>
                applyUpdate(
                  ~updateContext={
-                   Update.hostTreeState: acc.Update.hostTreeUpdate,
+                   calculateIndex: MockImplementationValues.calculateIndex,
+                   hostTreeState: acc.Update.hostTreeUpdate,
                    shouldExecutePendingUpdates:
                      updateContext.shouldExecutePendingUpdates,
                  },
@@ -487,8 +504,25 @@ and applyUpdate:
              childNodes: Seq.empty,
            },
          )
-      |> Update.map(instances => IDiffableSequence(instances, 0))
-    | ReRender({prevForest, nextElement}) =>
+      |> Update.map(instances =>
+           IDiffableSequence(instances, MockImplementationValues.zero)
+         )
+    | UpdateMovable(update, ref) =>
+      let updated = applyUpdate(~updateContext, update);
+      ref := Some(updated.payload);
+      updated;
+    | ReplaceOrMove({prevForest, nextElement}) =>
+      /* At this point we know the index in the tree */
+      /* If we've already gone through the element we wanted to move it might already be unmounted */
+      /* We should unmount all elements at the end */
+      /* Index of nextElement if it's movable for moves */
+      /* Procedure on every element:
+          1. Memoize prevForest in toRemove field (don't remove them yet)
+          2. Mount nextElement
+            - If it's movable on a bigger index - move it from there (take current shift into account)
+            - If it's moveable on a smaller index - move it from there and remove from toRemove (adjust current shift)
+            - Else simply render and adjust current shift
+         */
       replaceInstanceForest(
         ~updateContext,
         ~oldInstanceForest=prevForest,
@@ -497,39 +531,56 @@ and applyUpdate:
     };
   }
 
-and updateInstanceSubtree:
+and reconcile:
   type parentNode node.
     (
-      ~updateContext: Update.context(parentNode, node),
+      ~updateContext: context(parentNode, node),
       ~oldInstanceForest: instanceForest(node),
       ~nextElement: element(node),
       unit
     ) =>
     Instance.renderedElement(parentNode, node) =
   (~updateContext, ~oldInstanceForest, ~nextElement, ()) => {
+    /* Call cleanup which will remove all elements from toRemove */
     applyUpdate(
       ~updateContext,
       prepareUpdate(~oldInstanceForest, ~nextElement),
     );
   };
 
-/**
-      * Execute the pending updates at the top level of an instance tree.
-      * If no state change is performed, the argument is returned unchanged.
-      */
-let flushPendingUpdates = (opaqueInstance, nearestHostNode, nodeElement) => {
-  let Instance({opaqueLeafElement}) = opaqueInstance;
+let reconcile =
+    (
+      ~shouldExecutePendingUpdates,
+      ~hostTreeState,
+      ~oldInstanceForest,
+      ~nextElement,
+      unit,
+    ) =>
+  reconcile(
+    ~updateContext={
+      shouldExecutePendingUpdates,
+      hostTreeState,
+      calculateIndex: MockImplementationValues.calculateIndex,
+    },
+    ~oldInstanceForest,
+    ~nextElement,
+    (),
+  );
+
+let flushPendingUpdates =
+    (~parentHostNode, ~parentHostNodeElement, ~rootInstance) => {
+  let Instance({opaqueLeafElement}) = rootInstance;
   updateOpaqueInstance(
-    ~updateContext=
-      Update.{
-        shouldExecutePendingUpdates: true,
-        hostTreeState: {
-          nearestHostNode,
-          nodeElement,
-          absoluteSubtreeIndex: 0,
-        },
+    ~updateContext={
+      calculateIndex: MockImplementationValues.calculateIndex,
+      shouldExecutePendingUpdates: true,
+      hostTreeState: {
+        nearestHostNode: parentHostNode,
+        nodeElement: parentHostNodeElement,
+        absoluteSubtreeIndex: 0,
       },
-    opaqueInstance,
+    },
+    rootInstance,
     opaqueLeafElement,
   );
 };

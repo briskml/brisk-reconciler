@@ -27,7 +27,12 @@ type element('node) =
   | Leaf(opaqueLeafElement('node))
   | StaticList(list(element('node)))
   | DiffableSequence(dynamicElement('node, element('node)))
-  | Movable(element('node), ref(option(instanceForest('node))))
+  | Movable(element('node), ref(option(movableElementState('node))))
+and movableElementState('node) = {
+  instanceForest:instanceForest('node),
+  index: int,
+  subtreeSize: int
+}
 and leafElement('a) = {
   debugName: string,
   id: componentId(instance('a)),

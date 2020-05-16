@@ -14,10 +14,6 @@ type t('node, 'childNode, 'payload) = {
   payload: 'payload,
   childNodes: lazyHostNodeSeq('childNode),
 };
-type context('node, 'childNode) = {
-  shouldExecutePendingUpdates: bool,
-  hostTreeState: hostTreeState('node, 'childNode),
-};
 let map = (f, update) => {
   let {payload, hostTreeUpdate, enqueuedEffects, childNodes} = update;
   {hostTreeUpdate, enqueuedEffects, payload: f(payload), childNodes};

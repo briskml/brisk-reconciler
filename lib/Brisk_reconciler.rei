@@ -17,18 +17,6 @@ type hostNodeElement('node, 'childNode) = {
 };
 
 /**
-  * Converts a list of elements to a single syntheticElement.
-  * Lists use a mix of positoinal and keys to determine if a component should be
-  * inserted, removed, or updated.
-  * For two lists with the same length (i.e. if chicldren have the same length
-  * before and after update) if a component has a key, it'll be updated if there was a component
-  * with the same key on the previous render.
-  * Components without a key are matched based on position.
-  * Lists with different lengths are updated only based on keys.
-  */
-let listToElement: list(element('a)) => element('a);
-
-/**
   * Empty synthetic element.
   */
 let empty: element('a);

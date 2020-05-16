@@ -32,26 +32,36 @@ let rec fold = (~f, ~init, renderedElement) => {
          )
        );
   };
-  open CoreTypes;
-  switch (renderedElement) {
-  | Leaf(c) =>
-    f(~hostTreeState=init, ~component=c)
-    |> Update.map(instance => IFlat(instance))
-  | DiffableSequence(seq) =>
-    foldSequence(
-      seq.toSeq(),
-      seq.empty(),
-      (instances, instance) => instances.insert(instance),
-      (seq, length) => IDiffableSequence(seq, length),
-    )
-  | StaticList(l) =>
-    foldSequence(
-      l |> List.to_seq,
-      [],
-      (rest, h) => [h, ...rest],
-      (list, length) => INested(list, length),
-    )
+  CoreTypes.(
+    switch (renderedElement) {
+    | Leaf(c) =>
+      f(~hostTreeState=init, ~component=c)
+      |> Update.map(instance => IFlat(instance))
+    | DiffableSequence(seq) =>
+      foldSequence(
+        seq.toSeq(),
+        seq.empty(),
+        (instances, instance) => instances.insert(instance),
+        (seq, length) => IDiffableSequence(seq, length),
+      )
+    | StaticList(l) =>
+      foldSequence(
+        l |> List.to_seq,
+        [],
+        (rest, h) => [h, ...rest],
+        (list, length) => INested(list, length),
+      )
 
-  | Movable(l, _) => fold(~f, ~init, l)
-  };
+    | Movable(l, ref) =>
+      let res = fold(~f, ~init, l);
+      ref :=
+        Some({
+          instanceForest: res.payload,
+          /* THIS IS BROKEN */
+          index: 0,
+          subtreeSize: 0,
+        });
+      res;
+    }
+  );
 };

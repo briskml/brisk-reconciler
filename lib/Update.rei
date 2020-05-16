@@ -8,15 +8,12 @@ type hostTreeState('node, 'childNode) = {
    */
   absoluteSubtreeIndex: int,
 };
+
 type t('node, 'childNode, 'payload) = {
   hostTreeUpdate: hostTreeState('node, 'childNode),
   enqueuedEffects: EffectSequence.t,
   payload: 'payload,
   childNodes: lazyHostNodeSeq('childNode),
-};
-type context('node, 'childNode) = {
-  shouldExecutePendingUpdates: bool,
-  hostTreeState: hostTreeState('node, 'childNode),
 };
 
 let map: ('a => 'b, t('node, 'childNode, 'a)) => t('node, 'childNode, 'b);
