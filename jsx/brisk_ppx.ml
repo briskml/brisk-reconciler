@@ -223,17 +223,32 @@ module Declaration_ppx = struct
       Extension.Context.structure_item
       Ast_pattern.(
         pstr
-          ( pstr_value __ (value_binding ~pat:(ppat_var __) ~expr:__ ^:: nil)
+          ( pstr_value __ (value_binding ~pat:__ ~expr:__ ^:: nil)
           ^:: nil ))
       (fun ~loc ~path recursive pat expr ->
+        let pat, var_name =
+          let var_name pat =
+            match pat with
+            | {ppat_desc = Ppat_var var} -> var.txt
+            | _ -> failwith "function name expected"
+          in
+          let var_pat name =
+            ATH.Pat.var ~loc (Ast_builder.Default.Located.mk ~loc name)
+          in
+          match pat with
+          | {ppat_desc = Ppat_constraint (pat, core_type)} ->
+            let name = var_name pat in
+            {pat with ppat_desc = Ppat_constraint (var_pat name, core_type)},
+            name
+          | _ -> let name = var_name pat in var_pat name, name
+        in
         let component_name =
-          ATH.Exp.constant ~loc (ATH.Const.string (path ^ "." ^ pat))
+            ATH.Exp.constant ~loc (ATH.Const.string (path ^ "." ^ var_name))
         in
         let transformed_expression =
           transform_component_expr ~useDynamicKey:false ~attribute
             ~component_name expr
         in
-        let pat = ATH.Pat.var ~loc (Ast_builder.Default.Located.mk ~loc pat) in
         match recursive with
         | Recursive -> [%stri let rec [%p pat] = [%e transformed_expression]]
         | Nonrecursive -> [%stri let [%p pat] = [%e transformed_expression]])
