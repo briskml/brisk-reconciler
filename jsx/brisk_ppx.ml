@@ -76,24 +76,19 @@ module JSX_ppx = struct
 end
 
 module Declaration_ppx = struct
-  let func_pattern = Ppxlib.Ast_pattern.(pexp_fun __ __ __ __)
-
-  let match_ pattern ?on_error loc ast_node ~with_ =
-    Ppxlib.Ast_pattern.parse pattern ?on_error loc ast_node with_
-
   let attribute_name = function
     | `Component -> "component"
     | `Native -> "nativeComponent"
 
   let transform_component_expr ~useDynamicKey ~attribute ~component_name expr =
     let rec map_component_expression ({ P.pexp_loc = loc } as expr) =
-      match_ func_pattern loc expr
-        ~with_:(fun lbl opt_arg pat child_expression ->
+      match expr with
+      | {pexp_desc = Pexp_fun (lbl, opt_arg, pat, child_expression)} ->
           let make_fun_with_expr ~expr =
             Ast_builder.pexp_fun ~loc lbl opt_arg pat expr
           in
           let loc = pat.Ppxlib.ppat_loc in
-          match (lbl, pat) with
+          begin match (lbl, pat) with
           | (Ppxlib.Labelled _ | Optional _), _ ->
               make_fun_with_expr
                 ~expr:(map_component_expression child_expression)
@@ -104,7 +99,16 @@ module Declaration_ppx = struct
                   [%expr [%e component_ident ~loc] ~key [%e child_expression]]
           | _ ->
               Location.raise_errorf ~loc
-                "A labelled argument or () was expected")
+                "A labelled argument or () was expected"
+          end
+
+      | {pexp_desc = Pexp_newtype (ident, child_expression)} ->
+        { expr with
+            pexp_desc =
+              Pexp_newtype (ident, map_component_expression child_expression)
+        }
+          
+      | _ -> failwith "expected fun or newtype"
     in
     let open P in
     let loc = expr.P.pexp_loc in
