@@ -265,7 +265,12 @@ module LocallyAbstractType: {
   };
 };
 
-module TypeAnnotation = {
-  let%component make: (~key:Key.t=?,  unit) => element(node) = 
+module Pexp_constraint = {
+  let%component make: (~key:Key.t=?, unit) => element(node) = 
+    ((), hooks) => (empty, hooks);
+};
+
+module Ppat_constraint = {
+  let%component make: 'a. (~key:Key.t=?, unit) => element(node) = 
     ((), hooks) => (empty, hooks);
 };
