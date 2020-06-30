@@ -1,4 +1,4 @@
-(lang dune 1.10)
+(lang dune 1.11)
 (name brisk-reconciler)
 (source (github brisk/brisk-reconciler))
 (license MIT)
