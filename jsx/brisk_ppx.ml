@@ -123,14 +123,21 @@ module Declaration_ppx = struct
       | `Native -> [%expr Brisk_reconciler.Expert.nativeComponent]
       | `Component -> [%expr Brisk_reconciler.Expert.component]
     in
-    [%expr
-      let [%p component_ident_pattern ~loc] =
-        [%e create_component_expr]
-          ~useDynamicKey:[%e Ast_builder.(ebool ~loc useDynamicKey)]
-          [%e component_name]
-      in
-      fun ?(key = Brisk_reconciler.Key.none) ->
-        [%e map_component_expression expr]]
+    let fun_expr expr =
+      [%expr
+        let [%p component_ident_pattern ~loc] =
+          [%e create_component_expr]
+            ~useDynamicKey:[%e Ast_builder.(ebool ~loc useDynamicKey)]
+            [%e component_name]
+        in
+        fun ?(key = Brisk_reconciler.Key.none) ->
+          [%e map_component_expression expr]]
+    in
+    match expr with
+    | {pexp_desc = Pexp_constraint (expr, core_type)} ->
+      {expr with pexp_desc = Pexp_constraint (fun_expr expr, core_type)}
+    | _ -> fun_expr expr
+
 
   let declare_attribute ctx typ =
     let open Ppxlib.Attribute in
