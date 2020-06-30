@@ -264,3 +264,8 @@ module LocallyAbstractType: {
     (empty, hooks);
   };
 };
+
+module TypeAnnotation = {
+  let%component make: (~key:Key.t=?,  unit) => element(node) = 
+    ((), hooks) => (empty, hooks);
+};
