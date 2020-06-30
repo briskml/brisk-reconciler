@@ -242,3 +242,12 @@ module ShouldAllowComponentProp = {
     hooks,
   );
 };
+
+module LocallyAbstractType : {
+  let make: (~key: Key.t=?, ~foo: int, ~onWhatever: int => unit, unit) => element(node);
+} = {
+  let%component make = (type a, ~foo: a, ~onWhatever: a => unit, (), hooks) => {
+    onWhatever(foo);
+    (empty, hooks)
+  };
+};
