@@ -27,7 +27,7 @@
       },
       "overrides": [ "package-ci.json", "package-ci-4.07.json" ],
       "dependencies": [
-        "ocaml@4.7.1004@d41d8cd9", "@opam/ppxlib@opam:0.13.0@65a9c7cc",
+        "ocaml@4.7.1004@d41d8cd9", "@opam/ppxlib@opam:0.14.0@c02ad40d",
         "@opam/dune@opam:2.5.0@aef1678b", "@esy-ocaml/reason@3.6.0@d41d8cd9"
       ],
       "devDependencies": [
@@ -422,20 +422,20 @@
         "ocaml@4.7.1004@d41d8cd9", "@opam/result@opam:1.5@6b753c82"
       ]
     },
-    "@opam/ppxlib@opam:0.13.0@65a9c7cc": {
-      "id": "@opam/ppxlib@opam:0.13.0@65a9c7cc",
+    "@opam/ppxlib@opam:0.14.0@c02ad40d": {
+      "id": "@opam/ppxlib@opam:0.14.0@c02ad40d",
       "name": "@opam/ppxlib",
-      "version": "opam:0.13.0",
+      "version": "opam:0.14.0",
       "source": {
         "type": "install",
         "source": [
-          "archive:https://opam.ocaml.org/cache/sha256/81/81e1f3d308500e0e7f6108d5b0dda2b879640a5c21ef3dc4a9bd90381cee39d9#sha256:81e1f3d308500e0e7f6108d5b0dda2b879640a5c21ef3dc4a9bd90381cee39d9",
-          "archive:https://github.com/ocaml-ppx/ppxlib/releases/download/0.13.0/ppxlib-0.13.0.tbz#sha256:81e1f3d308500e0e7f6108d5b0dda2b879640a5c21ef3dc4a9bd90381cee39d9"
+          "archive:https://opam.ocaml.org/cache/sha256/a1/a1a398f7c8f670d7de80468ff4639862b126f4dcac3de416e0c5c4d5860f3854#sha256:a1a398f7c8f670d7de80468ff4639862b126f4dcac3de416e0c5c4d5860f3854",
+          "archive:https://github.com/ocaml-ppx/ppxlib/releases/download/0.14.0/ppxlib-0.14.0.tbz#sha256:a1a398f7c8f670d7de80468ff4639862b126f4dcac3de416e0c5c4d5860f3854"
         ],
         "opam": {
           "name": "ppxlib",
-          "version": "0.13.0",
-          "path": "package-ci-4.07.esy.lock/opam/ppxlib.0.13.0"
+          "version": "0.14.0",
+          "path": "package-ci-4.07.esy.lock/opam/ppxlib.0.14.0"
         }
       },
       "overrides": [],
@@ -935,20 +935,20 @@
         "ocaml@4.7.1004@d41d8cd9", "@opam/dune@opam:2.5.0@aef1678b"
       ]
     },
-    "@opam/dune-private-libs@opam:2.5.1@60c1661f": {
-      "id": "@opam/dune-private-libs@opam:2.5.1@60c1661f",
+    "@opam/dune-private-libs@opam:2.6.1@31997d39": {
+      "id": "@opam/dune-private-libs@opam:2.6.1@31997d39",
       "name": "@opam/dune-private-libs",
-      "version": "opam:2.5.1",
+      "version": "opam:2.6.1",
       "source": {
         "type": "install",
         "source": [
-          "archive:https://opam.ocaml.org/cache/sha256/8f/8f77d3a87f208e0d7cccaa1c48c4bb1bb87d62d07c3f25e9b8ba298e028ce52b#sha256:8f77d3a87f208e0d7cccaa1c48c4bb1bb87d62d07c3f25e9b8ba298e028ce52b",
-          "archive:https://github.com/ocaml/dune/releases/download/2.5.1/dune-2.5.1.tbz#sha256:8f77d3a87f208e0d7cccaa1c48c4bb1bb87d62d07c3f25e9b8ba298e028ce52b"
+          "archive:https://opam.ocaml.org/cache/sha256/5e/5ef959f286448ee172f1cffc86c439a6f7b662676e6015b282db071bb88899a0#sha256:5ef959f286448ee172f1cffc86c439a6f7b662676e6015b282db071bb88899a0",
+          "archive:https://github.com/ocaml/dune/releases/download/2.6.1/dune-2.6.1.tbz#sha256:5ef959f286448ee172f1cffc86c439a6f7b662676e6015b282db071bb88899a0"
         ],
         "opam": {
           "name": "dune-private-libs",
-          "version": "2.5.1",
-          "path": "package-ci-4.07.esy.lock/opam/dune-private-libs.2.5.1"
+          "version": "2.6.1",
+          "path": "package-ci-4.07.esy.lock/opam/dune-private-libs.2.6.1"
         }
       },
       "overrides": [],
@@ -978,11 +978,11 @@
       },
       "overrides": [],
       "dependencies": [
-        "@opam/dune-private-libs@opam:2.5.1@60c1661f",
+        "@opam/dune-private-libs@opam:2.6.1@31997d39",
         "@opam/dune@opam:2.5.0@aef1678b", "@esy-ocaml/substs@0.0.1@d41d8cd9"
       ],
       "devDependencies": [
-        "@opam/dune-private-libs@opam:2.5.1@60c1661f",
+        "@opam/dune-private-libs@opam:2.6.1@31997d39",
         "@opam/dune@opam:2.5.0@aef1678b"
       ]
     },
