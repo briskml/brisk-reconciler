@@ -134,10 +134,9 @@ module Declaration_ppx = struct
           [%e map_component_expression expr]]
     in
     match expr with
-    | {pexp_desc = Pexp_constraint (expr, core_type)} ->
-      {expr with pexp_desc = Pexp_constraint (fun_expr expr, core_type)}
+    | { pexp_desc = Pexp_constraint (expr, core_type) } ->
+        { expr with pexp_desc = Pexp_constraint (fun_expr expr, core_type) }
     | _ -> fun_expr expr
-
 
   let declare_attribute ctx typ =
     let open Ppxlib.Attribute in
@@ -222,28 +221,31 @@ module Declaration_ppx = struct
     Extension.declare (attribute_name attribute)
       Extension.Context.structure_item
       Ast_pattern.(
-        pstr
-          ( pstr_value __ (value_binding ~pat:__ ~expr:__ ^:: nil)
-          ^:: nil ))
+        pstr (pstr_value __ (value_binding ~pat:__ ~expr:__ ^:: nil) ^:: nil))
       (fun ~loc ~path recursive pat expr ->
         let pat, var_name =
           let var_name pat =
             match pat with
-            | {ppat_desc = Ppat_var var} -> var.txt
+            | { ppat_desc = Ppat_var var } -> var.txt
             | _ -> failwith "function name expected"
           in
           let var_pat name =
             ATH.Pat.var ~loc (Ast_builder.Default.Located.mk ~loc name)
           in
           match pat with
-          | {ppat_desc = Ppat_constraint (pat, core_type)} ->
-            let name = var_name pat in
-            {pat with ppat_desc = Ppat_constraint (var_pat name, core_type)},
-            name
-          | _ -> let name = var_name pat in var_pat name, name
+          | { ppat_desc = Ppat_constraint (pat, core_type) } ->
+              let name = var_name pat in
+              ( {
+                  pat with
+                  ppat_desc = Ppat_constraint (var_pat name, core_type);
+                },
+                name )
+          | _ ->
+              let name = var_name pat in
+              (var_pat name, name)
         in
         let component_name =
-            ATH.Exp.constant ~loc (ATH.Const.string (path ^ "." ^ var_name))
+          ATH.Exp.constant ~loc (ATH.Const.string (path ^ "." ^ var_name))
         in
         let transformed_expression =
           transform_component_expr ~useDynamicKey:false ~attribute
