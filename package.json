@@ -20,7 +20,6 @@
   },
   "devDependencies": {
     "ocaml": "~4.10.0",
-    "@opam/dune": "2.5.0",
     "@opam/ocaml-lsp-server": "ocaml/ocaml-lsp:ocaml-lsp-server.opam",
     "@opam/ppx_deriving": "^4.2.1",
     "@opam/ocamlformat": "0.12",
