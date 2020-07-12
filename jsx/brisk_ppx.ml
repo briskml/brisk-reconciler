@@ -76,7 +76,14 @@ module JSX_ppx = struct
 end
 
 module Declaration_ppx = struct
-  let func_pattern = Ppxlib.Ast_pattern.(pexp_fun __ __ __ __)
+  let func_pattern =
+    Ppxlib.Ast_pattern.(
+      alt
+        ( pexp_fun __ __ __ __
+        |> map ~f:(fun f lbl opt_arg pat expr ->
+               f (`Fun (lbl, opt_arg, pat, expr))) )
+        ( pexp_newtype __' __
+        |> map ~f:(fun f ident expr -> f (`Newtype (ident, expr))) ))
 
   let match_ pattern ?on_error loc ast_node ~with_ =
     Ppxlib.Ast_pattern.parse pattern ?on_error loc ast_node with_
@@ -87,24 +94,27 @@ module Declaration_ppx = struct
 
   let transform_component_expr ~useDynamicKey ~attribute ~component_name expr =
     let rec map_component_expression ({ P.pexp_loc = loc } as expr) =
-      match_ func_pattern loc expr
-        ~with_:(fun lbl opt_arg pat child_expression ->
-          let make_fun_with_expr ~expr =
-            Ast_builder.pexp_fun ~loc lbl opt_arg pat expr
-          in
-          let loc = pat.Ppxlib.ppat_loc in
-          match (lbl, pat) with
-          | (Ppxlib.Labelled _ | Optional _), _ ->
-              make_fun_with_expr
-                ~expr:(map_component_expression child_expression)
-          | Ppxlib.Nolabel, [%pat? ()] ->
-              let loc = child_expression.pexp_loc in
-              make_fun_with_expr
-                ~expr:
-                  [%expr [%e component_ident ~loc] ~key [%e child_expression]]
-          | _ ->
-              Location.raise_errorf ~loc
-                "A labelled argument or () was expected")
+      match_ func_pattern loc expr ~with_:(function
+        | `Fun (lbl, opt_arg, pat, child_expression) -> (
+            let make_fun_with_expr ~expr =
+              Ast_builder.pexp_fun ~loc lbl opt_arg pat expr
+            in
+            let loc = pat.Ppxlib.ppat_loc in
+            match (lbl, pat) with
+            | (Ppxlib.Labelled _ | Optional _), _ ->
+                make_fun_with_expr
+                  ~expr:(map_component_expression child_expression)
+            | Ppxlib.Nolabel, [%pat? ()] ->
+                let loc = child_expression.pexp_loc in
+                make_fun_with_expr
+                  ~expr:
+                    [%expr [%e component_ident ~loc] ~key [%e child_expression]]
+            | _ ->
+                Location.raise_errorf ~loc
+                  "A labelled argument or () was expected" )
+        | `Newtype (ident, child_expression) ->
+            Ast_builder.pexp_newtype ~loc ident
+              (map_component_expression child_expression))
     in
     let open P in
     let loc = expr.P.pexp_loc in

@@ -242,3 +242,25 @@ module ShouldAllowComponentProp = {
     hooks,
   );
 };
+
+// Test that locally abstract types are accepted by the %component ppx
+module LocallyAbstractType: {
+  let make:
+    (~key: Key.t=?, ~foo: int, ~onA: int => bool, ~onB: bool => unit, unit) =>
+    element(node);
+} = {
+  let%component make =
+                (
+                  type a,
+                  ~foo: a,
+                  type b,
+                  ~onA: a => b,
+                  ~onB: b => unit,
+                  (),
+                  hooks,
+                ) => {
+    let b = onA(foo);
+    onB(b);
+    (empty, hooks);
+  };
+};
