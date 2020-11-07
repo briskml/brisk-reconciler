@@ -50,7 +50,7 @@
         "ocaml@4.10.1002@d41d8cd9", "@reason-native/rely@3.2.1@d41d8cd9",
         "@opam/ppx_deriving@opam:5.1@22f48c2b",
         "@opam/ocamlformat@opam:0.12@c6954cd5",
-        "@opam/ocaml-lsp-server@github:ocaml/ocaml-lsp:ocaml-lsp-server.opam#ccd4a781f1ccddd071a525f4ce1d58af79651548@d41d8cd9"
+        "@opam/ocaml-lsp-server@github:ocaml/ocaml-lsp:ocaml-lsp-server.opam#01fa03be3796e1cb9edea10564c69fb63a64546b@d41d8cd9"
       ]
     },
     "@reason-native/rely@3.2.1@d41d8cd9": {
@@ -769,16 +769,16 @@
         "@opam/dune@opam:2.7.1@f5f493bc"
       ]
     },
-    "@opam/ocaml-lsp-server@github:ocaml/ocaml-lsp:ocaml-lsp-server.opam#ccd4a781f1ccddd071a525f4ce1d58af79651548@d41d8cd9": {
+    "@opam/ocaml-lsp-server@github:ocaml/ocaml-lsp:ocaml-lsp-server.opam#01fa03be3796e1cb9edea10564c69fb63a64546b@d41d8cd9": {
       "id":
-        "@opam/ocaml-lsp-server@github:ocaml/ocaml-lsp:ocaml-lsp-server.opam#ccd4a781f1ccddd071a525f4ce1d58af79651548@d41d8cd9",
+        "@opam/ocaml-lsp-server@github:ocaml/ocaml-lsp:ocaml-lsp-server.opam#01fa03be3796e1cb9edea10564c69fb63a64546b@d41d8cd9",
       "name": "@opam/ocaml-lsp-server",
       "version":
-        "github:ocaml/ocaml-lsp:ocaml-lsp-server.opam#ccd4a781f1ccddd071a525f4ce1d58af79651548",
+        "github:ocaml/ocaml-lsp:ocaml-lsp-server.opam#01fa03be3796e1cb9edea10564c69fb63a64546b",
       "source": {
         "type": "install",
         "source": [
-          "github:ocaml/ocaml-lsp:ocaml-lsp-server.opam#ccd4a781f1ccddd071a525f4ce1d58af79651548"
+          "github:ocaml/ocaml-lsp:ocaml-lsp-server.opam#01fa03be3796e1cb9edea10564c69fb63a64546b"
         ]
       },
       "overrides": [],
@@ -790,8 +790,9 @@
         "@opam/ocamlfind@opam:1.8.1@ff07b0f9",
         "@opam/menhir@opam:20200624@8629ff13",
         "@opam/dune-build-info@opam:2.7.1@da03d61d",
-        "@opam/dune@opam:2.7.1@f5f493bc", "@opam/csexp@opam:1.3.2@5cea14af",
-        "@esy-ocaml/substs@0.0.1@d41d8cd9"
+        "@opam/dune@opam:2.7.1@f5f493bc",
+        "@opam/dot-merlin-reader@opam:3.4.1@efff3e0d",
+        "@opam/csexp@opam:1.3.2@5cea14af", "@esy-ocaml/substs@0.0.1@d41d8cd9"
       ],
       "devDependencies": [
         "ocaml@4.10.1002@d41d8cd9", "@opam/yojson@opam:1.7.0@7056d985",
@@ -801,7 +802,9 @@
         "@opam/ocamlfind@opam:1.8.1@ff07b0f9",
         "@opam/menhir@opam:20200624@8629ff13",
         "@opam/dune-build-info@opam:2.7.1@da03d61d",
-        "@opam/dune@opam:2.7.1@f5f493bc", "@opam/csexp@opam:1.3.2@5cea14af"
+        "@opam/dune@opam:2.7.1@f5f493bc",
+        "@opam/dot-merlin-reader@opam:3.4.1@efff3e0d",
+        "@opam/csexp@opam:1.3.2@5cea14af"
       ]
     },
     "@opam/ocaml-compiler-libs@opam:v0.12.3@f0f069bd": {
@@ -1115,6 +1118,37 @@
       "devDependencies": [
         "ocaml@4.10.1002@d41d8cd9", "@opam/base-unix@opam:base@87d0b2eb",
         "@opam/base-threads@opam:base@36803084"
+      ]
+    },
+    "@opam/dot-merlin-reader@opam:3.4.1@efff3e0d": {
+      "id": "@opam/dot-merlin-reader@opam:3.4.1@efff3e0d",
+      "name": "@opam/dot-merlin-reader",
+      "version": "opam:3.4.1",
+      "source": {
+        "type": "install",
+        "source": [
+          "archive:https://opam.ocaml.org/cache/sha256/e7/e7f28ca520d1ab4a58e8ba876b665b1ecf9917cee7e5b3e3330afbd1d12a9e2a#sha256:e7f28ca520d1ab4a58e8ba876b665b1ecf9917cee7e5b3e3330afbd1d12a9e2a",
+          "archive:https://github.com/ocaml/merlin/releases/download/v3.4.1/merlin-v3.4.1.tbz#sha256:e7f28ca520d1ab4a58e8ba876b665b1ecf9917cee7e5b3e3330afbd1d12a9e2a"
+        ],
+        "opam": {
+          "name": "dot-merlin-reader",
+          "version": "3.4.1",
+          "path": "esy.lock/opam/dot-merlin-reader.3.4.1"
+        }
+      },
+      "overrides": [],
+      "dependencies": [
+        "ocaml@4.10.1002@d41d8cd9", "@opam/yojson@opam:1.7.0@7056d985",
+        "@opam/result@opam:1.5@6b753c82",
+        "@opam/ocamlfind@opam:1.8.1@ff07b0f9",
+        "@opam/dune@opam:2.7.1@f5f493bc", "@opam/csexp@opam:1.3.2@5cea14af",
+        "@esy-ocaml/substs@0.0.1@d41d8cd9"
+      ],
+      "devDependencies": [
+        "ocaml@4.10.1002@d41d8cd9", "@opam/yojson@opam:1.7.0@7056d985",
+        "@opam/result@opam:1.5@6b753c82",
+        "@opam/ocamlfind@opam:1.8.1@ff07b0f9",
+        "@opam/dune@opam:2.7.1@f5f493bc", "@opam/csexp@opam:1.3.2@5cea14af"
       ]
     },
     "@opam/csexp@opam:1.3.2@5cea14af": {
