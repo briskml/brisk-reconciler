@@ -661,20 +661,16 @@ module Render = {
       * -------------------------------
       *
       * We perform a dynamic check that two types are statically equal by way of
-      * mutation! We have a value of type `Instance` and another of type
-      * `Element`, where we each has their own `component 'x` for potentially
-      * different 'x. We need to see if the 'x are the same and if so safely "cast"
-      * one's `component` to the others. We do this by handing off state safely into
-      * one of their `component`s, and then seeing if we can observe it in the
-      * other, and if so, we simply treat the old component as the new one's.
+      * a type witness! We have a value of type `instance` and another of type
+      * `element`, where each has their own `component 'x` with potentially
+      * different type variable 'x. We need to see if they are the same and if so
+      * safely "cast" one of the components. We do this by using a type witness that is
+      * able to prove type equality to the compiler through the use of an extensible
+      * GADT as a kind of dynamic type.
       *
-      * This approach is as sound as our confidence in our ability to repair the
-      * mutations accurately.
-      *
-      * There are more elegant ways to do this using first class modules, combined
-      * with extensible variants. That is how we should do this if we want to turn
-      * this implementation into something serious - it would avoid hitting the
-      * write barrier.
+      * For details, see:
+      *   https://discuss.ocaml.org/t/types-as-first-class-citizens-in-ocaml/2030/3
+      *   https://alan.petitepomme.net/cwn/2015.03.24.html#1
       *
       * The UpdateLog:
       * ---------------------
