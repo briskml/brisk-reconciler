@@ -662,9 +662,9 @@ module Render = {
       *
       * We perform a dynamic check that two types are statically equal by way of
       * a type witness! We have a value of type `instance` and another of type
-      * `element`, where each has their own `component 'x` for potentially
-      * different 'x. We need to see if the they are the same and if so safely "cast"
-      * one's `component` to the others. We do this by using a type witness that is
+      * `element`, where each has their own `component 'x` with potentially
+      * different type variable 'x. We need to see if they are the same and if so
+      * safely "cast" one of the components. We do this by using a type witness that is
       * able to prove type equality to the compiler through the use of an extensible
       * GADT as a kind of dynamic type.
       *
