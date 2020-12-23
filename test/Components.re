@@ -264,3 +264,15 @@ module LocallyAbstractType: {
     (empty, hooks);
   };
 };
+
+// Test to make sure type annotations are accepted
+module Pexp_constraint = {
+  let%component make: (~key: Key.t=?, unit) => element(node) =
+    ((), hooks) => (empty, hooks);
+};
+
+// Test to make sure type annotations with universal quantifiers are accepted
+module Ppat_constraint = {
+  let%component make: 'a. (~key: Key.t=?, unit) => element(node) =
+    ((), hooks) => (empty, hooks);
+};
