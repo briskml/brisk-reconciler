@@ -159,7 +159,8 @@ let action = RemoteAction.create();
 
 let%component counterButtons = () => {
   let%hook (count, setCount) = Hooks.state(0);
-  RemoteAction.subscribe(~handler=n => setCount(_ => n), action) |> ignore;
+  RemoteAction.subscribe(
+    ~handler=n => setCount(_ => n), action, ()) |> ignore;
   <view>
     <button title="Decrement" onPress={() => setCount(count => count - 1)} />
     <text text={"Counter: " ++ str(count)} />
@@ -168,7 +169,7 @@ let%component counterButtons = () => {
       onPress={() =>
         ignore(
           Js_of_ocaml.Dom_html.setTimeout(
-            () => RemoteAction.send(0, action),
+            () => RemoteAction.send(~action=0, action),
             3000.,
           ),
         )

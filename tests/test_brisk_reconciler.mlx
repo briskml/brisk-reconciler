@@ -1,0 +1,836 @@
+open Reconciler
+open Helpers
+open Brisk_reconciler__Brisk_reconciler_internal
+
+let mount_entry = Alcotest.testable pp_testMountEntry equal_testMountEntry
+let root = {name = "root"; element = View}
+let div = {name = "Div"; element = View}
+let singleChildDiv = {name = "SingleChildDiv"; element = View}
+let text t = {name = "Text"; element = Text t}
+let box t = {name = "Box"; element = Text t}
+let render = render root
+
+let initial_render =
+  ( "Initial render"
+  , [ Alcotest.test_case "It correctly inserts nodes" `Quick (fun () ->
+        let mountLog =
+          render <Components.BoxWrapper />
+          |> executeSideEffects |> getMountLogAndReset
+        in
+        Alcotest.(
+          check (list mount_entry) "same lists"
+            [MountChild (div, box "ImABox", 0); MountChild (root, div, 0)]
+            mountLog)) ] )
+
+let rendering_children =
+  ( "Rendering list children"
+  , [ Alcotest.test_case "It inserts two boxes in a div" `Quick (fun () ->
+        let mountLog =
+          render Components.(
+            <Div> <Box title="ImABox1" /> <Box title="ImABox2" /> </Div>)
+          |> executeSideEffects |> getMountLogAndReset
+        in
+        Alcotest.(
+          check (list mount_entry) "same lists"
+            [ MountChild (div, box "ImABox1", 0)
+            ; MountChild (div, box "ImABox2", 1)
+            ; MountChild (root, div, 0) ]
+            mountLog)) ] )
+
+let replacing_subtree =
+  ( "Replacing subtree"
+  , [ Alcotest.test_case "It replaces the subtree" `Quick (fun () ->
+        let mountLog =
+          render Components.(
+            <Div> <Box title="ImABox1" /> <Box title="ImABox2" /> </Div>)
+          |> executeSideEffects |> reset
+          |> update
+               (let open Components in
+                (Div.createElement
+                   ~children:
+                     [ (Box.createElement ~title:"ImABox3" ~children:[] () [@JSX])
+                     ]
+                   () [@JSX]))
+          |> executeSideEffects |> getMountLogAndReset
+        in
+        Alcotest.(
+          check (list mount_entry) "same lists"
+            [ UnmountChild (div, box "ImABox1")
+            ; UnmountChild (div, box "ImABox2")
+            ; MountChild (div, box "ImABox3", 0) ]
+            mountLog)) ] )
+
+let top_level_reorder =
+  ( "Top level reorder"
+  , let key1 = Key.create () and key2 = Key.create () in
+    let state =
+      ref
+        (render
+          (listToElement
+            Components.[
+              <Text key=key1 title="x" />
+            ; <Text key=key2 title="y" />
+            ]))
+    in
+    [ Alcotest.test_case "It correctly constructs initial tree" `Quick (fun () ->
+        state := !state |> executeSideEffects;
+        let mountLog = !state |> getMountLogAndReset in
+        Alcotest.(
+          check (list mount_entry) "same lists"
+            [ ChangeText ("x", "x")
+            ; MountChild (root, text "x", 0)
+            ; ChangeText ("y", "y")
+            ; MountChild (root, text "y", 1) ]
+            mountLog))
+    ; Alcotest.test_case "It reorders only one element" `Quick (fun () ->
+        let mountLog =
+          !state
+          |> update
+              (listToElement
+                Components.[
+                  <Text key=key2 title="y" />
+                ; <Text key=key1 title="x" />
+                ])
+          |> executeSideEffects |> getMountLogAndReset
+        in
+        Alcotest.(
+          check (list mount_entry) "same lists"
+            [RemountChild (root, text "y", 1, 0)]
+            mountLog)) ] )
+
+let top_level_replace_elements =
+  ( "Top level replace elements"
+  , let key1 = Key.create () and key2 = Key.create () in
+    let state =
+      ref (render <Components.Text key=key1 title="x" />)
+    in
+    [ Alcotest.test_case "It constructs initial tree" `Quick (fun () ->
+        state := !state |> executeSideEffects;
+        let mountLog = !state |> getMountLogAndReset in
+        Alcotest.(
+          check (list mount_entry) "same lists"
+            [ChangeText ("x", "x"); MountChild (root, text "x", 0)]
+            mountLog))
+    ; Alcotest.test_case "It replaces text(x) with text(y)" `Quick (fun () ->
+        let mountLog =
+          !state
+          |> update <Components.Text key=key2 title="y" />
+          |> executeSideEffects |> getMountLogAndReset
+        in
+        Alcotest.(
+          check (list mount_entry) "same lists"
+            [ UnmountChild (root, text "x")
+            ; ChangeText ("y", "y")
+            ; MountChild (root, text "y", 0) ]
+            mountLog)) ] )
+
+let subtree_replace_elements =
+  ( "Subtree replace elements (not at top-level)"
+  , let rAction = Remote_action.create () and well = text "well" in
+    let state =
+      ref (render Components.(<Div> <ToggleClicks rAction /> </Div>))
+    in
+    [ Alcotest.test_case "It constructs initial tree" `Quick (fun () ->
+        state := !state |> executeSideEffects;
+        let mountLog = !state |> getMountLogAndReset in
+        Alcotest.(
+          check (list mount_entry) "same lists"
+            [ ChangeText ("well", "well")
+            ; MountChild (div, well, 0)
+            ; MountChild (div, div, 0)
+            ; MountChild (root, div, 0) ]
+            mountLog))
+    ; Alcotest.test_case
+        "It replaces text(well) with text(cell1) and text(cell2)" `Quick
+        (fun () ->
+           Remote_action.send ~action:Components.ToggleClicks.Click rAction;
+           let cell1 = text "cell1" in
+           let cell2 = text "cell2" in
+           let mountLog =
+             !state |> flushPendingUpdates |> executeSideEffects
+             |> getMountLogAndReset
+           in
+           Alcotest.(
+             check (list mount_entry) "same lists"
+               [ UnmountChild (div, well)
+               ; ChangeText ("cell1", "cell1")
+               ; MountChild (div, cell1, 0)
+               ; ChangeText ("cell2", "cell2")
+               ; MountChild (div, cell2, 1) ]
+               mountLog)) ] )
+
+let subtree_replace_elements' =
+  ( "Subtree replace elements"
+  , let rAction = Remote_action.create () and well = text "well" in
+    let state =
+      ref (render <Components.ToggleClicks rAction />)
+    in
+    [ Alcotest.test_case
+        "It replaces text(well) with text(cell1) and text(cell2)" `Quick
+        (fun () ->
+           state := !state |> executeSideEffects;
+           let mountLog = state |> getMountLogAndReset in
+           Alcotest.(
+             check (list mount_entry) "same lists"
+               [ ChangeText ("well", "well")
+               ; MountChild (div, well, 0)
+               ; MountChild (root, div, 0) ]
+               mountLog))
+    ; Alcotest.test_case
+        "It replaces text(well) with text(cell1) and text(cell2)" `Quick
+        (fun () ->
+           Remote_action.send ~action:Components.ToggleClicks.Click rAction;
+           let cell1 = text "cell1" in
+           let cell2 = text "cell2" in
+           let mountLog =
+             !state |> flushPendingUpdates |> executeSideEffects
+             |> getMountLogAndReset
+           in
+           Alcotest.(
+             check (list mount_entry) "same lists"
+               [ UnmountChild (div, well)
+               ; ChangeText ("cell1", "cell1")
+               ; MountChild (div, cell1, 0)
+               ; ChangeText ("cell2", "cell2")
+               ; MountChild (div, cell2, 1) ]
+               mountLog)) ] )
+
+let top_level_prepend =
+  ( "Top level prepend"
+  , let key1 = Key.create () and key2 = Key.create () in
+    let commonElement = [ <Components.Text key=key1 title="x" /> ] in
+    let state = ref (render (listToElement commonElement)) in
+    [ Alcotest.test_case "It constructs initial tree" `Quick (fun () ->
+        state := !state |> executeSideEffects;
+        let mountLog = state |> getMountLogAndReset in
+        Alcotest.(
+          check (list mount_entry) "same lists"
+            [ChangeText ("x", "x"); MountChild (root, text "x", 0)]
+            mountLog))
+    ; Alcotest.test_case "It correctly mounts prepend topLevelUpdate" `Quick
+        (fun () ->
+           let mountLog =
+             !state
+             |> update
+                  (listToElement
+                     (<Components.Text key=key2 title="y" />
+                     :: commonElement))
+             |> executeSideEffects |> getMountLogAndReset
+           in
+           Alcotest.(
+             check (list mount_entry) "same lists"
+               [ChangeText ("y", "y"); MountChild (root, text "y", 0)]
+               mountLog)) ] )
+
+let simple_subtree_change =
+  ( "Simple subtree change"
+  , let state = ref (render <Components.BoxWrapper />) in
+    [ Alcotest.test_case "It renders one Box inside a Div" `Quick (fun () ->
+        state := !state |> executeSideEffects;
+        let mountLog = !state |> getMountLogAndReset in
+        Alcotest.(
+          check (list mount_entry) "same lists"
+            [MountChild (div, box "ImABox", 0); MountChild (root, div, 0)]
+            mountLog))
+    ; Alcotest.test_case "It replaces one box with two boxes" `Quick (fun () ->
+        let mountLog =
+          !state
+          |> update <Components.BoxWrapper twoBoxes=true />
+          |> executeSideEffects |> getMountLogAndReset
+        in
+        Alcotest.(
+          check (list mount_entry) "same lists"
+            [ UnmountChild (div, box "ImABox")
+            ; MountChild (div, box "ImABox", 0)
+            ; MountChild (div, box "ImABox", 1) ]
+            mountLog)) ] )
+
+let changing_components =
+  ( "Changing components"
+  , let state =
+      ref (render <Components.EmptyComponent /> |> executeSideEffects)
+    in
+    [ Alcotest.test_case "It renders nothing" `Quick (fun () ->
+        let mountLog = !state |> getMountLogAndReset in
+        Alcotest.(check (list mount_entry) "same lists" [] mountLog))
+    ; Alcotest.test_case
+        "It changes from EmptyComponent to ButtonWrapperWrapper" `Quick
+        (fun () ->
+           state :=
+             !state
+             |> update
+                <Components.ButtonWrapperWrapper wrappedText="initial text" />
+             |> executeSideEffects;
+           let mountLog = !state |> getMountLogAndReset in
+           Alcotest.(
+             check (list mount_entry) "same lists"
+               [ ChangeText ("initial text", "initial text")
+               ; MountChild (div, text "initial text", 0)
+               ; MountChild (div, div, 1)
+               ; MountChild (root, div, 0) ]
+               mountLog))
+    ; Alcotest.test_case "It updates text in the ButtonWrapper" `Quick
+        (fun () ->
+           state :=
+             !state
+             |> update
+                <Components.ButtonWrapperWrapper wrappedText="updated text" />
+             |> executeSideEffects;
+           let mountLog = !state |> getMountLogAndReset in
+           Alcotest.(
+             check (list mount_entry) "same lists"
+               [ChangeText ("initial text", "updated text")]
+               mountLog)) ] )
+
+let boxlist_with_dynamic_keys =
+  ( "BoxList with dynamic keys"
+  , let rAction = Remote_action.create () in
+    let state =
+      ref (render <Components.BoxList useDynamicKeys=true rAction />
+        |> executeSideEffects)
+    in
+    [ Alcotest.test_case "It renders an empty list" `Quick (fun () ->
+        let mountLog = !state |> getMountLogAndReset in
+        Alcotest.(check (list mount_entry) "same lists" [] mountLog))
+    ; Alcotest.test_case "It inserts one item" `Quick (fun () ->
+        state :=
+          !state
+          |> act ~action:(Components.BoxList.Create "Hello") rAction
+          |> flushPendingUpdates |> executeSideEffects;
+        let mountLog = !state |> getMountLogAndReset in
+        Alcotest.(
+          check (list mount_entry) "same lists"
+            [ChangeText ("Hello", "Hello"); MountChild (root, text "Hello", 0)]
+            mountLog))
+    ; Alcotest.test_case "It prepends one more BoxItem and then flushes" `Quick
+        (fun () ->
+           state :=
+             !state
+             |> act ~action:(Components.BoxList.Create "World") rAction
+             |> flushPendingUpdates |> executeSideEffects;
+           let mountLog = !state |> getMountLogAndReset in
+           Alcotest.(
+             check (list mount_entry) "same lists"
+               [ ChangeText ("World", "World")
+               ; MountChild (root, text "World", 0) ]
+               mountLog))
+    ; Alcotest.test_case "It reverses the items list in the BoxList" `Quick
+        (fun () ->
+           state :=
+             !state
+             |> act ~action:Components.BoxList.Reverse rAction
+             |> flushPendingUpdates |> executeSideEffects;
+           let mountLog = !state |> getMountLogAndReset in
+           Alcotest.(
+             check (list mount_entry) "same lists"
+               [RemountChild (root, text "Hello", 1, 0)]
+               mountLog)) ] )
+
+let boxlist_without_dynamic_keys =
+  ( "BoxList without dynamic keys"
+  , let rAction = Remote_action.create () in
+    let state =
+      ref (render <Components.BoxList rAction /> |> executeSideEffects)
+    in
+    [ Alcotest.test_case "It renders an empty list" `Quick (fun () ->
+        let mountLog = !state |> getMountLogAndReset in
+        Alcotest.(check (list mount_entry) "same lists" [] mountLog))
+    ; Alcotest.test_case "It adds a new Box" `Quick (fun () ->
+        state :=
+          !state
+          |> act ~action:(Components.BoxList.Create "Hello") rAction
+          |> flushPendingUpdates |> executeSideEffects;
+        let mountLog = !state |> getMountLogAndReset in
+        Alcotest.(
+          check (list mount_entry) "same lists"
+            [MountChild (root, box "Hello", 0)]
+            mountLog))
+    ; Alcotest.test_case "It prepends one more Box" `Quick (fun () ->
+        state :=
+          !state
+          |> act ~action:(Components.BoxList.Create "World") rAction
+          |> flushPendingUpdates |> executeSideEffects;
+        let mountLog = !state |> getMountLogAndReset in
+        Alcotest.(
+          check (list mount_entry) "same lists"
+            [MountChild (root, box "World", 0)]
+            mountLog))
+    ; Alcotest.test_case "It reverses the boxes list in the BoxList" `Quick
+        (fun () ->
+           state :=
+             !state
+             |> act ~action:Components.BoxList.Reverse rAction
+             |> flushPendingUpdates |> executeSideEffects;
+           let mountLog = !state |> getMountLogAndReset in
+           Alcotest.(
+             check (list mount_entry) "same lists"
+               [ UnmountChild (root, box "World")
+               ; MountChild (root, box "Hello", 0)
+               ; UnmountChild (root, box "Hello")
+               ; MountChild (root, box "World", 1) ]
+               mountLog)) ] )
+
+let memoizing_during_deep_move =
+  ( "BoxItemDynamic memoizing during deep move"
+  , let box = <Components.BoxItemDynamic title="box to move" /> in
+    let state = ref (render box) in
+    let beforeUpdate = ref None and afterUpdate = ref None in
+    [ Alcotest.test_case "It renders the initial BoxItemDynamic" `Quick
+        (fun () ->
+           state := !state |> executeSideEffects;
+           let mountLog = !state |> getMountLogAndReset in
+           beforeUpdate := Some !state.renderedElement.instanceForest;
+           Alcotest.(
+             check (list mount_entry) "same lists"
+               [ ChangeText ("box to move", "box to move")
+               ; MountChild (root, text "box to move", 0) ]
+               mountLog))
+    ; Alcotest.test_case
+        "It adds new element before BoxItemDynamic (it replaces the whole tree)"
+        `Quick (fun () ->
+        state :=
+          !state
+          |> update
+               (listToElement
+                  [Components.stringToElement "before"; listToElement [box]])
+          |> executeSideEffects;
+        afterUpdate := Some !state.renderedElement.instanceForest;
+        let mountLog = !state |> getMountLogAndReset in
+        Alcotest.(
+          check (list mount_entry) "same lists"
+            [ UnmountChild (root, text "box to move")
+            ; ChangeText ("before", "before")
+            ; MountChild (root, text "before", 0)
+            ; MountChild (root, text "box to move", 1) ]
+            mountLog))
+    ; Alcotest.test_case "It memoized the nested BoxItemDynamic" `Quick
+        (fun () ->
+           Alcotest.(
+             check bool "same bools"
+               (match !beforeUpdate, !afterUpdate with
+               | ( Some (IFlat x)
+                 , Some (INested ([_; INested (IFlat y :: [], _)], _)) ) ->
+                   x == y
+               | _ -> false)
+               true)) ] )
+
+let list_updates_with_static_keys =
+  ( "List updates with static keys"
+  , let key1 = Key.create () and key2 = Key.create () in
+    let state =
+      ref
+        (render
+           (listToElement
+              [ <Components.Box key=key1 title="Box1unchanged" />
+              ; <Components.Box key=key2 title="Box2unchanged" /> ]))
+    in
+    [ Alcotest.test_case "It renders the initial Boxes list" `Quick (fun () ->
+        state := !state |> executeSideEffects;
+        let mountLog = !state |> getMountLogAndReset in
+        Alcotest.(
+          check (list mount_entry) "same lists"
+            [ MountChild (root, box "Box1unchanged", 0)
+            ; MountChild (root, box "Box2unchanged", 1) ]
+            mountLog))
+    ; Alcotest.test_case "It reorders the list" `Quick (fun () ->
+        state :=
+          !state
+          |> update
+               (listToElement
+                  [ <Components.Box key=key2 title="Box2changed" />
+                  ; <Components.Box key=key1 title="Box1changed" /> ])
+          |> executeSideEffects;
+        let mountLog = !state |> getMountLogAndReset in
+        Alcotest.(
+          check (list mount_entry) "same lists"
+            [ UnmountChild (root, box "Box2unchanged")
+            ; MountChild (root, box "Box2changed", 1)
+            ; RemountChild (root, box "Box2changed", 1, 0)
+            ; UnmountChild (root, box "Box1unchanged")
+            ; MountChild (root, box "Box1changed", 1) ]
+            mountLog)) ] )
+
+let conditional_updating =
+  ( "Conditional updating by leveraging refs"
+  , let rAction = Remote_action.create () in
+    let state = ref (render <Components.UpdateAlternateClicks rAction />) in
+    [ Alcotest.test_case "It renders UpdateAlternateClicks element" `Quick
+        (fun () ->
+           state := !state |> executeSideEffects;
+           let mountLog = !state |> getMountLogAndReset in
+           Alcotest.(
+             check (list mount_entry) "same lists"
+               [ChangeText ("0", "0"); MountChild (root, text "0", 0)]
+               mountLog))
+    ; Alcotest.test_case "It only changes state on first click" `Quick
+        (fun () ->
+           state :=
+             !state
+             |> act ~action:Components.UpdateAlternateClicks.Click rAction
+             |> flushPendingUpdates |> executeSideEffects;
+           let mountLog = !state |> getMountLogAndReset in
+           Alcotest.(check (list mount_entry) "same lists" [] mountLog))
+    ; Alcotest.test_case "It changes both state and contents on second click"
+        `Quick (fun () ->
+        state :=
+          !state
+          |> act ~action:Components.UpdateAlternateClicks.Click rAction
+          |> flushPendingUpdates |> executeSideEffects;
+        let mountLog = !state |> getMountLogAndReset in
+        Alcotest.(
+          check (list mount_entry) "same lists" [ChangeText ("0", "2")] mountLog))
+    ; Alcotest.test_case "It only changes state on third click" `Quick
+        (fun () ->
+           state :=
+             !state
+             |> act ~action:Components.UpdateAlternateClicks.Click rAction
+             |> flushPendingUpdates |> executeSideEffects;
+           let mountLog = !state |> getMountLogAndReset in
+           Alcotest.(check (list mount_entry) "same lists" [] mountLog))
+    ; Alcotest.test_case "It changes both state and contents on fourth click"
+        `Quick (fun () ->
+        state :=
+          !state
+          |> act ~action:Components.UpdateAlternateClicks.Click rAction
+          |> flushPendingUpdates |> executeSideEffects;
+        let mountLog = !state |> getMountLogAndReset in
+        Alcotest.(
+          check (list mount_entry) "same lists" [ChangeText ("2", "4")] mountLog))
+    ] )
+
+let updating_with_identical_element =
+  ( "Updating with identical element"
+  , let key1 = Key.create () and key2 = Key.create () in
+    let state =
+      ref
+        (render
+           (listToElement
+              [ <Components.Text key=key1 title="x" />
+              ; <Components.Text key=key2 title="y" /> ]))
+    in
+    [ Alcotest.test_case "It renders list with Text elements" `Quick (fun () ->
+        state := !state |> executeSideEffects;
+        let mountLog = !state |> getMountLogAndReset in
+        Alcotest.(
+          check (list mount_entry) "same lists"
+            [ ChangeText ("x", "x")
+            ; MountChild (root, text "x", 0)
+            ; ChangeText ("y", "y")
+            ; MountChild (root, text "y", 1) ]
+            mountLog))
+    ; Alcotest.test_case
+        "It updates the state with a new instance of (same) string" `Quick
+        (fun () ->
+           state :=
+             !state
+             |> update
+                  (listToElement
+                     (let open Components in
+                      [ <Text key=key1 title="x" />
+                      ; <Text key=key2 title="y" /> ]))
+             |> executeSideEffects;
+           let mountLog = !state |> getMountLogAndReset in
+           Alcotest.(check (list mount_entry) "same lists" [] mountLog))
+    ; Alcotest.test_case "It reorders the list" `Quick (fun () ->
+        state :=
+          !state
+          |> update
+               (listToElement
+                  (let open Components in
+                   [ <Text key=key2 title="y" />
+                   ; <Text key=key1 title="x" /> ]))
+          |> executeSideEffects;
+        let mountLog = !state |> getMountLogAndReset in
+        Alcotest.(
+          check (list mount_entry) "same lists"
+            [RemountChild (root, text "y", 1, 0)]
+            mountLog)) ] )
+
+let prepending_new_element =
+  ( "Prepending new element"
+  , let key1 = Key.create () and key2 = Key.create () in
+    let commonElement = [ <Components.Text key=key1 title="x" /> ] in
+    let state = ref (render (listToElement commonElement)) in
+    [ Alcotest.test_case "It renders a new Text element" `Quick (fun () ->
+        state := !state |> executeSideEffects;
+        let mountLog = !state |> getMountLogAndReset in
+        Alcotest.(
+          check (list mount_entry) "same lists"
+            [ChangeText ("x", "x"); MountChild (root, text "x", 0)]
+            mountLog))
+    ; Alcotest.test_case "It prepends a new Text element to the list" `Quick
+        (fun () ->
+           state :=
+             !state
+             |> update
+                  (listToElement
+                     (<Components.Text key=key2 title="y" /> :: commonElement))
+             |> executeSideEffects;
+           let mountLog = !state |> getMountLogAndReset in
+           Alcotest.(
+             check (list mount_entry) "same lists"
+               [ChangeText ("y", "y"); MountChild (root, text "y", 0)]
+               mountLog)) ] )
+
+let always_effect =
+  ( "'Always' effect"
+  , let effectCallCount = ref 0 and effectDisposeCallCount = ref 0 in
+    let onEffect () = incr effectCallCount in
+    let onEffectDispose () = incr effectDisposeCallCount in
+    let state =
+      ref (render
+        <Components.EmptyComponentWithAlwaysEffect onEffect onEffectDispose />)
+    in
+    [ Alcotest.test_case "The effect should've been run" `Quick (fun () ->
+        state := !state |> executeSideEffects;
+        Alcotest.(check int "same ints" 1 !effectCallCount))
+    ; Alcotest.test_case "The dispose should not have been run yet" `Quick
+        (fun () -> Alcotest.(check int "same ints" 0 !effectDisposeCallCount))
+    ; Alcotest.test_case "It prepends a new Text element to the list" `Quick
+        (fun () ->
+           state :=
+             !state
+             |> update
+                <Components.EmptyComponentWithAlwaysEffect
+                  onEffect
+                  onEffectDispose
+                />
+             |> executeSideEffects;
+           Alcotest.(check int "same ints" 2 !effectCallCount))
+    ; Alcotest.test_case "Test 'Always' effect in a nested component" `Quick
+        (fun () -> Alcotest.(check int "same ints" 1 !effectDisposeCallCount))
+    ] )
+
+let always_effect_nested_component =
+  ( "'Always' effect in a nested component"
+  , let effectCallCount = ref 0 and effectDisposeCallCount = ref 0 in
+    let onEffect () = incr effectCallCount in
+    let onEffectDispose () = incr effectDisposeCallCount in
+    let state =
+      ref (render Components.(
+        <Div>
+          <EmptyComponentWithAlwaysEffect onEffect onEffectDispose />
+        </Div>
+      ))
+    in
+    [ Alcotest.test_case "The effect should've been run" `Quick (fun () ->
+        state := !state |> executeSideEffects;
+        Alcotest.(check int "same ints" 1 !effectCallCount))
+    ; Alcotest.test_case "The dispose should not have been run yet" `Quick
+        (fun () -> Alcotest.(check int "same ints" 0 !effectDisposeCallCount))
+    ] )
+
+let onmount_effect =
+  ( "'OnMount' effect"
+  , let effectCallCount = ref 0 and effectDisposeCallCount = ref 0 in
+    let onEffect () = incr effectCallCount in
+    let onEffectDispose () = incr effectDisposeCallCount in
+    let state =
+      ref (render
+        <Components.EmptyComponentWithOnMountEffect
+          onEffect
+          onEffectDispose
+        />)
+    in
+    [ Alcotest.test_case "The effect should've been run" `Quick (fun () ->
+        state := !state |> executeSideEffects;
+        Alcotest.(check int "same ints" 1 !effectCallCount))
+    ; Alcotest.test_case "The dispose should not have been run yet" `Quick
+        (fun () -> Alcotest.(check int "same ints" 0 !effectDisposeCallCount))
+    ; Alcotest.test_case "The effect should not have been run again" `Quick
+        (fun () ->
+           state :=
+             !state
+             |> update
+                <Components.EmptyComponentWithOnMountEffect
+                  onEffect
+                  onEffectDispose
+                />
+             |> executeSideEffects;
+           Alcotest.(check int "same ints" 1 !effectCallCount))
+    ; Alcotest.test_case
+        "The effect dispose callback should not have been run yet" `Quick
+        (fun () -> Alcotest.(check int "same ints" 0 !effectDisposeCallCount))
+    ; Alcotest.test_case "The effect should not have been run again" `Quick
+        (fun () ->
+           state :=
+             !state
+             |> update <Components.EmptyComponent />
+             |> executeSideEffects;
+           Alcotest.(check int "same ints" 1 !effectCallCount))
+    ; Alcotest.test_case
+        "The effect dispose callback should have been called since the component was un-mounted"
+        `Quick (fun () ->
+        Alcotest.(check int "same ints" 1 !effectDisposeCallCount)) ] )
+
+let onmount_effect_nested_component =
+  ( "'OnMount' effect in nested component"
+  , let effectCallCount = ref 0 and effectDisposeCallCount = ref 0 in
+    let onEffect () = incr effectCallCount in
+    let onEffectDispose () = incr effectDisposeCallCount in
+    let state =
+      ref (render Components.(
+        <Div>
+          <EmptyComponentWithOnMountEffect onEffect onEffectDispose />
+        </Div>
+      ))
+    in
+    [ Alcotest.test_case "The effect should've been run" `Quick (fun () ->
+        state := !state |> executeSideEffects;
+        Alcotest.(check int "same ints" 1 !effectCallCount))
+    ; Alcotest.test_case "The dispose should not have been run yet" `Quick
+        (fun () -> Alcotest.(check int "same ints" 0 !effectDisposeCallCount))
+    ; Alcotest.test_case "The effect should not have been run again" `Quick
+        (fun () ->
+           state :=
+             !state
+             |> update Components.(<Div />)
+             |> executeSideEffects;
+           Alcotest.(check int "same ints" 1 !effectCallCount))
+    ; Alcotest.test_case
+        "The effect dispose callback should have been called since the component was un-mounted"
+        `Quick (fun () ->
+        Alcotest.(check int "same ints" 1 !effectDisposeCallCount)) ] )
+
+let onmount_effect_extra_nested_component =
+  ( "'OnMount' effect in extra-nested component"
+  , let effectCallCount = ref 0 and effectDisposeCallCount = ref 0 in
+    let onEffect () = incr effectCallCount in
+    let onEffectDispose () = incr effectDisposeCallCount in
+    let state =
+      ref (render Components.(
+        <Div>
+          <Div>
+            <EmptyComponentWithOnMountEffect onEffect onEffectDispose />
+          </Div>
+        </Div>
+      ))
+    in
+    [ Alcotest.test_case "The effect should've been run" `Quick (fun () ->
+        state := !state |> executeSideEffects;
+        Alcotest.(check int "same ints" 1 !effectCallCount))
+    ; Alcotest.test_case "The dispose should not have been run yet" `Quick
+        (fun () -> Alcotest.(check int "same ints" 0 !effectDisposeCallCount))
+    ; Alcotest.test_case "The effect should not have been run again" `Quick
+        (fun () ->
+           state :=
+             !state
+             |> update Components.(<Div />)
+             |> executeSideEffects;
+           Alcotest.(check int "same ints" 1 !effectCallCount))
+    ; Alcotest.test_case
+        "The effect dispose callback should have been called since the component was un-mounted"
+        `Quick (fun () ->
+        Alcotest.(check int "same ints" 1 !effectDisposeCallCount)) ] )
+
+let transition_empty_to_nonempty_list =
+  ( "Transition from empty list to non-empty list"
+  , [ Alcotest.test_case "It mounts IAmBox0+1" `Quick (fun () ->
+        let state =
+          render Components.(
+            <Div> (listToElement []) <Box title="ImABox1" /> </Div>)
+          |> executeSideEffects |> reset
+          |> update Components.(
+            <Div>
+              (listToElement [(<Box title="ImABox0" />)])
+              <Box title="ImABox1" />
+            </Div> )
+          |> executeSideEffects
+        in
+        let mountLog = state |> getMountLogAndReset in
+        Alcotest.(
+          check (list mount_entry) "same lists"
+            [ MountChild (div, box "ImABox0", 0)
+            ; UnmountChild (div, box "ImABox1")
+            ; MountChild (div, box "ImABox1", 1) ]
+            mountLog))
+    ; Alcotest.test_case "It mounts IAmBox0+1" `Quick (fun () ->
+        let state =
+          render Components.(
+            <Div> <Box title="ImABox0" /> (listToElement []) </Div>)
+          |> executeSideEffects |> reset
+          |> update Components.(
+              <Div>
+                <Box title="ImABox0" />
+                (listToElement [(<Box title="ImABox1" />)])
+              </Div> )
+          |> executeSideEffects
+        in
+        let mountLog = state |> getMountLogAndReset in
+        Alcotest.(
+          check (list mount_entry) "same lists"
+            [ UnmountChild (div, box "ImABox0")
+            ; MountChild (div, box "ImABox0", 0)
+            ; MountChild (div, box "ImABox1", 1) ]
+            mountLog)) ] )
+
+let transition_empty_to_nonempty_list' =
+  ( "Transition from empty list to non-empty list & <Box key> becomes <Div key>"
+  , [ Alcotest.test_case "IAmBox" `Quick (fun () ->
+        let key = Key.create () in
+        let state =
+          render Components.(
+            <Div> (listToElement []) <Box key title="ImABoxA" /> </Div> )
+          |> executeSideEffects |> reset
+          |> update Components.(
+              <Div>
+                (listToElement [(<Box title="ImABoxB" />)])
+                <Div key />
+              </Div> )
+          |> executeSideEffects
+        in
+        let mountLog = state |> getMountLogAndReset in
+        Alcotest.(
+          check (list mount_entry) "same lists"
+            [ MountChild (div, box "ImABoxB", 0)
+            ; UnmountChild (div, box "ImABoxA")
+            ; MountChild (div, div, 1) ]
+            mountLog)) ] )
+
+let single_child_div_flat_child_changing_key =
+  ( "<SingleChildDiv> with single Flat child, with a changing key"
+  , [ Alcotest.test_case "It re-mounts the node with the new key" `Quick
+        (fun () ->
+           let key1 = Key.create () and key2 = Key.create () in
+           let state =
+             render Components.(
+                <SingleChildDiv> <Div key=key1 /> </SingleChildDiv>)
+             |> executeSideEffects |> reset
+             |> update Components.(
+                <SingleChildDiv> <Div key=key2 /> </SingleChildDiv>)
+             |> executeSideEffects
+           in
+           let mountLog = state |> getMountLogAndReset in
+           Alcotest.(
+             check (list mount_entry) "same lists"
+               [ UnmountChild (singleChildDiv, div)
+               ; MountChild (singleChildDiv, div, 0) ]
+               mountLog)) ] )
+
+let () =
+  Alcotest.run "brisk-reconciler-ocaml"
+    [ initial_render
+    ; rendering_children
+    ; replacing_subtree
+    ; top_level_reorder
+    ; top_level_replace_elements
+    ; subtree_replace_elements
+    ; subtree_replace_elements'
+    ; top_level_prepend
+    ; simple_subtree_change
+    ; changing_components
+    ; boxlist_with_dynamic_keys
+    ; boxlist_without_dynamic_keys
+    ; memoizing_during_deep_move
+    ; list_updates_with_static_keys
+    ; conditional_updating
+    ; updating_with_identical_element
+    ; prepending_new_element
+    ; always_effect
+    ; always_effect_nested_component
+    ; onmount_effect
+    ; onmount_effect_nested_component
+    ; onmount_effect_extra_nested_component
+    ; transition_empty_to_nonempty_list
+    ; transition_empty_to_nonempty_list'
+    ; single_child_div_flat_child_changing_key ]

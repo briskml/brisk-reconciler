@@ -14,8 +14,8 @@
   (pps brisk_ppx ppx_deriving.std))
  (modules RunTests))
 
-(alias
- (name runtest)
+(rule
+ (alias runtest)
  (deps RunTests.exe)
  (action
   (run %{deps})))

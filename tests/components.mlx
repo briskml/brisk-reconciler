@@ -1,0 +1,217 @@
+open Reconciler
+module Brisk_reconciler = Brisk_reconciler__Brisk_reconciler_internal
+open Brisk_reconciler
+
+(** The simplest component. Composes nothing! *)
+module Box = struct
+  let%nativeComponent make ?(title = "ImABox") () h =
+    ( { children = Brisk_reconciler.empty
+      ; make = (fun () -> {name = "Box"; element = Text title})
+      ; configureInstance =
+          (fun ~isFirstRender instance ->
+            match isFirstRender with
+            | true -> instance
+            | false -> {name = "Box"; element = Text title})
+      ; insertNode
+      ; moveNode
+      ; deleteNode }
+    , h )
+end
+
+module Div = struct
+  let%nativeComponent make ?(children = empty) () h =
+    ( { make = (fun () -> {name = "Div"; element = View})
+      ; configureInstance = (fun ~isFirstRender:_ d -> d)
+      ; children
+      ; insertNode
+      ; moveNode
+      ; deleteNode }
+    , h )
+end
+
+module SingleChildDiv = struct
+  let%nativeComponent make ~children () h =
+    ( { make = (fun () -> {name = "SingleChildDiv"; element = View})
+      ; configureInstance = (fun ~isFirstRender:_ d -> d)
+      ; children
+      ; insertNode
+      ; moveNode
+      ; deleteNode }
+    , h )
+end
+
+module Text = struct
+  type state = {current : string; prev : string}
+
+  let%nativeComponent make ?(title = "ImABox") () =
+    let%hook prevTitle = Hooks.ref title in
+    let%hook () =
+      Hooks.effect Always (fun () ->
+        prevTitle := title;
+        None)
+    in
+    { make = (fun () -> {name = "Text"; element = Text title})
+    ; configureInstance =
+        (fun ~isFirstRender t ->
+          if !prevTitle <> title || isFirstRender
+          then mountLog := ChangeText (!prevTitle, title) :: !mountLog;
+          t)
+    ; children = empty
+    ; insertNode
+    ; moveNode
+    ; deleteNode }
+end
+
+let stringToElement string =
+  Text.createElement ~title:string ~children:[] () [@JSX]
+
+module BoxWrapper = struct
+  let%component make ?(title = "ImABox") ?(twoBoxes = false) () h =
+    ( (if twoBoxes then <Div> <Box title /> <Box title /> </Div>
+       else <Div> <Box title /> </Div>)
+    , h )
+end
+
+(** Box with dynamic keys. *)
+module BoxItemDynamic = struct
+  let make ?(title = "ImABox") () h = stringToElement title, h
+  [@@component useDynamicKey]
+end
+
+module BoxList = struct
+  type action = Create of string | Reverse
+
+  let%component make ~rAction ?(useDynamicKeys = false) () =
+    let%hook state, dispatch =
+      Hooks.reducer ~initialState:[] (fun action state ->
+        match action with
+        | Create title ->
+          ( if useDynamicKeys then <BoxItemDynamic title />
+            else <Box title /> ) :: state
+        | Reverse -> List.rev state)
+    in
+    let%hook () =
+      Hooks.effect OnMount (fun () ->
+        Some (Remote_action.subscribe ~handler:dispatch rAction))
+    in
+    listToElement state
+end
+
+module StatelessButton = struct
+  let%component make
+      ?initialClickCount:(_ = "noclicks")
+      ?test:(_ = "default")
+      () h
+    =
+    <Div />, h
+end
+
+module ButtonWrapper = struct
+  let%component make ?(wrappedText = "default") () hooks =
+    <StatelessButton
+      initialClickCount=("wrapped:" ^ wrappedText ^ ":wrapped")
+    />
+    , hooks
+end
+
+module ButtonWrapperWrapper = struct
+  let buttonWrapperJsx = <ButtonWrapper wrappedText="TestButtonUpdated!!!" />
+
+  let%component make ?(wrappedText = "default") () hooks =
+    <Div> (stringToElement wrappedText) buttonWrapperJsx </Div>, hooks
+end
+
+module UpdateAlternateClicks = struct
+  type action = Click
+
+  let%component make ~rAction () =
+    let%hook state, dispatch =
+      Hooks.reducer ~initialState:(ref 0) (fun Click state ->
+        match !state mod 2 == 0 with
+        | true -> incr state; state
+        | false -> ref (!state + 1))
+    in
+    let%hook () =
+      Hooks.effect OnMount (fun () ->
+        Some (Remote_action.subscribe ~handler:dispatch rAction))
+    in
+    stringToElement (string_of_int !state)
+end
+
+module ToggleClicks = struct
+  type action = Click
+
+  let customHook rAction =
+    let%hook state, setState = Hooks.state false in
+    let%hook () =
+      Hooks.effect Always (fun () ->
+        Some (
+          Remote_action.subscribe
+            ~handler:(fun (_ : action) -> setState (fun state -> not state))
+            rAction))
+    in
+    state
+
+  let%component make ~rAction () =
+    let%hook state = customHook rAction in
+    if state then
+      <Div> <Text title="cell1" /> <Text title="cell2" /> </Div>
+    else
+      <Div> <Text title="well" /> </Div>
+end
+
+let empty = (empty : node element)
+
+module EmptyComponent = struct
+  let%component make () hooks = empty, hooks
+end
+
+module EmptyComponentWithAlwaysEffect = struct
+  let%component make
+      ~(onEffect : unit -> unit)
+      ~(onEffectDispose : unit -> unit)
+      ()
+    =
+    let%hook () =
+      Hooks.effect Always (fun () -> onEffect (); Some onEffectDispose)
+    in
+    empty
+end
+
+module EmptyComponentWithOnMountEffect = struct
+  let%component make
+      ~(onEffect : unit -> unit)
+      ~(onEffectDispose : unit -> unit)
+      ()
+    =
+    let%hook () =
+      Hooks.effect OnMount (fun () -> onEffect (); Some onEffectDispose)
+    in
+    empty
+end
+
+module ShouldAllowComponentProp = struct
+  let%component make ~component () hooks =
+    <Div> component </Div>, hooks
+end
+
+module LocallyAbstractType : sig
+  val make :
+     ?key:Key.t
+    -> foo:int
+    -> onA:(int -> bool)
+    -> onB:(bool -> unit)
+    -> unit
+    -> node element
+end = struct
+  let%component make
+      (type a) (type b)
+      ~(foo : a)
+      ~(onA : a -> b)
+      ~(onB : b -> unit)
+      () hooks
+    =
+    let b = onA foo in
+    onB b;
+    empty, hooks
+end

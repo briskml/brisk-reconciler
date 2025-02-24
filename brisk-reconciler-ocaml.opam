@@ -6,9 +6,9 @@ homepage: "https://github.com/brisk/brisk-reconciler"
 bug-reports: "https://github.com/brisk/brisk-reconciler/issues"
 depends: [
   "dune" {>= "3.16"}
-  "ocaml" {>= "4.8.0"}
-  "reason" {>= "3.4.0"}
-  "ppxlib"
+  "alcotest" {with-test}
+  "mlx" {with-dev}
+  "ocamlformat-mlx" {with-dev}
   "odoc" {with-doc}
 ]
 build: [
