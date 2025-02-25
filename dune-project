@@ -7,7 +7,7 @@
 
 (license MIT)
 
-(version 1.0.0-alpha.0)
+(version 1.0.0-alpha.1)
 
 (generate_opam_files true)
 
@@ -35,4 +35,8 @@
  (depends
   (alcotest :with-test)
   (mlx :with-dev)
-  (ocamlformat-mlx :with-dev)))
+  (ocamlformat-mlx :with-dev)
+  (js_of_ocaml :with-dev)
+  (js_of_ocaml-ppx :with-dev)
+  (lwt :with-dev)
+  (lambda-term :with-dev)))

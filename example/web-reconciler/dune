@@ -1,0 +1,15 @@
+(executable
+  (name web_reconciler)
+  (libraries brisk-reconciler-ocaml)
+  (preprocess (pps js_of_ocaml-ppx brisk-reconciler.ppx))
+  (modes js))
+
+(rule
+  (targets web_reconciler.js)
+  (deps web_reconciler.bc.js)
+  (action
+    (run cp %{deps} %{targets})))
+
+(alias
+  (name example)
+  (deps web_reconciler.js index.html))

@@ -1,0 +1,145 @@
+(** This is an implementation of a reconciler for DOM elements via js_of_ocaml:
+    http://ocsigen.org/js_of_ocaml/3.1.0/api/Dom_html
+
+    This is just an example but you could use this to create interesting CLI
+    apps, with a react-like functional API! *)
+
+open Js_of_ocaml
+open Brisk_reconciler
+
+let str = string_of_int
+
+
+(* Step 1: Define the reconciler template *)
+
+type node = Dom_html.element Js.t
+
+let onStale = (Remote_action.create () : unit Remote_action.t)
+
+let insertNode ~(parent : node) ~(child : node) ~position:_ =
+  Dom.appendChild parent child;
+  parent
+
+let deleteNode ~(parent : node) ~(child : node) ~position:_ =
+  Dom.removeChild parent child;
+  parent
+
+let moveNode ~parent ~child:_ ~from:_ ~to_:_ = parent;;
+
+Brisk_reconciler.addStaleTreeHandler (fun () ->
+  Remote_action.send ~action:() onStale)
+
+
+(* Step 2: Define some native components (aka primitives) *)
+
+let document = Dom_html.window##.document
+
+let%nativeComponent view ~children () hooks =
+  ( { make =
+        (fun () ->
+          let node = Dom_html.createDiv document in
+          node)
+    ; configureInstance = (fun ~isFirstRender:_ node -> node)
+    ; children
+    ; insertNode
+    ; deleteNode
+    ; moveNode }
+  , hooks )
+
+let%nativeComponent text ~text () hooks =
+  ( { make =
+        (fun () ->
+          let node = Dom_html.createSpan document in
+          node##.innerHTML := Js.string text;
+          node |> Dom_html.element)
+    ; configureInstance =
+        (fun ~isFirstRender:_ n ->
+          let node = (Obj.magic n : Dom_html.imageElement Js.t) in
+          node##.innerHTML := Js.string text;
+          node |> Dom_html.element)
+    ; children = empty
+    ; insertNode
+    ; deleteNode
+    ; moveNode }
+  , hooks )
+
+let%nativeComponent button ~onPress ~title () hooks =
+  ( { make =
+        (fun () ->
+          let node =
+            Dom_html.createButton ~_type:(Js.string "button") document
+          in
+          let t = Js.string title in
+          node##.title := t;
+          node##.innerHTML := t;
+          node##.onclick :=
+            Dom_html.handler (fun _e -> onPress (); Js.bool false);
+          node |> Dom_html.element)
+    ; configureInstance =
+        (fun ~isFirstRender:_ n ->
+          let node = (Obj.magic n : Dom_html.imageElement Js.t) in
+          let t = Js.string title in
+          node##.title := t;
+          node##.innerHTML := t;
+          node##.onclick :=
+            Dom_html.handler (fun _e -> onPress (); Js.bool false);
+          node |> Dom_html.element)
+    ; children = empty
+    ; insertNode
+    ; deleteNode
+    ; moveNode }
+  , hooks )
+
+
+(* Step 3: Use the reconciler + native elements to create something great! *)
+
+let action = Remote_action.create ()
+
+let%component counterButtons () =
+  let%hook count, setCount = Hooks.state 0 in
+  Remote_action.subscribe ~handler:(fun n -> setCount (fun _ -> n)) action ()
+  |> ignore;
+  <view>
+    <button
+      title="Decrement"
+      onPress=(fun () -> setCount (fun count -> count - 1))
+    />
+    <text text=("Counter: " ^ str count) />
+    <button
+      title="Reset (Race condition)"
+      onPress=(fun () ->
+        ignore
+          (Dom_html.setTimeout
+            (fun () -> Remote_action.send ~action:0 action)
+            3000.))
+    />
+    <button
+      title="Increment"
+      onPress=(fun () -> setCount (fun count -> count + 1))
+    />
+  </view>
+
+let render () =
+  <view> <text text="Hello World" /> <counterButtons /> </view>
+
+
+(* Step 4: Make the first render *)
+
+let rendered =
+  ref
+    (RenderedElement.render
+       { node = Dom_html.getElementById_exn "app"
+       ; insertNode
+       ; deleteNode
+       ; moveNode }
+       (render ()))
+;;
+
+RenderedElement.executeHostViewUpdates !rendered |> ignore;;
+
+Remote_action.subscribe
+  ~handler:(fun () ->
+    let nextElement = RenderedElement.flushPendingUpdates !rendered in
+    RenderedElement.executeHostViewUpdates nextElement |> ignore;
+    rendered := nextElement)
+  onStale
