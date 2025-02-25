@@ -36,7 +36,10 @@ let deleteNode ~(parent : node) ~(child : node) ~position:_ =
   | _ -> ());
   parent
 
-let moveNode ~parent ~child:_ ~from:_ ~to_:_ = parent
+let moveNode ~parent ~child:_ ~from:_ ~to_:_ = parent;;
+
+Brisk_reconciler.addStaleTreeHandler (fun () ->
+  Remote_action.send ~action:() onStale)
 
 
 (* Step 2: Define some native components (aka primitives) *)
