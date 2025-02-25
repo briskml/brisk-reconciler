@@ -6,13 +6,17 @@ homepage: "https://github.com/brisk/brisk-reconciler"
 bug-reports: "https://github.com/brisk/brisk-reconciler/issues"
 depends: [
   "dune" {>= "3.16"}
-  "alcotest" {with-test}
   "mlx" {with-dev}
   "ocamlformat-mlx" {with-dev}
-  "js_of_ocaml" {with-dev}
-  "js_of_ocaml-ppx" {with-dev}
-  "lwt" {with-dev}
-  "lambda-term" {with-dev}
+  "ocamlformat" {with-dev}
+  "ocaml-lsp-server" {with-dev}
+  "alcotest" {with-test}
+  "ppx_deriving" {with-test}
+  "js_of_ocaml" {with-test}
+  "js_of_ocaml-ppx" {with-test}
+  "lwt" {with-test}
+  "lambda-term" {with-test}
+  "core_bench" {with-test}
   "odoc" {with-doc}
 ]
 build: [

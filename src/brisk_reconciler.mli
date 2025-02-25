@@ -85,7 +85,7 @@ module RenderedElement : sig
       your runloop. *)
 end
 
-(** Creates a component. Components are a functions which
+(** Creates a component. Components are functions which
     retain state over time via Hooks. The function you pass to
     component should be pure and all side effects should be
     handled using Hooks.effect *)
