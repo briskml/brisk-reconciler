@@ -2,5 +2,3 @@
  (_
   (flags
    (:standard -w -9))))
-
-(dirs :standard \ benchmark test)

@@ -1,4 +1,4 @@
 (executable
   (name lambda_term)
-  (libraries lwt lambda-term brisk-reconciler-ocaml)
+  (libraries lwt lambda-term brisk-reconciler)
   (preprocess (pps brisk-reconciler.ppx)))

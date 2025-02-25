@@ -1,6 +1,6 @@
 (executable
   (name web_reconciler)
-  (libraries brisk-reconciler-ocaml)
+  (libraries brisk-reconciler)
   (preprocess (pps js_of_ocaml-ppx brisk-reconciler.ppx))
   (modes js))
 

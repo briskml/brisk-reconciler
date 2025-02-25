@@ -24,15 +24,8 @@
 (package
  (name brisk-reconciler)
  (depends
-  (ocaml
-   (>= 4.8.0))
-  (reason
-   (>= 3.4.0))
-  ppxlib))
-
-(package
- (name brisk-reconciler-ocaml)
- (depends
+  (ocaml (>= 4.8.0))
+  ppxlib
   (mlx :with-dev)
   (ocamlformat-mlx :with-dev)
   (ocamlformat :with-dev)

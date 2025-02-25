@@ -802,7 +802,7 @@ let single_child_div_flat_child_changing_key =
                mountLog)) ] )
 
 let () =
-  Alcotest.run "brisk-reconciler-ocaml"
+  Alcotest.run "brisk-reconciler"
     [ initial_render
     ; rendering_children
     ; replacing_subtree
