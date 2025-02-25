@@ -44,13 +44,7 @@ let replacing_subtree =
           render Components.(
             <Div> <Box title="ImABox1" /> <Box title="ImABox2" /> </Div>)
           |> executeSideEffects |> reset
-          |> update
-               (let open Components in
-                (Div.createElement
-                   ~children:
-                     [ (Box.createElement ~title:"ImABox3" ~children:[] () [@JSX])
-                     ]
-                   () [@JSX]))
+          |> update Components.(<Div> <Box title="ImABox3" /> </Div>)
           |> executeSideEffects |> getMountLogAndReset
         in
         Alcotest.(

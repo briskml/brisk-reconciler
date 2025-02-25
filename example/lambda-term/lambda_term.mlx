@@ -18,8 +18,6 @@ type hostElement =
 
 type node = hostElement
 
-let onStale = Remote_action.create ()
-
 let insertNode ~(parent : node) ~(child : node) ~position:_ =
   (match parent, child with
   | Container box, Label child -> box#add child
@@ -36,10 +34,11 @@ let deleteNode ~(parent : node) ~(child : node) ~position:_ =
   | _ -> ());
   parent
 
-let moveNode ~parent ~child:_ ~from:_ ~to_:_ = parent;;
+let moveNode ~parent ~child:_ ~from:_ ~to_:_ = parent
 
-Brisk_reconciler.addStaleTreeHandler (fun () ->
-  Remote_action.send ~action:() onStale)
+let onStale = Remote_action.create ();;
+
+addStaleTreeHandler (fun () -> Remote_action.send ~action:() onStale)
 
 
 (* Step 2: Define some native components (aka primitives) *)
@@ -122,7 +121,7 @@ let%component counterButtons () =
    `useEffect` and `setState` together. *)
 
 let%component clock () =
-  let%hook time, setTime = Hooks.state 0. in
+  let%hook time, setTime = Hooks.state (Unix.time ()) in
   let%hook () =
     Hooks.effect Hooks.Effect.Always (fun () ->
       let evt =
@@ -130,7 +129,11 @@ let%component clock () =
       in
       Some (fun () -> Lwt_engine.stop_event evt))
   in
-  <label text=("Time: " ^ string_of_float time) />
+  let formated_time =
+    let tm = Unix.localtime time in
+    Printf.sprintf "%02d:%02d:%02d" tm.tm_hour tm.tm_min tm.tm_sec
+  in
+  <label text=("Time: " ^ formated_time) />
 
 
 (* Step 4: Make the first render *)

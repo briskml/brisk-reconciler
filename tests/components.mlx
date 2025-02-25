@@ -62,8 +62,7 @@ module Text = struct
     ; deleteNode }
 end
 
-let stringToElement string =
-  Text.createElement ~title:string ~children:[] () [@JSX]
+let stringToElement string = <Text title=string />
 
 module BoxWrapper = struct
   let%component make ?(title = "ImABox") ?(twoBoxes = false) () h =

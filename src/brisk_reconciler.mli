@@ -15,7 +15,7 @@ module Key : sig
   (** Abstract type of the component key. It prevents duplicate key issues *)
 
   val create : unit -> t
-  (** Create unique a component key. *)
+  (** Create a unique component key. *)
 
   val none : t
   (** Default key *)

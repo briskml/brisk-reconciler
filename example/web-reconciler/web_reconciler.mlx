@@ -14,8 +14,6 @@ let str = string_of_int
 
 type node = Dom_html.element Js.t
 
-let onStale = (Remote_action.create () : unit Remote_action.t)
-
 let insertNode ~(parent : node) ~(child : node) ~position:_ =
   Dom.appendChild parent child;
   parent
@@ -24,10 +22,11 @@ let deleteNode ~(parent : node) ~(child : node) ~position:_ =
   Dom.removeChild parent child;
   parent
 
-let moveNode ~parent ~child:_ ~from:_ ~to_:_ = parent;;
+let moveNode ~parent ~child:_ ~from:_ ~to_:_ = parent
 
-Brisk_reconciler.addStaleTreeHandler (fun () ->
-  Remote_action.send ~action:() onStale)
+let onStale = (Remote_action.create () : unit Remote_action.t);;
+
+addStaleTreeHandler (fun () -> Remote_action.send ~action:() onStale)
 
 
 (* Step 2: Define some native components (aka primitives) *)
