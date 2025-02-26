@@ -1,0 +1,5 @@
+(test
+ (name test_brisk_reconciler)
+ (libraries alcotest brisk-reconciler)
+ (preprocess
+  (pps brisk_ppx ppx_deriving.std)))

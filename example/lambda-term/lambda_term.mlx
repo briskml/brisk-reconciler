@@ -1,0 +1,180 @@
+(** This is an implementation of a reconciler for the Lambda_term widget
+    library: https://github.com/ocaml-community/lambda-term
+
+    This is just an example but you could use this to create interesting CLI
+    apps, with a react-like functional API! *)
+
+open Lwt
+open LTerm_widget
+open Brisk_reconciler
+
+
+(* Step 1: Define the reconciler template *)
+
+type hostElement =
+  | Label of LTerm_widget.label
+  | Button of LTerm_widget.button
+  | Container of LTerm_widget.box
+
+type node = hostElement
+
+let insertNode ~(parent : node) ~(child : node) ~position:_ =
+  (match parent, child with
+  | Container box, Label child -> box#add child
+  | Container box, Button child -> box#add child
+  | Container box, Container child -> box#add child
+  | _ -> ());
+  parent
+
+let deleteNode ~(parent : node) ~(child : node) ~position:_ =
+  (match parent, child with
+  | Container box, Label child -> box#remove child
+  | Container box, Button child -> box#remove child
+  | Container box, Container child -> box#remove child
+  | _ -> ());
+  parent
+
+let moveNode ~parent ~child:_ ~from:_ ~to_:_ = parent
+
+let onStale = Remote_action.create ();;
+
+addStaleTreeHandler (fun () -> Remote_action.send ~action:() onStale)
+
+
+(* Step 2: Define some native components (aka primitives) *)
+
+let%nativeComponent hbox ~children () hooks =
+  ( { make =
+        (fun () ->
+          let node = new LTerm_widget.hbox in
+          Container node)
+    ; configureInstance = (fun ~isFirstRender:_ node -> node)
+    ; insertNode
+    ; deleteNode
+    ; moveNode
+    ; children }
+  , hooks )
+
+let%nativeComponent vbox ~children () hooks =
+  ( { make =
+        (fun () ->
+          let node = new LTerm_widget.vbox in
+          Container node)
+    ; configureInstance = (fun ~isFirstRender:_ node -> node)
+    ; insertNode
+    ; deleteNode
+    ; moveNode
+    ; children }
+  , hooks )
+
+let%nativeComponent label ~text () hooks =
+  ( { make =
+        (fun () ->
+          let node = new LTerm_widget.label text in
+          Label node)
+    ; configureInstance =
+        (fun ~isFirstRender:_ node ->
+          (match node with Label n -> n#set_text text | _ -> ());
+          node)
+    ; insertNode
+    ; deleteNode
+    ; moveNode
+    ; children = empty }
+  , hooks )
+
+let%nativeComponent button ~text ~onClick () hooks =
+  ( { make =
+        (fun () ->
+          let button = new button text in
+          button#on_click onClick; Button button)
+    ; configureInstance =
+        (fun ~isFirstRender:_ node ->
+          (match node with Button n -> n#set_label text | _ -> ());
+          node)
+    ; insertNode
+    ; deleteNode
+    ; moveNode
+    ; children = empty }
+  , hooks )
+
+
+(* Step 3: Use the reconciler + native elements to create something great! *)
+
+type action = Increment | Decrement
+
+let reducer action state =
+  match action with Increment -> state + 1 | Decrement -> state - 1
+
+(* CounterButtons
+   This shows how you can use reducers with a callback from a primitive. *)
+
+let%component counterButtons () =
+  let%hook count, dispatch = Hooks.reducer ~initialState:0 reducer in
+  <hbox>
+    <button text="Decrement" onClick=(fun () -> dispatch Decrement) />
+    <label text=("Counter: " ^ string_of_int count) />
+    <button text="Increment" onClick=(fun () -> dispatch Increment) />
+    <label text="???" />
+  </hbox>
+
+(* Clock
+   Custom clock component to show the time. Demonstrates use of
+   `useEffect` and `setState` together. *)
+
+let%component clock () =
+  let%hook time, setTime = Hooks.state (Unix.time ()) in
+  let%hook () =
+    Hooks.effect Hooks.Effect.Always (fun () ->
+      let evt =
+        Lwt_engine.on_timer 1.0 true (fun _ -> setTime (fun _ -> Unix.time ()))
+      in
+      Some (fun () -> Lwt_engine.stop_event evt))
+  in
+  let formated_time =
+    let tm = Unix.localtime time in
+    Printf.sprintf "%02d:%02d:%02d" tm.tm_hour tm.tm_min tm.tm_sec
+  in
+  <label text=("Time: " ^ formated_time) />
+
+
+(* Step 4: Make the first render *)
+
+let main () =
+  let waiter, wakener = wait () in
+  let quit () = wakeup wakener () in
+
+  (* Let's finally put our UI to use! *)
+  let render () =
+    <vbox>
+      <label text="Hello World!" />
+      <clock />
+      <counterButtons />
+      <button onClick=quit text="Quit" />
+    </vbox>
+  in
+
+  (* Create a container for our UI *)
+  let body = new vbox in
+  let root =
+    RenderedElement.{node = Container body; insertNode; deleteNode; moveNode}
+  in
+  let rendered =
+    let rendered = RenderedElement.render root (render ()) in
+    RenderedElement.executeHostViewUpdates rendered |> ignore;
+    ref (RenderedElement.executePendingEffects rendered)
+  in
+  let _unsubscribe =
+    Remote_action.subscribe
+      ~handler:(fun () ->
+        let nextElement = RenderedElement.flushPendingUpdates !rendered in
+        RenderedElement.executeHostViewUpdates nextElement |> ignore;
+        rendered := RenderedElement.executePendingEffects nextElement)
+      onStale
+  in
+  Lazy.force LTerm.stdout >>= fun term ->
+  LTerm.enable_mouse term >>= fun () ->
+  Lwt.finalize
+    (fun () -> run term body waiter)
+    (fun () -> LTerm.disable_mouse term)
+
+let () = Lwt_main.run (main ())

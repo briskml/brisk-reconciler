@@ -1,0 +1,7 @@
+(executable
+  (package brisk-reconciler)
+  (name benchmark)
+  (public_name benchmark)
+  (libraries core core_bench core_unix brisk-reconciler)
+  (preprocess (pps brisk-reconciler.ppx))
+  (flags (:standard -w -3)))
