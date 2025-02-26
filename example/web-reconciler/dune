@@ -11,5 +11,5 @@
     (run cp %{deps} %{targets})))
 
 (alias
-  (name example)
+  (name all)
   (deps web_reconciler.js index.html))
