@@ -3,7 +3,7 @@
 (name brisk-reconciler)
 
 (source
- (github brisk/brisk-reconciler))
+ (github briskml/brisk-reconciler))
 
 (license MIT)
 
@@ -26,7 +26,7 @@
  (depends
   (ocaml (>= 4.8.0))
   ppxlib
-  (mlx :with-dev)
+  (mlx :with-test)
   (ocamlformat-mlx :with-dev)
   (ocamlformat :with-dev)
   (ocaml-lsp-server :with-dev)

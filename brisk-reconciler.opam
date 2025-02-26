@@ -2,13 +2,13 @@
 opam-version: "2.0"
 version: "1.0.0-alpha.1"
 license: "MIT"
-homepage: "https://github.com/brisk/brisk-reconciler"
-bug-reports: "https://github.com/brisk/brisk-reconciler/issues"
+homepage: "https://github.com/briskml/brisk-reconciler"
+bug-reports: "https://github.com/briskml/brisk-reconciler/issues"
 depends: [
   "dune" {>= "3.16"}
   "ocaml" {>= "4.8.0"}
   "ppxlib"
-  "mlx" {with-dev}
+  "mlx" {with-test}
   "ocamlformat-mlx" {with-dev}
   "ocamlformat" {with-dev}
   "ocaml-lsp-server" {with-dev}
@@ -35,4 +35,4 @@ build: [
     "@doc" {with-doc}
   ]
 ]
-dev-repo: "git+https://github.com/brisk/brisk-reconciler.git"
+dev-repo: "git+https://github.com/briskml/brisk-reconciler.git"
