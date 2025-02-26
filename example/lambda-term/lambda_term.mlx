@@ -114,6 +114,7 @@ let%component counterButtons () =
     <button text="Decrement" onClick=(fun () -> dispatch Decrement) />
     <label text=("Counter: " ^ string_of_int count) />
     <button text="Increment" onClick=(fun () -> dispatch Increment) />
+    <label text="???" />
   </hbox>
 
 (* Clock
