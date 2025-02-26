@@ -128,3 +128,6 @@ end
 
 module Hooks = Hooks
 module Remote_action = Remote_action
+
+(* For backward compatibility *)
+module RemoteAction = Remote_action
