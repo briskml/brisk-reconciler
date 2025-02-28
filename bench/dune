@@ -1,5 +1,5 @@
 (executable
-  (package brisk-reconciler)
+  (enabled_if (<> %{os_type} "Win32"))
   (name benchmark)
   (public_name benchmark)
   (libraries core core_bench core_unix brisk-reconciler)
