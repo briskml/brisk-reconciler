@@ -1,4 +1,14 @@
 (env
  (_
-  (flags
-   (:standard -w -9))))
+  (flags (:standard %{read-lines:flags.txt}))))
+
+(rule
+ (enabled_if (< %{ocaml_version} 5.3))
+ (target flags.txt)
+ (action (with-stdout-to %{target} (echo "-w\n-9"))))
+
+(rule
+ (enabled_if (>= %{ocaml_version} 5.3))
+ (target flags.txt)
+ ;; 5.3 reserves the keyword `effect` used in the library
+ (action (with-stdout-to %{target} (echo "-w\n-9\n-keywords\n5.2"))))

@@ -40,7 +40,15 @@ npm install -g esy
 
 ### Installation using opam
 
-TODO
+Create local opam switch (optional):
+
+```
+opam switch create ./ --deps-only
+```
+
+```
+opam install . --with-dev-setup --with-test --with-doc
+```
 
 ### Development workflow
 
