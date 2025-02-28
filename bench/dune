@@ -1,5 +1,6 @@
 (executable
-  (enabled_if (<> %{os_type} "Win32"))
+  ;; core_unix constraint
+  (enabled_if (>= %{ocaml_version} 5.1))
   (name benchmark)
   (public_name benchmark)
   (libraries core core_bench core_unix brisk-reconciler)
