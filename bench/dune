@@ -1,6 +1,7 @@
 (executable
   ;; core_unix constraint
   (enabled_if (and
+    (= %{profile} dev)
     (>= %{ocaml_version} 5.1)
     (<> %{os_type} "Win32")))
   (name benchmark)
