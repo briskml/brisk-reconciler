@@ -31,7 +31,7 @@ Brisk Reconciler provides an expressive and powerful abstraction for managing **
 - **UI-oriented, but flexible**: Designed with UIs in mind but applicable to other domains.")
  (depends
   (ocaml (>= 4.8.0))
-  ppxlib
+  (ppxlib (< 0.36.0))
   (mlx :with-test)
   (ocamlformat-mlx :with-dev-setup)
   (ocamlformat :with-dev-setup)
