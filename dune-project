@@ -30,8 +30,9 @@ Brisk Reconciler provides an expressive and powerful abstraction for managing **
 - **OutputTree-agnostic hooks**: Support different output representations.
 - **UI-oriented, but flexible**: Designed with UIs in mind but applicable to other domains.")
  (depends
-  (ocaml (>= 4.8.0))
-  (ppxlib (< 0.36.0))
+  ;; OCaml 5.3 reserves the keyword `effect` used in the library
+  (ocaml (and (>= 4.8.0) (< 5.3.0)))
+  (ppxlib (and (>= 0.12.0) (< 0.36.0)))
   (mlx :with-test)
   (ocamlformat-mlx :with-dev-setup)
   (ocamlformat :with-dev-setup)
