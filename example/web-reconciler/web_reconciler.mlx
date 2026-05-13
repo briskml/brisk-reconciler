@@ -26,7 +26,7 @@ let moveNode ~parent ~child:_ ~from:_ ~to_:_ = parent
 
 let onStale = (Remote_action.create () : unit Remote_action.t);;
 
-addStaleTreeHandler (fun () -> Remote_action.send ~action:() onStale)
+add_stale_tree_handler (fun () -> Remote_action.send ~action:() onStale)
 
 
 (* Step 2: Define some native components (aka primitives) *)
@@ -128,7 +128,7 @@ let render () =
 let main () =
   let rendered =
     ref
-      (RenderedElement.render
+      (Rendered_element.render
         { node = Dom_html.getElementById_exn "app"
         ; insertNode
         ; deleteNode
@@ -138,11 +138,11 @@ let main () =
   let _unsubscribe =
     Remote_action.subscribe
       ~handler:(fun () ->
-        let nextElement = RenderedElement.flushPendingUpdates !rendered in
-        RenderedElement.executeHostViewUpdates nextElement |> ignore;
+        let nextElement = Rendered_element.flush_pending_updates !rendered in
+        Rendered_element.execute_host_view_updates nextElement |> ignore;
         rendered := nextElement)
       onStale
   in
-  RenderedElement.executeHostViewUpdates !rendered |> ignore
+  Rendered_element.execute_host_view_updates !rendered |> ignore
 
 let () = main ()

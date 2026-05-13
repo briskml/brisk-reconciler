@@ -82,7 +82,7 @@ module A = struct
     if depth < 5
     then
       ( hooks
-      , Brisk.listToElement
+      , Brisk.list_to_element
           (List.mapi
              (fun i ->
                 fun c ->
@@ -101,7 +101,7 @@ module A = struct
     | B | B' -> makeB ~depth ~index
 
   let render () =
-    Brisk.RenderedElement.render
+    Brisk.Rendered_element.render
       {node = (); insertNode; deleteNode; moveNode}
       (makeA ~depth:0 ~index:0)
 end
@@ -111,12 +111,12 @@ let benchUpdateAtDepth depth ~switchComponent =
     ~name:("Depth: " ^ string_of_int depth)
     (fun `init ->
        let renderedElement =
-         A.render () |> Brisk.RenderedElement.executePendingEffects
+         A.render () |> Brisk.Rendered_element.execute_pending_effects
        in
        Brisk.Remote_action.send
          ~action:(Update.random ~depth ~switchComponent)
          Update.remoteAction;
-       fun () -> Brisk.RenderedElement.flushPendingUpdates renderedElement)
+       fun () -> Brisk.Rendered_element.flush_pending_updates renderedElement)
 
 let main () =
   Random.self_init ();
@@ -127,19 +127,19 @@ let main () =
            (fun `init ->
               let renderedElement = A.render () in
               fun () ->
-                Brisk.RenderedElement.executePendingEffects renderedElement)
+                Brisk.Rendered_element.execute_pending_effects renderedElement)
        ; Bench.Test.create_with_initialization ~name:"Execute host view updates"
            (fun `init ->
               let renderedElement =
-                A.render () |> Brisk.RenderedElement.executePendingEffects
+                A.render () |> Brisk.Rendered_element.execute_pending_effects
               in
               fun () ->
-                Brisk.RenderedElement.executeHostViewUpdates renderedElement)
-       ; Bench.Test.create_with_initialization ~name:"noop flushPendingUpdates"
+                Brisk.Rendered_element.execute_host_view_updates renderedElement)
+       ; Bench.Test.create_with_initialization ~name:"noop flush_pending_updates"
            (fun `init ->
               let renderedElement = A.render () in
               fun () ->
-                Brisk.RenderedElement.flushPendingUpdates renderedElement)
+                Brisk.Rendered_element.flush_pending_updates renderedElement)
        ; Bench.Test.create_group ~name:"State update without subtree change"
            (List.map
               (benchUpdateAtDepth ~switchComponent:false)

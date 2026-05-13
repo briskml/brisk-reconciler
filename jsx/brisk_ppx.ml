@@ -172,7 +172,7 @@ module Declaration_ppx = struct
     let loc = expr.P.pexp_loc in
     let create_component_expr =
       match attribute with
-      | `Native -> [%expr Brisk_reconciler.Expert.nativeComponent]
+      | `Native -> [%expr Brisk_reconciler.Expert.native_component]
       | `Component -> [%expr Brisk_reconciler.Expert.component]
     in
     [%expr

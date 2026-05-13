@@ -38,7 +38,7 @@ let moveNode ~parent ~child:_ ~from:_ ~to_:_ = parent
 
 let onStale = Remote_action.create ();;
 
-addStaleTreeHandler (fun () -> Remote_action.send ~action:() onStale)
+add_stale_tree_handler (fun () -> Remote_action.send ~action:() onStale)
 
 
 (* Step 2: Define some native components (aka primitives) *)
@@ -156,19 +156,19 @@ let main () =
   (* Create a container for our UI *)
   let body = new vbox in
   let root =
-    RenderedElement.{node = Container body; insertNode; deleteNode; moveNode}
+    Rendered_element.{node = Container body; insertNode; deleteNode; moveNode}
   in
   let rendered =
-    let rendered = RenderedElement.render root (render ()) in
-    RenderedElement.executeHostViewUpdates rendered |> ignore;
-    ref (RenderedElement.executePendingEffects rendered)
+    let rendered = Rendered_element.render root (render ()) in
+    Rendered_element.execute_host_view_updates rendered |> ignore;
+    ref (Rendered_element.execute_pending_effects rendered)
   in
   let _unsubscribe =
     Remote_action.subscribe
       ~handler:(fun () ->
-        let nextElement = RenderedElement.flushPendingUpdates !rendered in
-        RenderedElement.executeHostViewUpdates nextElement |> ignore;
-        rendered := RenderedElement.executePendingEffects nextElement)
+        let nextElement = Rendered_element.flush_pending_updates !rendered in
+        Rendered_element.execute_host_view_updates nextElement |> ignore;
+        rendered := Rendered_element.execute_pending_effects nextElement)
       onStale
   in
   Lazy.force LTerm.stdout >>= fun term ->

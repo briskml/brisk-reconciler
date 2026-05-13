@@ -13,7 +13,7 @@ type testMountLog = testMountEntry list [@@deriving show, eq]
 let mountLog = ref []
 let isDirty = ref false;;
 
-Brisk_reconciler.addStaleTreeHandler (fun () -> isDirty := true)
+Brisk_reconciler.add_stale_tree_handler (fun () -> isDirty := true)
 
 let insertNode ~(parent : node) ~(child : node) ~(position : int) =
   (match child.element with

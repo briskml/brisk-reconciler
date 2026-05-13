@@ -252,3 +252,19 @@ let flushPendingStateUpdates hooks =
   match Heterogenous_list.compareElementsIdentity hooks nextHooks with
   | true -> hooks
   | false -> nextHooks
+
+(* Snake-case wrappers added in Phase 2. The camelCase definitions
+   above retain their original names and labelled args; these
+   provide the new OCaml-style names exposed in [hooks.mli]. *)
+
+let of_state remaining ~on_state_did_change =
+  ofState remaining ~onStateDidChange:on_state_did_change
+
+let to_state = toState
+let print_state = printState
+
+let process_next ~default ?merge ~to_witness =
+  processNext ~default ?merge ~toWitness:to_witness
+
+let pending_effects = pendingEffects
+let flush_pending_state_updates = flushPendingStateUpdates

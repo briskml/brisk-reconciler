@@ -1,3 +1,12 @@
+(* The internal implementation file uses several Hooks helpers
+   ([Hooks.ofState], [Hooks.toState], [Hooks.pendingEffects], …)
+   that the public [hooks.mli] now marks as [@@deprecated] aliases
+   in favour of snake_case versions. The deprecation is for external
+   consumers — internal call sites can keep using the original
+   names — so silence the [deprecated] alert just here rather than
+   restructuring the internal call graph. *)
+[@@@alert "-deprecated"]
+
 module GlobalState = struct
   let componentKeyCounter = ref 0
   let reset () = componentKeyCounter := 0
@@ -1339,6 +1348,13 @@ module Expert = struct
         ; id = Component.Id
         ; eq = Component.eq
         ; render }
+
+  (* Snake-case alias mirroring the public surface in
+     [brisk_reconciler.mli]. Some test files alias
+     [Brisk_reconciler] directly to this internal module so PPX-
+     generated [Brisk_reconciler.Expert.native_component] calls
+     resolve here; keep both names in sync. *)
+  let native_component = nativeComponent
 end
 
 let component ?useDynamicKey debugName =
