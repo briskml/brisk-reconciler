@@ -10,7 +10,7 @@ test:
 	dune test
 
 bench:
-	dune exec benchmark
+	BRISK_BUILD_BENCH=1 dune exec benchmark
 
 clean:
 	dune clean
