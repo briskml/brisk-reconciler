@@ -82,6 +82,33 @@ val reducer :
 
 val ref : 'value -> ('value ref -> 'c, 'd) t -> 'value ref * ('c, 'd) t
 
+val use_latest :
+  'value -> ('value ref -> 'c, 'd) t -> 'value ref * ('c, 'd) t
+(** [use_latest v] is [Hooks.ref v] with one extra mechanic: on
+    every render, the ref's contents are overwritten with the
+    supplied [v]. So the returned [ref] has stable identity
+    across renders, and dereferencing it always yields the value
+    passed at the most recent render — the "trampoline" pattern
+    for callbacks captured by long-lived consumers (imperative-API
+    registrations, OnMount-scheduled effects, etc.) without
+    spelling it out as a [Hooks.ref] + per-render assignment pair.
+
+    Common shape:
+
+    {[
+      let%hook latest_on_tick = Hooks.use_latest on_tick in
+      let%hook () =
+        Hooks.use_effect OnMount (fun () ->
+          register_callback (fun () -> !latest_on_tick ());
+          Some (fun () -> unregister_callback ()))
+      in
+      ...
+    ]}
+
+    The closure passed to [register_callback] dereferences the
+    ref each call, so it always invokes the latest [on_tick]
+    even though the registration happened at mount-time. *)
+
 val use_effect :
    'value Effect.condition
   -> (unit -> (unit -> unit) option)

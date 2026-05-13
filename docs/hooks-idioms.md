@@ -155,15 +155,16 @@ handlers fire again. This is brisk's intended subtree-lifecycle
 semantics, distinct from "hide" (which would keep the instance
 alive and just toggle visibility on the view).
 
-### Stable callback identity via `Hooks.ref`
+### Latest callback / stable trampoline via `Hooks.use_latest`
 
-If you need a callback whose *identity* must be stable across
-renders (because it's compared by reference somewhere — rare in
-brisk, common with imperative APIs), the pattern is:
+If you register a callback at mount-time (via `use_effect
+OnMount`) but want the registered callback to always invoke the
+*latest* closure body (e.g. because it captures something that
+changes per render), use `Hooks.use_latest` + a dereferencing
+trampoline:
 
 ```ocaml
-let%hook latest_cb = Hooks.ref ignore in
-latest_cb := (fun () -> (* always-fresh-closure body *));
+let%hook latest_cb = Hooks.use_latest my_cb in
 
 let%hook () =
   Hooks.use_effect OnMount (fun () ->
@@ -172,11 +173,13 @@ let%hook () =
 in
 ```
 
-The trick: register a stable trampoline closure (`fun () ->
-!latest_cb ()`) that dereferences the ref on every call. Update
-the ref's contents on every render. Imperative callers see the
-same function pointer for the trampoline; the actual body uses
-the latest closure.
+`Hooks.use_latest v` is a one-line wrapper around `Hooks.ref`:
+the ref's identity is stable across renders, but its contents
+are overwritten with the supplied `v` on every render. The
+trampoline `(fun () -> !latest_cb ())` registered with the
+imperative API dereferences the ref each call and so always
+invokes the latest body, even though it was registered once at
+mount.
 
 This is the React `useRef`-for-callbacks pattern. Comes up less
 often in brisk than in React because brisk doesn't have an

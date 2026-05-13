@@ -241,6 +241,20 @@ let reducer = Reducer.hook
 let ref = Ref.hook
 let use_effect = Effect.hook
 
+(* [use_latest v] is [Hooks.ref v] threaded with an in-place
+   refresh: on every render the cell's contents are overwritten
+   with the supplied [v]. The returned ref has stable identity
+   across renders, and dereferencing it always yields the latest
+   value passed at the most recent render — the "trampoline"
+   pattern for callbacks captured by long-lived consumers
+   (imperative-API registrations, OnMount-scheduled effects,
+   etc.), formalised so users don't have to spell it out as a
+   [Hooks.ref] + assignment pair. *)
+let use_latest value hooks =
+  let cell, hooks = ref value hooks in
+  cell := value;
+  cell, hooks
+
 let pendingEffects ~lifecycle hooks =
   match hooks with
   | Some hooks ->
