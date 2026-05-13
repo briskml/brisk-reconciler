@@ -56,20 +56,37 @@ let processNext
         ; onStateDidChange } )
 
 module State = struct
-  type 'a t = {currentValue : 'a; mutable nextValue : 'a}
+  (* Mirrors [Reducer.t] structurally: the [updates] field is a
+     [ref] passed by reference into the post-flush container, so
+     a setter captured at render N keeps routing updates to the
+     live container at render N+k. Before this rewrite, [State.t]
+     was [{currentValue; mutable nextValue}] and [flush] built a
+     fresh record each time — which orphaned every captured
+     setter on first flush and broke long-lived callbacks
+     (timers, notification observers, async work) that wanted to
+     dispatch back into the state from outside a render. *)
+  type 'a t = {currentValue : 'a; updates : ('a -> 'a) list ref}
   type 'a hook += State : 'a t -> 'a t hook
 
   let make =
-    (fun initialValue -> {currentValue = initialValue; nextValue = initialValue}
+    (fun initialValue -> {currentValue = initialValue; updates = ref []}
      : 'a -> 'a t)
 
   let wrapAsHook s = State s
-  let setState nextValue stateContainer = stateContainer.nextValue <- nextValue
 
-  let flush {currentValue; nextValue} =
-    if currentValue == nextValue
-    then None
-    else Some {currentValue = nextValue; nextValue}
+  let flush =
+    (fun stateContainer ->
+       let {currentValue; updates} = stateContainer in
+       let nextValue =
+         List.fold_right
+           (fun update latestValue -> update latestValue)
+           !updates currentValue
+       in
+       updates := [];
+       if currentValue == nextValue
+       then None
+       else Some {currentValue = nextValue; updates}
+     : 'a t -> 'a t option)
 
   let hook initialState hooks =
     let stateContainer, nextHooks =
@@ -77,7 +94,8 @@ module State = struct
     in
     let onStateDidChange = hooks.onStateDidChange in
     let setter updater =
-      setState (updater stateContainer.nextValue) stateContainer;
+      let updates = stateContainer.updates in
+      updates := updater :: !updates;
       onStateDidChange ()
     in
     (stateContainer.currentValue, setter), nextHooks
