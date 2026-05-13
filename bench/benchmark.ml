@@ -74,7 +74,7 @@ module A = struct
         hooks
     in
     let (), hooks =
-      Hooks.effect OnMount
+      Hooks.use_effect OnMount
         (fun () ->
            Some (Brisk.Remote_action.subscribe ~handler:dispatch remoteAction))
         hooks

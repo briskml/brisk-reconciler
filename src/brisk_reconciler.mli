@@ -88,7 +88,7 @@ end
 (** Creates a component. Components are functions which
     retain state over time via Hooks. The function you pass to
     component should be pure and all side effects should be
-    handled using Hooks.effect *)
+    handled using Hooks.use_effect *)
 val component :
    ?useDynamicKey:bool
   -> string

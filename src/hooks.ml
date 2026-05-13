@@ -221,7 +221,7 @@ end
 let state = State.hook
 let reducer = Reducer.hook
 let ref = Ref.hook
-let effect = Effect.hook
+let use_effect = Effect.hook
 
 let pendingEffects ~lifecycle hooks =
   match hooks with
@@ -231,7 +231,7 @@ let pendingEffects ~lifecycle hooks =
            match opaqueValue with
            | Heterogenous_list.Any (Effect.Effect state) -> (
              match Effect.get ~lifecycle state with
-             | Some effect -> Effect_sequence.chain acc effect
+             | Some eff -> Effect_sequence.chain acc eff
              | None -> acc)
            | _ -> acc)
         Effect_sequence.noop hooks

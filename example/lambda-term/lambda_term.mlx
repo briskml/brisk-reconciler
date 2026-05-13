@@ -124,7 +124,7 @@ let%component counterButtons () =
 let%component clock () =
   let%hook time, setTime = Hooks.state (Unix.time ()) in
   let%hook () =
-    Hooks.effect Hooks.Effect.Always (fun () ->
+    Hooks.use_effect Hooks.Effect.Always (fun () ->
       let evt =
         Lwt_engine.on_timer 1.0 true (fun _ -> setTime (fun _ -> Unix.time ()))
       in

@@ -61,11 +61,16 @@ val reducer :
 
 val ref : 'value -> ('value ref -> 'c, 'd) t -> 'value ref * ('c, 'd) t
 
-val effect :
+val use_effect :
    'value Effect.condition
   -> (unit -> (unit -> unit) option)
   -> ('value Effect.t -> 'c, 'd) t
   -> unit * ('c, 'd) t
+(** Renamed from [effect] in OCaml-5.3+ compatibility: the bare
+    identifier [effect] became a contextual keyword for the effect-
+    handler feature, so the old name no longer parses at a
+    declaration start position. No deprecation alias is possible
+    on 5.3+ — call sites must update. *)
 
 val pendingEffects :
    lifecycle:Effect.lifecycle
