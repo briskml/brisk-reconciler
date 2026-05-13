@@ -1,9 +1,12 @@
 (executable
-  ;; core_unix constraint
+  ;; core_unix is unix-only and requires OCaml >= 5.1; (optional) skips
+  ;; the bench when its dev-setup deps (core, core_bench, core_unix)
+  ;; aren't installed.
   (enabled_if (and
     (= %{profile} dev)
     (>= %{ocaml_version} 5.1)
     (<> %{os_type} "Win32")))
+  (optional)
   (name benchmark)
   (public_name benchmark)
   (libraries core core_bench core_unix brisk-reconciler)
