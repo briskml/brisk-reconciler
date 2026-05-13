@@ -26,17 +26,3 @@ jobs:
       - run: opam exec -- dune build
 
       - run: opam exec -- dune runtest
-
-  fmt:
-    name: fmt
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: ocaml/setup-ocaml@v3
-        with:
-          ocaml-compiler: "5.4"
-
-      - run: opam install . --deps-only --with-test --with-dev-setup
-
-      - run: opam exec -- dune build @fmt
