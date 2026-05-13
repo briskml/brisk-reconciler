@@ -285,9 +285,9 @@ let flushPendingStateUpdates hooks =
   | true -> hooks
   | false -> nextHooks
 
-(* Snake-case wrappers added in Phase 2. The camelCase definitions
-   above retain their original names and labelled args; these
-   provide the new OCaml-style names exposed in [hooks.mli]. *)
+(* The camelCase definitions above retain their original names
+   and labelled args; these provide the new OCaml-style names exposed
+   in [hooks.mli]. *)
 
 let of_state remaining ~on_state_did_change =
   ofState remaining ~onStateDidChange:on_state_did_change
