@@ -1,8 +1,0 @@
-{
-  "source": "./package.json",
-  "override": {
-    "devDependencies": {
-      "@opam/ocaml-lsp-server": null
-    }
-  }
-}

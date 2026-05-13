@@ -48,5 +48,5 @@ Brisk Reconciler provides an expressive and powerful abstraction for managing **
   (js_of_ocaml-ppx :with-test)
   (lwt :with-test)
   (lambda-term :with-test)
-  (core_bench :with-test)
-  (core_unix :with-test)))
+  (core_bench :with-dev-setup)
+  (core_unix :with-dev-setup)))

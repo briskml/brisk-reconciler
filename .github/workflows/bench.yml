@@ -1,0 +1,29 @@
+name: Bench
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 6 * * 1"
+  pull_request:
+    paths:
+      - "bench/**"
+      - "src/**"
+      - "jsx/**"
+      - "dune-project"
+      - ".github/workflows/bench.yml"
+
+jobs:
+  bench:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ocaml/setup-ocaml@v3
+        with:
+          ocaml-compiler: "5.4"
+
+      - run: opam install . --deps-only --with-test --with-dev-setup
+
+      - run: opam exec -- dune build --profile=dev bench/
+
+      - run: opam exec -- dune exec --profile=dev bench/benchmark.exe -- -quota 5

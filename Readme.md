@@ -1,4 +1,4 @@
-[![Build Status](https://dev.azure.com/briskml/brisk-reconciler/_apis/build/status/briskml.brisk-reconciler?branchName=master)](https://dev.azure.com/briskml/brisk-reconciler/_build/latest?definitionId=2&branchName=master)
+[![CI](https://github.com/briskml/brisk-reconciler/actions/workflows/build.yml/badge.svg?branch=master)](https://github.com/briskml/brisk-reconciler/actions/workflows/build.yml)
 
 # brisk-reconciler
 
@@ -32,22 +32,18 @@ One example of this is Brisk and Revery, where we have two vastly different appr
 
 ## Contributing
 
-### Install [esy](https://esy.sh/)
-
-```
-npm install -g esy
-```
-
 ### Installation using opam
 
-Create local opam switch (optional):
+Create a local opam switch (optional):
 
 ```
-opam switch create ./ --deps-only
+opam switch create ./ 5.4.0 --deps-only
 ```
 
+Install dependencies (add `--with-dev-setup` to also pull in formatters, LSP, and benchmark tools):
+
 ```
-opam install . --with-dev-setup --with-test --with-doc
+opam install . --with-test --with-doc
 ```
 
 ### Development workflow
@@ -56,6 +52,7 @@ Take a look at our [issues](https://github.com/briskml/brisk-reconciler/issues) 
 
 - build: `make`
 - test: `make test`
+- bench (requires `--with-dev-setup`): `make bench`
 
 ### Community
 

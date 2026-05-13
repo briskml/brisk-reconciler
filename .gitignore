@@ -1,9 +1,7 @@
-_esy
 _opam/
 _build/
 .DS_Store
 .vscode/
-/node_modules
 .merlin
 *.log
 *.install
