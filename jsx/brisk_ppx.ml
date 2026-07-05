@@ -118,55 +118,68 @@ module Declaration_ppx = struct
             "A labelled argument or () was expected"
     in
     let rec process_function_body expr =
-      match expr.P.pexp_desc with
-      | P.Pexp_newtype (ident, inner) ->
+      match Brisk_ppx_compat.match_pexp_newtype expr.P.pexp_desc with
+      | Some (ident, inner) ->
           (* Locally-abstract type binding wrapping the function. The
              mlx-pp preprocessor emits [(type a)] params as nested
              [Pexp_newtype] rather than as flat [Pparam_newtype] inside
-             [Pexp_function]'s params list; preserve that shape. *)
-          { expr with
-            P.pexp_desc =
-              P.Pexp_newtype (ident, process_function_body inner) }
-      | P.Pexp_function (params, type_constraint, P.Pfunction_body inner) ->
-        (match split_at_unit [] params with
-         | Some (before, terminator, after) ->
-             (* Wrap everything from the terminator inward as
-                [component ~key <rest>]. If [after] is non-empty,
-                [<rest>] is a function [fun p1 ... pn -> inner];
-                otherwise it's just [inner]. *)
-             let wrap_arg =
-               match after with
-               | [] -> inner
-               | _ ->
-                   { expr with
-                     P.pexp_desc =
-                       P.Pexp_function
-                         (after, type_constraint, P.Pfunction_body inner) }
-             in
-             let loc = wrap_arg.P.pexp_loc in
-             let wrapped =
-               [%expr [%e component_ident ~loc] ~key [%e wrap_arg]]
-             in
-             { expr with
-               P.pexp_desc =
-                 P.Pexp_function
-                   ( before @ [ terminator ]
-                   , None
-                   , P.Pfunction_body wrapped ) }
-         | None ->
-             (* No terminator at this layer — recurse into [inner]. *)
-             { expr with
-               P.pexp_desc =
-                 P.Pexp_function
-                   ( params
-                   , type_constraint
-                   , P.Pfunction_body (process_function_body inner) ) })
-      | P.Pexp_function (_, _, P.Pfunction_cases _) ->
-          Location.raise_errorf ~loc:expr.P.pexp_loc
-            "A 'fun' expression was expected, not 'function ... | ...'"
-      | _ ->
-          Location.raise_errorf ~loc:expr.P.pexp_loc
-            "A function with a () parameter was expected"
+             [Pexp_function]'s params list; preserve that shape. We match
+             and rebuild through [Brisk_ppx_compat]/[Ast_builder] because
+             [Pexp_newtype]'s arity differs between upstream ppxlib and
+             OxCaml (which adds a jkind annotation). *)
+          let rebuilt =
+            Ast_builder.pexp_newtype ~loc:expr.P.pexp_loc ident
+              (process_function_body inner)
+          in
+          { expr with P.pexp_desc = rebuilt.P.pexp_desc }
+      | None -> (
+          match expr.P.pexp_desc with
+          | P.Pexp_function (params, type_constraint, P.Pfunction_body inner)
+            -> (
+              match split_at_unit [] params with
+              | Some (before, terminator, after) ->
+                  (* Wrap everything from the terminator inward as
+                     [component ~key <rest>]. If [after] is non-empty,
+                     [<rest>] is a function [fun p1 ... pn -> inner];
+                     otherwise it's just [inner]. *)
+                  let wrap_arg =
+                    match after with
+                    | [] -> inner
+                    | _ ->
+                        { expr with
+                          P.pexp_desc =
+                            P.Pexp_function
+                              ( after,
+                                type_constraint,
+                                P.Pfunction_body inner ) }
+                  in
+                  let loc = wrap_arg.P.pexp_loc in
+                  let wrapped =
+                    [%expr [%e component_ident ~loc] ~key [%e wrap_arg]]
+                  in
+                  { expr with
+                    P.pexp_desc =
+                      P.Pexp_function
+                        ( before @ [ terminator ],
+                          (* the outer wrapper carries no constraint; its
+                             representation ([None] vs. an empty record)
+                             also differs across ppxlib flavours *)
+                          Brisk_ppx_compat.no_function_constraint,
+                          P.Pfunction_body wrapped ) }
+              | None ->
+                  (* No terminator at this layer — recurse into [inner]. *)
+                  { expr with
+                    P.pexp_desc =
+                      P.Pexp_function
+                        ( params,
+                          type_constraint,
+                          P.Pfunction_body (process_function_body inner) ) })
+          | P.Pexp_function (_, _, P.Pfunction_cases _) ->
+              Location.raise_errorf ~loc:expr.P.pexp_loc
+                "A 'fun' expression was expected, not 'function ... | ...'"
+          | _ ->
+              Location.raise_errorf ~loc:expr.P.pexp_loc
+                "A function with a () parameter was expected")
     in
     let open P in
     let loc = expr.P.pexp_loc in
@@ -241,7 +254,7 @@ module Declaration_ppx = struct
       let value_binding_loc = value_binding.P.pvb_loc in
       Ppxlib.Ast_pattern.(
         parse
-          (value_binding ~pat:(ppat_var __) ~expr:__ ~constraint_:drop))
+          (Brisk_ppx_compat.value_binding_pat ~pat:(ppat_var __) ~expr:__))
         value_binding_loc value_binding (fun var_pat expr ->
           let component_name =
             ATH.Exp.constant ~loc:expr.P.pexp_loc (ATH.Const.string var_pat)
@@ -271,7 +284,7 @@ module Declaration_ppx = struct
       Ast_pattern.(
         pstr
           ( pstr_value __
-              ( value_binding ~pat:(ppat_var __) ~expr:__ ~constraint_:drop
+              ( Brisk_ppx_compat.value_binding_pat ~pat:(ppat_var __) ~expr:__
                 ^:: nil )
           ^:: nil ))
       (fun ~loc ~path recursive pat expr ->
@@ -307,8 +320,11 @@ module Hooks_ppx = struct
 
   let expand ~loc expr =
     let expansion =
-      match expr.pexp_desc with
-      | Pexp_let (Nonrecursive, [ binding ], next_expression) ->
+      (* [Pexp_let]'s arity differs across ppxlib flavours (OxCaml prefixes
+         a [mutable_flag] for [let mutable]), so destructure via the compat
+         shim, which normalises it to [(rec_flag, bindings, body)]. *)
+      match Brisk_ppx_compat.match_pexp_let expr.pexp_desc with
+      | Some (Nonrecursive, [ binding ], next_expression) ->
           let wrapped_next_expression =
             if contains_hook_expression expr then
               [%expr [%e next_expression] [%e hooks_ident ~loc]]
@@ -320,9 +336,10 @@ module Hooks_ppx = struct
                 [%e binding.pvb_expr] [%e hooks_ident ~loc]
               in
               [%e wrapped_next_expression]]
-      | Pexp_let (Recursive, _, _) ->
+      | Some (Recursive, _, _) ->
           Location.raise_errorf ~loc "'let%%hook' may not be recursive"
-      | _ -> Location.raise_errorf ~loc "'hook' can only be used with 'let'"
+      | Some _ | None ->
+          Location.raise_errorf ~loc "'hook' can only be used with 'let'"
     in
     {
       expansion with

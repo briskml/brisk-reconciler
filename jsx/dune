@@ -5,3 +5,13 @@
  (libraries ppxlib)
  (preprocess
   (pps ppxlib.metaquot)))
+
+; [brisk_ppx_compat.ml] adapts the few AST nodes we destructure by hand to the
+; flavour of ppxlib in the current switch (upstream vs. OxCaml). See
+; config/discover.ml for details.
+(rule
+ (targets brisk_ppx_compat.ml)
+ (deps
+  (:discover config/discover.exe))
+ (action
+  (run %{discover})))

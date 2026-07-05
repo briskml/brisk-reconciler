@@ -36,8 +36,13 @@ Brisk Reconciler provides an expressive and powerful abstraction for managing **
   ;; unified [Pexp_function] AST shape (function_param list +
   ;; function_body) introduced upstream and pinned in ppxlib's AST
   ;; at version 0.32.
+  ;;
+  ;; [dune-configurator] runs jsx/config/discover.ml at build time to
+  ;; select the [Pexp_newtype]/[Pexp_function] representation matching
+  ;; the current ppxlib (upstream vs. OxCaml's patched AST).
   (ocaml (>= 4.8.0))
   (ppxlib (>= 0.32.0))
+  (dune-configurator :build)
   (mlx :with-test)
   (ocamlformat-mlx :with-dev-setup)
   (ocamlformat :with-dev-setup)
